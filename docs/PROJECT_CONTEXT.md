@@ -125,12 +125,13 @@ For schema work, read the relevant Supabase skill guidance, inspect remote migra
 
 ## GitHub and Vercel state
 
-- Local `origin` points to `https://github.com/anilkumar-repo/fittrack.git`.
-- Vercel reports a GitHub link to `anilkumar-repo/fittrack` and a Hobby project with SSO deployment protection. Pushes may trigger Vercel Git deployments; check the resulting target before sharing or promoting anything.
-- A source-based Vercel deployment was mistakenly created with `target: production` after a preview was requested. It is READY at `https://fittrack-gvp8vgriy-anilkumarm.vercel.app` and has aliases `fittrack-inky-eta.vercel.app` and `fittrack-anilkumarm.vercel.app`. The project currently reports `live: false`; SSO protection is enabled. This is not a verified preview. The connected Vercel tools did not expose a completed-deployment/alias removal operation. Inspect and deactivate/remove these aliases in Vercel before sharing the app or creating a preview. Never treat this deployment as production approval.
-- Keep Vercel deployment protection enabled while testing. Use a feature branch for GitHub work and verify Vercel reports `target: preview`; do not push release changes to the production branch without separate approval.
-- The workspace has no permission to claim a successful end-to-end production release. A real two-account RLS test and mobile browser walkthrough still need to be completed.
-- Do not commit `.env.local`, `.vercel`, `.next`, `node_modules`, or build output. `.gitignore` excludes these; `.env.example` contains blank placeholders.
+- The GitHub `origin` is https://github.com/anilkumar-repo/fittrack. At the 2026-10-27 check, `main` was at commit `246e02be75fc8bae3b71b9f5c83e8eb73fa7f65d` (`NEW`).
+- The latest Vercel deployment is `READY`, `target: production`, from the same main commit. Deployment URL: https://fittrack-a92dmuoae-anilkumarm.vercel.app. Project aliases reported by Vercel: `fittrack-anilkumarm.vercel.app`, `fittrack-inky-eta.vercel.app`, and `fittrack-git-main-anilkumarm.vercel.app`.
+- Vercel project metadata reports `live: false` despite the `READY` deployment. SSO protection is enabled with `all_except_custom_domains`, so the Vercel-hosted aliases remain protected. Public access and client readiness have not been verified.
+- Vercel listed `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, and `NEXT_PUBLIC_SITE_URL` for Production after the user configured them and redeployed. Environment values are intentionally excluded from this document. Preview did not list these variables at verification time; configure them separately before preview testing.
+- Supabase migrations through Phase 6 and RLS were previously verified. Supabase Auth email-provider settings and redirect allow-lists, a real client/trainer two-account RLS check, and the mobile logging flow still need confirmation.
+- Keep deployment protection enabled until authentication and RLS smoke tests pass. If external clients need access, decide on a custom domain or deployment-protection change only after those checks; do not assume SSO has been removed.
+- Do not commit, push, change plans, remove aliases, or deploy production as part of a documentation update unless separately authorized. Verify the Vercel target before future releases.
 
 ## Guidance for future coding assistants
 

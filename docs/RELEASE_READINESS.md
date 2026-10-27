@@ -18,10 +18,13 @@ The browser uses only these values:
 - `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`
 - `NEXT_PUBLIC_SITE_URL`
 
-Copy `.env.example` to `.env.local` for local work. Set the site URL to `http://localhost:3000` locally and to the protected preview origin when testing a Vercel preview. Add the matching `/auth/callback` URL to Supabase Auth's redirect allow-list. The callback reports a safe sign-in error without exposing tokens. No service-role key is read by the client or documented in a public variable. `.env.local` is ignored by Git; `.env.example` contains empty placeholders only.
+Copy `.env.example` to the ignored `.env.local` for local work. Use the project's public URL and publishable key only; never expose a service-role or secret key in browser configuration. Set `NEXT_PUBLIC_SITE_URL` to `http://localhost:3000` locally.
 
-Configure Supabase email sign-in and Auth URL settings in the project dashboard. The connected database integration can apply SQL migrations but does not configure email delivery or the Auth redirect allow-list. Use the same authenticated account across devices for workout sync; RLS scopes records by `auth.uid()` and active trainer relationship.
+As verified on 2026-10-27, all three browser variables are configured for Vercel Production and a new `target: production` deployment completed with `READY` status. The production site origin shown in the dashboard is `https://fittrack-anilkumarm.vercel.app`. Variable values are not copied into this document. The three variables were not listed for Preview at that check; configure them for Preview before testing preview deployments.
 
+Supabase Auth URL settings are separate from Vercel environment variables. Set the production Site URL to `https://fittrack-anilkumarm.vercel.app`, allow `https://fittrack-anilkumarm.vercel.app/auth/callback` and `http://localhost:3000/auth/callback`, and enable the intended Email sign-in method. Add a preview callback URL before using a preview. Confirm these dashboard settings rather than inferring them from the Vercel deployment.
+
+Use the same authenticated account across devices for workout sync; RLS scopes records by auth.uid() and active trainer relationship. Trainer roles must use trusted app_metadata plus an active trainer_clients relationship.
 ## Database migration and rollback
 
 The live project previously had the Phase 1 and Phase 2 migrations applied; its tables had no workout/profile rows at the Phase 6 audit. The migration sequence for the current code is Phase 3 equipment/form-quality fields, Phase 5 optional body-weight history, and Phase 6 trainer settings/audit/security guards. Review migration status before applying SQL. These changes add columns, a table, constraints, triggers, and policies; they do not delete or rewrite workout rows.
@@ -32,16 +35,17 @@ The preferred rollback is an application rollback to the last known-good release
 
 ## Release and recovery procedure
 
-1. Run `npm test`, `npm run lint`, `npm run typecheck`, and `npm run build` locally.
-2. Apply reviewed migrations in order and inspect Supabase security/performance advisors.
-3. Configure only public Supabase URL/publishable-key variables in the Vercel Preview environment. Keep deployment protection enabled.
-4. Verify the preview sign-in callback and exercise the full flow with separate client and linked trainer accounts. Check that an unlinked trainer and a client cannot change trainer rules, and that a client cannot save a deadlift plan while the restriction is off.
+1. Run npm test, npm run lint, npm run typecheck, and npm run build locally.
+2. Review migration history and pending SQL, inspect Supabase security/performance advisors, and preserve a verified backup before future schema changes against populated data.
+3. The latest Vercel deployment is a `READY` production-target build from `main`. Production environment variables are now configured. Keep SSO deployment protection enabled while testing.
+4. Confirm Supabase Auth email sign-in and redirect allow-lists. Exercise sign-in, save, refresh, and history with a client account, then test a linked trainer account. Check that an unlinked trainer and a client cannot change trainer rules, and that a client cannot save a deadlift plan while the restriction is off.
 5. Confirm a trainer change creates one audit row and a newly generated session stores its trainer rule revision. Confirm existing session snapshots are unchanged.
-6. Keep production promotion, Git commits/pushes, plan changes, and data deletion out of this release step unless separately approved.
-
+6. The production deployment has not passed the real-account persistence/RLS smoke test. Do not treat READY as proof of client access or verified end-to-end data persistence. Keep deployment protection enabled until testing is complete.
 ## Current Vercel status (2026-10-27)
 
-The connected Vercel deployment tool returned a deployment with `target: production` after a preview was requested. It reached `READY` at `fittrack-gvp8vgriy-anilkumarm.vercel.app` and received the aliases `fittrack-inky-eta.vercel.app` and `fittrack-anilkumarm.vercel.app`. The project currently reports `live: false`, and SSO protection is enabled for deployments except custom domains. Treat this as a production-target deployment, not a verified preview. The connected tools did not expose a deployment or alias removal operation. Before sharing or using a preview, inspect this deployment in Vercel and remove or otherwise deactivate the aliases there; then create a verified Preview deployment only after confirming the tool reports `target: preview`.
+The user configured the three public Supabase browser variables for Production and redeployed. Vercel API verification shows the latest deployment as `READY`, `target: production`, from `main` commit `246e02be75fc8bae3b71b9f5c83e8eb73fa7f65d` (`NEW`). The deployment URL is `https://fittrack-a92dmuoae-anilkumarm.vercel.app`, with project aliases `fittrack-anilkumarm.vercel.app`, `fittrack-inky-eta.vercel.app`, and `fittrack-git-main-anilkumarm.vercel.app`. No environment variable values are stored in this document.
+
+The project metadata reports `live: false`. SSO protection is enabled for deployments except custom domains, so access through Vercel-hosted aliases remains protected. This is not a confirmed public client launch. Auth redirect/email configuration, real two-account RLS/persistence testing, and mobile-flow testing remain unverified. Preview does not currently list the three Supabase variables; set them for Preview before preview testing. Keep SSO enabled until authentication and RLS checks pass.
 
 If sync fails, the app keeps the in-progress session on-device and presents a retry action. Preserve that browser's local data until sync succeeds. For a database incident, stop rule changes, preserve audit history, restore only through a verified backup or Supabase recovery process, and confirm row counts and access policies before reopening sign-in. Do not use service-role credentials in the client to work around an RLS failure.
 
