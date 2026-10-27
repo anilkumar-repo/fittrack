@@ -1,0 +1,32 @@
+{
+  "name": "fittrack-workout-planner",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "next dev --turbopack",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
+    "test": "node --experimental-strip-types --test src/lib/planner.test.ts src/lib/workout-tracking.test.ts src/lib/exercise-library.test.ts src/lib/progress.test.ts src/lib/demo-data.test.ts src/lib/trainer-rules.test.ts"
+  },
+  "dependencies": {
+    "@supabase/ssr": "0.10.2",
+    "@supabase/supabase-js": "2.102.1",
+    "next": "16.4.3",
+    "react": "19.2.4",
+    "react-dom": "19.2.4"
+  },
+  "devDependencies": {
+    "@types/node": "25.5.0",
+    "@types/react": "19.2.14",
+    "@types/react-dom": "19.2.3",
+    "eslint": "9.39.1",
+    "eslint-config-next": "16.4.3",
+    "typescript": "6.0.2"
+  },
+  "engines": {
+    "node": ">=22.6.0"
+  }
+}
