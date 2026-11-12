@@ -1,7 +1,7 @@
 import type { EquipmentKey, ExerciseDefinition, MovementPattern, WorkoutFocus } from "./types";
 
 export const TEMPLATE_VERSION = "2.1.0";
-export const RULE_VERSION = "2026.10.27.1";
+export const RULE_VERSION = "2026.11.12.1";
 
 export const EQUIPMENT_OPTIONS: Array<{ id: EquipmentKey; label: string }> = [
   { id: "dumbbells", label: "Dumbbells" },

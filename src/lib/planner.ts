@@ -61,8 +61,10 @@ function recoveryDecision(date: string, checkIn: CheckIn | undefined, prior: Wor
   const completedThisWeek = recent.filter((session) => session.status === "completed").length;
 
   if (checkIn?.pain) reasons.push("Your check-in reports pain or discomfort, so this plan avoids loaded training.");
-  const recentPain = recent.find((session) => session.checkIn?.pain || session.review?.discomfort);
-  if (recentPain) reasons.push("A recent session reported pain or discomfort; take a recovery day and do not train through symptoms.");
+  // A pain or discomfort report from the previous logged session lightens only the next session.
+  // Today's own check-in is the hard stop: reporting pain today always switches to recovery.
+  const lastLogged = [...prior].reverse().find((session) => session.status !== "planned");
+  const lastSessionPain = Boolean(lastLogged && (lastLogged.checkIn?.pain || lastLogged.review?.discomfort));
   if (completedThisWeek >= 4 && completedThisWeek > sessionsPerWeek) reasons.push("Training frequency exceeded the selected weekly schedule; allow more recovery instead of adding another hard session.");
   if ((checkIn?.energy ?? 5) <= settings.recovery.stopEnergyThreshold
     || (checkIn?.recovery ?? 5) <= settings.recovery.stopRecoveryThreshold
@@ -81,8 +83,9 @@ function recoveryDecision(date: string, checkIn: CheckIn | undefined, prior: Wor
   const lowCurrentReadiness = (checkIn?.energy ?? 3) <= settings.recovery.lowEnergyVolumeThreshold || (checkIn?.recovery ?? 3) <= settings.recovery.lowEnergyVolumeThreshold;
   const highCurrentSoreness = (checkIn?.soreness ?? 1) >= settings.recovery.highSorenessVolumeThreshold;
   const busyWeek = completedThisWeek > sessionsPerWeek;
-  const reduceVolume = recentHighSoreness || recentLowReadiness || lowCurrentReadiness || highCurrentSoreness || busyWeek;
+  const reduceVolume = lastSessionPain || recentHighSoreness || recentLowReadiness || lowCurrentReadiness || highCurrentSoreness || busyWeek;
 
+  if (lastSessionPain) reasons.push("Your last session reported pain or discomfort, so today is a lighter session with fewer sets and no progression. If anything hurts today, tick the pain box in your check-in and the plan switches to recovery.");
   if (recentHighSoreness) reasons.push("Soreness has been high in more than one recent check-in, so planned sets are reduced.");
   if (recentLowReadiness || lowCurrentReadiness) reasons.push("Low energy or recovery lowers today’s planned set count.");
   if (highCurrentSoreness) reasons.push("High soreness lowers today’s planned set count.");

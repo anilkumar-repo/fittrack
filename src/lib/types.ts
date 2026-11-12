@@ -182,6 +182,10 @@ export interface FitTrackState {
   trainerRuleSettings?: TrainerRuleSettings;
   trainerRuleRevision?: number;
   selectedDate: string;
+  /** False until the welcome steps are finished (or skipped) for this profile. */
+  onboarded?: boolean;
+  /** True when a trainer has an active link to this signed-in account. */
+  trainerLinked?: boolean;
   mode: "demo" | "supabase";
   userEmail?: string;
 }

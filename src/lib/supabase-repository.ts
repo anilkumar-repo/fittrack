@@ -1,5 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { createDemoState } from "./demo-data";
+import { createDemoState, defaultDisplayName, localTimeZone, todayInTimeZone } from "./demo-data";
 import { canAccessOwnerProgress } from "./progress";
 import type { BodyWeightEntry, EquipmentKey, ExerciseLog, FitTrackState, Profile, TrainerClient, TrainerRuleAudit, TrainerRuleSettings, WorkoutReview, WorkoutSession } from "./types";
 import { createExerciseLog, normalizeWorkoutSession, persistWorkoutSession, type WorkoutPersistencePort } from "./workout-tracking";
@@ -8,8 +8,39 @@ import { DEFAULT_TRAINER_RULE_SETTINGS, normalizeTrainerRuleSettings, validateTr
 type AuthUser = { id: string; email?: string; app_metadata?: Record<string, unknown> };
 type DbRow = Record<string, unknown>;
 
-function mapProfile(row: DbRow, id: string, trainerRole: boolean, deadliftEnabled: boolean): Profile {
-  const defaults = createDemoState().profile;
+/** Starting values for an account with no saved profile yet: the person's own name, time zone, and today as day one. */
+export function newAccountProfileDefaults(user: AuthUser, seed?: NewAccountSeed): Profile {
+  const base = createDemoState().profile;
+  const timeZone = localTimeZone();
+  const today = todayInTimeZone(timeZone);
+  const earliest = seed?.earliestSessionDate && seed.earliestSessionDate < today ? seed.earliestSessionDate : today;
+  const local = seed?.profile;
+  return {
+    ...base,
+    id: user.id,
+    displayName: local && local.displayName.trim() && local.displayName !== base.displayName ? local.displayName : defaultDisplayName(user.email),
+    timeZone,
+    trainingStartDate: earliest,
+    sessionsPerWeek: local?.sessionsPerWeek ?? base.sessionsPerWeek,
+    trainingDays: local?.trainingDays ?? base.trainingDays,
+    preferredSessionMinutes: local?.preferredSessionMinutes ?? base.preferredSessionMinutes,
+    equipmentAvailability: local?.equipmentAvailability ?? base.equipmentAvailability,
+    availableEquipment: local?.availableEquipment ?? base.availableEquipment,
+    deadliftEnabled: false,
+    trainerRole: false,
+  };
+}
+
+export interface NewAccountSeed {
+  /** Settings chosen on this device before signing in. */
+  profile?: Profile;
+  /** Earliest workout logged on this device that will be carried into the account. */
+  earliestSessionDate?: string;
+  /** True when the welcome steps were already finished on this device before signing in. */
+  onboarded?: boolean;
+}
+
+function mapProfile(row: DbRow, id: string, trainerRole: boolean, deadliftEnabled: boolean, defaults: Profile = createDemoState().profile): Profile {
   const validEquipment = new Set<EquipmentKey>(["dumbbells", "bench", "cable_machine", "leg_press", "leg_curl_machine", "rack", "mat", "chair"]);
   return {
     id,
@@ -22,8 +53,8 @@ function mapProfile(row: DbRow, id: string, trainerRole: boolean, deadliftEnable
     deadliftEnabled,
     trainerRole,
     preferredSessionMinutes: Number(row.preferred_session_minutes ?? defaults.preferredSessionMinutes),
-    equipmentAvailability: row.equipment_availability === "verified" ? "verified" : "unknown",
-    availableEquipment: Array.isArray(row.available_equipment) ? row.available_equipment.filter((item): item is EquipmentKey => typeof item === "string" && validEquipment.has(item as EquipmentKey)) : [],
+    equipmentAvailability: row.equipment_availability === undefined ? defaults.equipmentAvailability : row.equipment_availability === "verified" ? "verified" : "unknown",
+    availableEquipment: Array.isArray(row.available_equipment) ? row.available_equipment.filter((item): item is EquipmentKey => typeof item === "string" && validEquipment.has(item as EquipmentKey)) : row.available_equipment === undefined ? defaults.availableEquipment : [],
   };
 }
 
@@ -42,8 +73,34 @@ function exerciseLogRow(ownerId: string, sessionId: string, log: ExerciseLog) {
   };
 }
 
+/** Set once the database reports that `save_workout_session` is not deployed, to skip the extra request. */
+let atomicSaveUnavailable = false;
+
 function createSupabaseWorkoutPort(client: SupabaseClient): WorkoutPersistencePort {
   return {
+    async saveSessionAtomically(_ownerId, session) {
+      if (atomicSaveUnavailable) return null;
+      const { data, error } = await client.rpc("save_workout_session", {
+        p_session: {
+          workout_date: session.date,
+          status: session.status,
+          template_key: session.plan.focus.toLowerCase().replaceAll(" ", "_"),
+          template_version: session.plan.templateVersion,
+          rule_version: session.plan.ruleVersion,
+          plan_snapshot: session.plan,
+          check_in: session.checkIn ?? null,
+          exercise_logs: session.exerciseLogs,
+          review: session.review ?? null,
+          completed_at: session.status === "completed" ? session.completedAt ?? new Date().toISOString() : null,
+        },
+      });
+      if (error) {
+        // PGRST202: the function is not in the API schema yet. 42883: it does not exist in the database.
+        if (error.code === "PGRST202" || error.code === "42883") { atomicSaveUnavailable = true; return null; }
+        throw error;
+      }
+      return typeof data === "string" ? data : null;
+    },
     async upsertSession(ownerId, session, status) {
       const { data, error } = await client.from("workout_sessions").upsert({
         user_id: ownerId,
@@ -193,34 +250,24 @@ async function readCloudBodyWeightEntries(client: SupabaseClient, ownerId: strin
   };
 }
 
-export async function loadCloudState(client: SupabaseClient, user: AuthUser): Promise<FitTrackState> {
+export async function loadCloudState(client: SupabaseClient, user: AuthUser, seed?: NewAccountSeed): Promise<FitTrackState> {
   const trainerRole = user.app_metadata?.role === "trainer";
-  const defaults = createDemoState();
-  const [{ data: profileRow, error: profileError }, { data: ruleRow, error: ruleError }, sessions, bodyWeight] = await Promise.all([
+  const [{ data: profileRow, error: profileError }, { data: ruleRow, error: ruleError }, sessions, bodyWeight, { data: trainerLinks }] = await Promise.all([
     client.from("profiles").select("*").eq("id", user.id).maybeSingle(),
     client.from("trainer_rules").select("deadlift_enabled,rule_settings,rule_revision").eq("user_id", user.id).maybeSingle(),
     createSupabaseWorkoutPort(client).readSessions(user.id),
     readCloudBodyWeightEntries(client, user.id),
+    client.from("trainer_clients").select("trainer_id").eq("client_id", user.id).eq("status", "active").limit(1),
   ]);
   if (profileError) throw profileError;
   if (ruleError) throw ruleError;
 
   const ownRules = normalizeTrainerRuleSettings(ruleRow?.rule_settings ?? DEFAULT_TRAINER_RULE_SETTINGS);
-  const profile = mapProfile((profileRow ?? {}) as DbRow, user.id, trainerRole, ruleRow?.deadlift_enabled === true);
-  const { error: upsertError } = await client.from("profiles").upsert({
-    id: user.id,
-    display_name: profile.displayName,
-    experience: profile.experience,
-    sessions_per_week: profile.sessionsPerWeek,
-    training_days: profile.trainingDays,
-    training_start_date: profile.trainingStartDate,
-    time_zone: profile.timeZone,
-    preferred_session_minutes: profile.preferredSessionMinutes,
-    equipment_availability: profile.equipmentAvailability,
-    available_equipment: profile.availableEquipment,
-    updated_at: new Date().toISOString(),
-  }, { onConflict: "id", ignoreDuplicates: true });
-  if (upsertError) throw upsertError;
+  const profile = mapProfile((profileRow ?? {}) as DbRow, user.id, trainerRole, ruleRow?.deadlift_enabled === true, profileRow ? undefined : newAccountProfileDefaults(user, seed));
+  // A saved profile means the welcome steps are done. A brand-new account saves its profile when the
+  // person finishes them, or straight away if they already finished them on this device before signing in.
+  const onboarded = Boolean(profileRow) || seed?.onboarded === true;
+  if (!profileRow && onboarded) await saveCloudProfile(client, profile);
 
   let trainerClients: TrainerClient[] = [];
   let trainerClientAudit: TrainerRuleAudit[] = [];
@@ -270,7 +317,9 @@ export async function loadCloudState(client: SupabaseClient, user: AuthUser): Pr
     trainerClients,
     trainerRuleSettings: ownRules,
     trainerRuleRevision: Number(ruleRow?.rule_revision ?? 1),
-    selectedDate: defaults.selectedDate,
+    selectedDate: todayInTimeZone(profile.timeZone),
+    onboarded,
+    trainerLinked: Boolean(trainerLinks?.length),
     mode: "supabase",
     userEmail: user.email,
   };
@@ -379,4 +428,32 @@ export async function saveCloudTrainerRuleSettings(
 
 export function createInitialExerciseLogs(plan: WorkoutSession["plan"]): ExerciseLog[] {
   return plan.exercises.map((exercise) => createExerciseLog(exercise.id, exercise.sets, exercise.reps));
+}
+
+function isMissingFunction(error: { code?: string }): boolean {
+  return error.code === "PGRST202" || error.code === "42883";
+}
+const NOT_DEPLOYED = "This feature is not switched on for this FitTrack database yet. Ask your trainer to apply the latest database update.";
+
+export async function createTrainerInvite(client: SupabaseClient): Promise<{ code: string; expiresAt: string }> {
+  const { data, error } = await client.rpc("create_trainer_invite");
+  if (error) throw new Error(isMissingFunction(error) ? NOT_DEPLOYED : error.message);
+  const row = (Array.isArray(data) ? data[0] : data) as { code?: unknown; expires_at?: unknown } | null;
+  if (!row || typeof row.code !== "string") throw new Error("The invite code could not be created. Please try again.");
+  return { code: row.code, expiresAt: String(row.expires_at ?? "") };
+}
+
+export async function acceptTrainerInvite(client: SupabaseClient, code: string): Promise<void> {
+  const { error } = await client.rpc("accept_trainer_invite", { p_code: code });
+  if (error) throw new Error(isMissingFunction(error) ? NOT_DEPLOYED : error.message);
+}
+
+export async function removeMyTrainers(client: SupabaseClient): Promise<void> {
+  const { error } = await client.rpc("remove_my_trainers");
+  if (error) throw new Error(isMissingFunction(error) ? NOT_DEPLOYED : error.message);
+}
+
+export async function deleteMyWorkoutData(client: SupabaseClient): Promise<void> {
+  const { error } = await client.rpc("delete_my_workout_data");
+  if (error) throw new Error(isMissingFunction(error) ? NOT_DEPLOYED : error.message);
 }

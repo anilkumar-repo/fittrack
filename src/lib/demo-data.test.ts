@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { createDemoState, isBuiltInDemoExample } from "./demo-data.ts";
+import { createDemoState, defaultDisplayName, isBuiltInDemoExample, localTimeZone, todayInTimeZone } from "./demo-data.ts";
 import { generateWorkout } from "./planner.ts";
 import { createExerciseLog } from "./workout-tracking.ts";
 import type { WorkoutSession } from "./types";
@@ -28,4 +28,11 @@ test("recognizes only the old built-in demo fixtures, not user-entered sessions"
   };
   assert.equal(isBuiltInDemoExample(session), true);
   assert.equal(isBuiltInDemoExample({ ...session, review: { ...session.review!, note: "My workout" } }), false);
+});
+
+test("a new account gets a name from its email and a usable local time zone, never the demo persona", () => {
+  assert.equal(defaultDisplayName("priya.sharma92@example.com"), "Priya");
+  assert.equal(defaultDisplayName("a_kumar@example.com"), "Kumar");
+  assert.equal(defaultDisplayName(undefined), "Friend");
+  assert.match(todayInTimeZone(localTimeZone()), /^\d{4}-\d{2}-\d{2}$/);
 });

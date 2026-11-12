@@ -9,6 +9,21 @@ export function todayInTimeZone(timeZone: string): string {
   return `${part("year")}-${part("month")}-${part("day")}`;
 }
 
+/** The device's own time zone, so "today" matches the person's calendar. */
+export function localTimeZone(): string {
+  try {
+    const zone = new Intl.DateTimeFormat().resolvedOptions().timeZone;
+    if (zone) { todayInTimeZone(zone); return zone; }
+  } catch { /* Fall through to the default below. */ }
+  return "Asia/Kolkata";
+}
+
+/** A friendly starting name from the sign-in email, e.g. "priya.sharma@…" becomes "Priya". */
+export function defaultDisplayName(email: string | undefined): string {
+  const first = (email ?? "").split("@")[0].split(/[._+\-\d]+/).find((part) => part.length > 1);
+  return first ? first[0].toUpperCase() + first.slice(1).toLowerCase() : "Friend";
+}
+
 export function isBuiltInDemoExample(session: WorkoutSession): boolean {
   return session.id === `demo-${session.date}` && session.status === "completed" &&
     session.completedAt === `${session.date}T10:00:00.000Z` &&
@@ -21,7 +36,7 @@ export function isBuiltInDemoExample(session: WorkoutSession): boolean {
 }
 
 export function createDemoState(): FitTrackState {
-  const timeZone = "Asia/Kolkata";
+  const timeZone = localTimeZone();
   const today = todayInTimeZone(timeZone);
   const start = new Date(`${today}T12:00:00Z`);
   start.setUTCDate(start.getUTCDate() - 20);
@@ -39,7 +54,7 @@ export function createDemoState(): FitTrackState {
     equipmentAvailability: "unknown",
     availableEquipment: [],
   };
-  return { profile, sessions: [], bodyWeightEntries: [], bodyWeightAvailable: true, selectedDate: today, mode: "demo" };
+  return { profile, sessions: [], bodyWeightEntries: [], bodyWeightAvailable: true, selectedDate: today, onboarded: false, mode: "demo" };
 }
 
 const STORAGE_KEY = "fittrack-demo-v1";
@@ -55,7 +70,9 @@ export function readDemoState(): FitTrackState | null {
     const bodyWeightEntries = Array.isArray(value.bodyWeightEntries)
       ? value.bodyWeightEntries.filter((entry) => entry && typeof entry.id === "string" && /^\d{4}-\d{2}-\d{2}$/.test(entry.measuredOn) && Number.isFinite(entry.weightKg) && entry.weightKg >= 20 && entry.weightKg <= 500)
       : [];
-    return { ...value, sessions, bodyWeightEntries, bodyWeightAvailable: true };
+    // People who logged workouts before the welcome steps existed are not asked to set up again.
+    const onboarded = value.onboarded === true || sessions.some((session) => !session.sampleData && session.status !== "planned");
+    return { ...value, sessions, bodyWeightEntries, bodyWeightAvailable: true, onboarded };
   } catch {
     return null;
   }

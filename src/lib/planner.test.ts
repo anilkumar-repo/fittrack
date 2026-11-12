@@ -171,7 +171,25 @@ test("does not progress if form was not confirmed or if the previous session rep
 
   const painful = { ...prior, checkIn: { ...readyCheckIn, pain: true } };
   const cautious = generateWorkout({ date: "2026-10-27", profile, sessions: [painful] });
-  assert.equal(cautious?.sessionType, "recovery");
+  assert.equal(cautious?.sessionType, "training");
+  assert.ok(cautious?.exercises.every((exercise) => exercise.progressionAction !== "consider_small_load_step"));
+});
+
+test("a pain or discomfort report lightens only the next session, not the whole week", () => {
+  const discomfortReview = { effort: 5, mood: "same" as const, energyAfter: 3, discomfort: true, discomfortNote: "", note: "" };
+  const reported = session("2026-10-20", { checkIn: readyCheckIn, review: discomfortReview });
+  const standard = generateWorkout({ date: "2026-10-22", profile, sessions: [session("2026-10-20", { checkIn: readyCheckIn })], checkIn: readyCheckIn });
+  const next = generateWorkout({ date: "2026-10-22", profile, sessions: [reported], checkIn: readyCheckIn });
+  assert.equal(next?.sessionType, "training");
+  assert.ok(next?.generationReasons.some((reason) => reason.includes("last session reported pain")));
+  assert.ok((next?.exercises.reduce((sum, exercise) => sum + exercise.sets, 0) ?? 0) < (standard?.exercises.reduce((sum, exercise) => sum + exercise.sets, 0) ?? 0));
+
+  const after = generateWorkout({ date: "2026-10-24", profile, sessions: [reported, session("2026-10-22", { checkIn: readyCheckIn })], checkIn: readyCheckIn });
+  assert.equal(after?.sessionType, "training");
+  assert.ok(!after?.generationReasons.some((reason) => reason.includes("last session reported pain")));
+
+  const painToday = generateWorkout({ date: "2026-10-22", profile, sessions: [reported], checkIn: { ...readyCheckIn, pain: true } });
+  assert.equal(painToday?.sessionType, "recovery");
 });
 
 test("turns a current pain report into recovery, never a harder prescription", () => {

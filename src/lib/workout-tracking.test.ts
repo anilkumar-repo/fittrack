@@ -204,3 +204,30 @@ test("retrying a submission is idempotent for the same client and date", async (
   assert.equal(first.id, second.id);
   assert.equal((await port.readSessions(profile.id)).length, 1);
 });
+
+test("uses the single-transaction save when the store offers it, and falls back when it does not", async () => {
+  const stepCalls: string[] = [];
+  const steps = {
+    async upsertSession() { stepCalls.push("session"); return "step-id"; },
+    async upsertCheckIn() { stepCalls.push("checkIn"); },
+    async upsertExerciseLog() { stepCalls.push("log"); return "log-id"; },
+    async upsertSets() { stepCalls.push("sets"); },
+    async upsertReview() { stepCalls.push("review"); },
+    async finalizeSession() { stepCalls.push("finalize"); },
+    async readSessions() { return []; },
+  };
+  const plan = generateWorkout({ date: "2026-10-27", profile, sessions: [] });
+  assert.ok(plan);
+  const planned: WorkoutSession = { id: "local", date: "2026-10-27", status: "planned", plan, exerciseLogs: [] };
+  const actor = { id: profile.id, role: "client" as const };
+
+  const atomic = await persistWorkoutSession({ ...steps, async saveSessionAtomically() { return "atomic-id"; } }, actor, profile.id, planned);
+  assert.equal(atomic.id, "atomic-id");
+  assert.deepEqual(stepCalls, []);
+
+  const fallback = await persistWorkoutSession({ ...steps, async saveSessionAtomically() { return null; } }, actor, profile.id, planned);
+  assert.equal(fallback.id, "step-id");
+  assert.deepEqual(stepCalls, ["session", "finalize"]);
+
+  await assert.rejects(persistWorkoutSession({ ...steps, async saveSessionAtomically() { return "x"; } }, { id: "someone-else", role: "client" }, profile.id, planned));
+});

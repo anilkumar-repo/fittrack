@@ -14,6 +14,11 @@ export interface WorkoutPersistencePort {
   upsertReview(ownerId: string, sessionId: string, review: WorkoutReview): Promise<void>;
   finalizeSession(ownerId: string, sessionId: string, session: WorkoutSession): Promise<void>;
   readSessions(ownerId: string): Promise<WorkoutSession[]>;
+  /**
+   * Saves the session and all of its related rows in one transaction and returns the session ID.
+   * Returns null when the store cannot do that, so the caller uses the step-by-step save instead.
+   */
+  saveSessionAtomically?(ownerId: string, session: WorkoutSession): Promise<string | null>;
 }
 
 const NOTE_LIMIT = 2000;
@@ -124,7 +129,10 @@ export async function persistWorkoutSession(port: WorkoutPersistencePort, actor:
   const validationErrors = validateWorkoutSession(session);
   if (validationErrors.length) throw new Error(validationErrors.join(" "));
 
-  // Keep the parent session visibly in progress until all child rows are written.
+  const atomicId = await port.saveSessionAtomically?.(ownerId, session);
+  if (atomicId) return { ...session, id: atomicId };
+
+  // Step-by-step fallback: keep the parent session visibly in progress until all child rows are written.
   const pendingStatus: SessionStatus = session.status === "completed" ? "in_progress" : session.status;
   const sessionId = await port.upsertSession(ownerId, session, pendingStatus);
   if (session.checkIn) await port.upsertCheckIn(ownerId, sessionId, session.checkIn);

@@ -18,12 +18,21 @@ FitTrack is a mobile-first workout planner for a beginner/restarting trainee. It
 ## Stack and application shape
 
 - Next.js App Router, React, TypeScript, CSS, and Supabase Auth/Postgres.
-- `app/page.tsx` renders the main FitTrack app.
-- `src/components/fit-track-app.tsx` owns the app shell, navigation, state loading, demo/cloud mode, and feature integration. `src/components/trainer-controls.tsx` is the trainer rule preview/edit surface.
+- Pages live under `app/(app)/`: `/` (overview), `/today` (also `/today?date=YYYY-MM-DD`), `/progress`, `/library`, and `/settings`. `app/(app)/layout.tsx` keeps the shared state and navigation mounted while moving between them. `app/error.tsx` and `app/not-found.tsx` are the full-page error and missing-page messages.
+- `src/components/app/fit-track-provider.tsx` owns shared state: demo/cloud mode, account loading, session saving, and profile updates, exposed through `useFitTrack()`. `src/components/app/use-workout-day.ts` gives one date's saved session and plan and saves the `planned` session. `src/components/app/app-shell.tsx` is the sidebar, top bar, messages, and mobile navigation. Each page's UI and its own form state is one file in `src/components/screens/`. `src/components/trainer-controls.tsx` is the trainer rule preview/edit surface.
 - `app/auth/callback/route.ts` exchanges the Supabase email-link code for a cookie-backed session and redirects to the same origin with a safe error state on failure.
 - `src/lib/supabase-browser.ts` creates the browser Supabase client only when the public URL and publishable key are configured.
 - `src/lib/supabase-repository.ts` maps authenticated Supabase rows into the app model and persists profiles, sessions, logs, reviews, body weight, and trainer rule state. Row-level security and database guards are authoritative even if a UI check is bypassed.
 - Without Supabase configuration, the app uses demo mode and browser-local persistence. This is useful for local UI exploration, not cross-device sync.
+- Saving: each change updates the screen and a device draft at once; set/rep/review edits reach Supabase after an 800 ms pause in typing, and are flushed when the tab is hidden. Drafts left on a device are retried automatically at the next sign-in.
+- Account loading happens once per signed-in user. Repeated `SIGNED_IN`/`TOKEN_REFRESHED` events for the same user must not reload state, because that would overwrite unsaved edits.
+- A new account starts from the sign-in email's name, the device time zone, and today as the training start date. Completed or in-progress workouts logged in demo mode on that device are carried into the account on first sign-in (dates already saved in the account are left alone).
+- First run shows the welcome steps (`src/components/app/welcome.tsx`): name, training days, session length, equipment. `FitTrackState.onboarded` records that they are done. For an account, a saved `profiles` row means onboarded; a brand-new account's profile row is written when the steps finish, not at sign-in.
+- Sign-in is at `/sign-in`, in the top bar while signed out, on the first welcome step, and in Settings. Settings also holds trainer linking by invite code, the trainer's invite-code card, data download (`src/lib/account-data.ts`), and deleting workout history. The trainer role itself is still set once by an administrator in `app_metadata`.
+- Workout logger (`src/components/app/exercise-log-card.tsx`, `rest-timer.tsx`, helpers in `src/lib/logging.ts`): each exercise shows last time's reps and load, a rest countdown starts when a set is ticked, phones show one exercise at a time, and a saved session can be reopened with "Edit entries". Weights are always stored in kilograms; kg/lb is a per-device display choice (`fittrack-weight-unit` in local storage). Planner advice text still quotes kilograms.
+- Installable app: `app/manifest.ts`, icons in `public/icons/`, and `public/sw.js` (registered in production builds only) cache the app's own pages and files. It does not cache account data: a signed-in person who opens the app with no connection sees this device's local data until the connection returns. Unsynced sessions retry automatically when the browser reports it is back online.
+- `stateRef` in the provider must be updated in the same place as every `setState` call. Page components save from their own effects, which run before the provider's effects; a stale ref there once overwrote the saved profile with the placeholder state.
+- `.github/workflows/ci.yml` runs test, typecheck, lint, and build on pushes to `main` and on pull requests.
 - The interface is styled in `app/globals.css`; preserve its mobile-first layout and test narrow widths when changing primary logging flows.
 
 ## Source map
@@ -38,7 +47,13 @@ FitTrack is a mobile-first workout planner for a beginner/restarting trainee. It
 | Logging validation, normalization, duplicate-safe persistence workflow | `src/lib/workout-tracking.ts` |
 | Progress windows, consistency, performance, records, recovery summaries | `src/lib/progress.ts` |
 | Cloud persistence, auth role checks, profile/rule/session mapping | `src/lib/supabase-repository.ts` |
-| Main UI and mode wiring | `src/components/fit-track-app.tsx` |
+| Shared state, saving, account loading | `src/components/app/fit-track-provider.tsx` |
+| One date's session and plan | `src/components/app/use-workout-day.ts` |
+| Navigation shell | `src/components/app/app-shell.tsx` |
+| Page UI (overview, today, progress, library, settings) | `src/components/screens/` |
+| Exercise guide and history detail dialogs | `src/components/app/exercise-guide-modal.tsx`, `src/components/app/history-detail-modal.tsx` |
+| Date helpers and page addresses | `src/lib/dates.ts` |
+| Device drafts of unsynced sessions | `src/lib/pending-sessions.ts` |
 | Trainer preview, confirmation, edit, and audit UI | `src/components/trainer-controls.tsx` |
 | Email authentication callback | `app/auth/callback/route.ts` |
 | Database schema, RLS, triggers, and validators | `supabase/migrations/` |
@@ -64,7 +79,7 @@ FitTrack is a mobile-first workout planner for a beginner/restarting trainee. It
 - Missing history never creates a guessed working weight.
 - Duplicate exercises and redundant movement patterns are avoided. Adjacent sessions use history for variety when safe alternatives exist.
 - Missed sessions are not crammed together. A long break leads to a lighter return session; rest and recovery plans are valid outcomes.
-- Recovery rules reduce volume or recommend recovery based on fatigue. Pain is a hard safety signal in code, outside trainer-editable recovery settings.
+- Recovery rules reduce volume or recommend recovery based on fatigue. Pain is a hard safety signal in code, outside trainer-editable recovery settings. Pain ticked in today's check-in always switches the day to recovery. A pain or discomfort report from the previous logged session lightens only the next session (fewer sets, no progression); it does not force a week of recovery (rules `2026.11.12.1`).
 - Equipment alternatives preserve the source movement in the session snapshot and explain the substitution.
 - Deadlift approval is client-specific, explicit, trainer-authorized, and not time-based. The database rejects a saved plan containing a deadlift variation while approval is off.
 
@@ -72,7 +87,15 @@ Trainer edits are deliberately bounded. The trainer UI previews the next schedul
 
 ## Exercise library and media
 
-Exercise reference text is maintained in `src/lib/templates.ts`; query and alternative behavior is in `src/lib/exercise-library.ts`. The library uses beginner-friendly text, equipment requirements, muscles, difficulty, rep/rest guidance, and cautions. There is no bundled third-party image or video. Do not add exercise media until source, permission, license, and required attribution have been verified and recorded. A text guide is the fallback.
+Exercise reference text is maintained in `src/lib/templates.ts`; query and alternative behavior is in `src/lib/exercise-library.ts`. The library uses beginner-friendly text, equipment requirements, muscles, difficulty, rep/rest guidance, and cautions.
+
+Media lives in `src/lib/exercise-media.ts`:
+
+- **Illustrations** are original stick-figure start/finish position guides, drawn in code from pose angles for all 30 exercises and rendered by `src/components/app/exercise-illustration.tsx`. They were made for FitTrack, so there is no licence or attribution to track. They are schematic; the written steps remain the instruction. A test checks every exercise has a drawing that stays inside its frame.
+- **Videos**: "Watch a demonstration" opens a YouTube search for the exercise name in a new tab, labelled as unreviewed. To pin a specific video, the trainer adds its address to `TRAINER_DEMO_VIDEOS` after watching it. Never add a video address that has not been opened and checked.
+- There is still no bundled third-party image or video. Do not add any until source, permission, license, and required attribution have been verified and recorded.
+
+Progress charts use `src/components/app/line-chart.tsx` (one measure per chart, hover or tap to read a session, table of exact values beside it).
 
 ## Progress definitions
 
@@ -94,6 +117,8 @@ Apply migrations in filename order after checking the project's migration histor
 3. `20261027162804_20261027141721_phase_3_workout_generation.sql`: equipment/form-quality and workout generation data support.
 4. `20261027162809_20261027153903_phase_5_progress_tracking.sql`: optional owner-only body-weight entries.
 5. `20261027162818_20261027162000_phase_6_trainer_controls.sql`: bounded trainer settings/revisions, append-only audit, authorization guards, and the deadlift plan guard.
+6. `20261112074033_phase_7_atomic_session_save.sql`: `public.save_workout_session(jsonb)`, a security-invoker function that writes a session and its check-in, exercise logs, set logs, and review in one transaction. Applied to the live project on 2026-11-12 and checked there in a rolled-back transaction as an authenticated user (insert, update, child rows, deadlift guard). The app calls it first and falls back to the step-by-step save when the function is missing.
+7. `20261112074535_phase_8_invites_and_data_controls.sql`: `trainer_invites` plus `create_trainer_invite()`, `accept_trainer_invite(code)`, `remove_my_trainers()`, and `delete_my_workout_data()`. Dry-run in a rolled-back transaction and then applied to the live project on 2026-11-12. These four functions are `security definer` on purpose (each acts only for `auth.uid()`), so the Supabase advisor lists them as callable by signed-in users; that is expected.
 
 Main tables are `profiles`, `trainer_rules`, `trainer_clients`, `workout_sessions`, `workout_check_ins`, `workout_exercise_logs`, `workout_set_logs`, `workout_reviews`, `body_weight_entries`, and `trainer_rule_audit`. Session snapshots retain the original plan while normalized child rows store actual outcomes.
 
