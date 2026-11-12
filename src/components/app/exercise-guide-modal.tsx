@@ -5,7 +5,11 @@ import { deadliftAllowedForPlan, preserveOriginalPlan } from "@/lib/planner";
 import { getExerciseDefinition } from "@/lib/templates";
 import { DEFAULT_TRAINER_RULE_SETTINGS, profileWithTrainerEquipment } from "@/lib/trainer-rules";
 import type { ExerciseDefinition, WorkoutPlan, WorkoutSession } from "@/lib/types";
+import { useEffect } from "react";
+import { Clock, Dumbbell, Play, Repeat, ShieldCheck, X } from "lucide-react";
 import { getDemoVideoLink, getExerciseIllustration } from "@/lib/exercise-media";
+import { regionsForExercises } from "@/lib/figure";
+import { BodyFigure } from "./body-figure";
 import { ExerciseIllustration } from "./exercise-illustration";
 import { sessionForDate, useFitTrack } from "./fit-track-provider";
 
@@ -35,7 +39,7 @@ interface ExerciseGuideModalProps {
 }
 
 export function ExerciseGuideModal({ exercise, workout, onOpen, onClose }: ExerciseGuideModalProps) {
-  const { state, getState, upsertSession, setNotice } = useFitTrack();
+  const { state, getState, upsertSession, setNotice, figure } = useFitTrack();
   const todaySession = workout?.session;
   const plan = workout?.plan ?? null;
   const restricted = isDeadliftVariation(exercise) && !deadliftAllowedForPlan(state.profile);
@@ -87,19 +91,68 @@ export function ExerciseGuideModal({ exercise, workout, onOpen, onClose }: Exerc
     setNotice(`${alternative.name} is saved in this workout. The original template remains in its history.`);
   }
 
+  const ready = exerciseEquipmentIsAvailable(exercise, state.profile);
+  const regions = regionsForExercises([exercise]);
+
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => { if (event.key === "Escape") onClose(); };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose]);
+
   return (
-    <div className="modal-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}><section className="exercise-modal" role="dialog" aria-modal="true" aria-labelledby="exercise-modal-title"><button className="modal-close" aria-label="Close exercise details" onClick={() => onClose()}>×</button><span className="modal-kicker">EXERCISE LIBRARY · GUIDE</span><span className="modal-art">{exercise.category === "core" ? "◉" : exercise.category === "conditioning" ? "↗" : "✦"}</span><h2 id="exercise-modal-title">{exercise.name}</h2><p className="modal-subtitle">{exercise.equipment} · {exercise.sets} sets × {exercise.reps} · {exercise.restSeconds ? `${exercise.restSeconds} sec rest` : "No timed rest"}</p>
-      {restricted ? <div className="locked-note">This movement is currently restricted by the trainer rule. It is hidden from library search and its instructions are unavailable unless an authorized trainer explicitly approves it.</div> : <>
-        <div className="exercise-detail-grid"><div><small>Target muscles</small><strong>{exercise.targetMuscles.join(" · ")}</strong></div><div><small>Difficulty</small><strong>{exercise.difficulty[0].toUpperCase() + exercise.difficulty.slice(1)}</strong></div><div><small>Movement pattern</small><strong>{exercise.movementPattern?.replaceAll("_", " ") ?? "General movement"}</strong></div><div><small>Equipment</small><strong>{exercise.equipment}</strong><span className={exerciseEquipmentIsAvailable(exercise, state.profile) ? "equipment-ready ready" : "equipment-ready needs-check"}>{exerciseEquipmentIsAvailable(exercise, state.profile) ? "Available in your setup" : "Confirm equipment before using"}</span></div></div>
-        {exercise.selectionReason && <p className="exercise-reason">{exercise.selectionReason}</p>}
-        <ExerciseIllustration exerciseId={exercise.id} name={exercise.name} />
-          {hasIllustration && <p className="illustration-note">Simple position guide drawn for FitTrack. Follow the written steps for detail.</p>}
-          <div className="demo-video"><a className="button button-subtle" href={demoVideo.url} target="_blank" rel="noopener noreferrer">Watch a demonstration <span>↗</span></a><small>{demoVideo.curated ? "Opens the video your trainer chose, in a new tab." : "Opens a YouTube search for this exercise in a new tab. FitTrack has not reviewed those videos; your trainer’s guidance and the steps below come first."}</small></div>
-          <h3>Step-by-step instructions</h3><ol className="instruction-list">{instructions.map((instruction, index) => <li key={`${index}-${instruction}`}><span>{index + 1}</span><p>{instruction}</p></li>)}</ol>
-        {exercise.cautionNotes.length > 0 && <div className="exercise-cautions"><strong>Comfort and safety</strong><ul>{exercise.cautionNotes.map((caution) => <li key={caution}>{caution}</li>)}</ul></div>}
-        {alternatives.length > 0 && <div className="exercise-alternatives"><h3>Suitable alternatives</h3><p>Only equipment-free options or movements that match your confirmed equipment and the current restrictions are shown.</p>{alternatives.map((alternative) => <article key={alternative.id} className="alternative-choice"><div><strong>{alternative.name}</strong><small>{alternative.equipment} · {alternative.sets} sets × {alternative.reps}</small><p>{alternative.selectionReason}</p></div>{inPlannedSession ? <button type="button" className="button button-subtle" onClick={() => applyAlternative(alternative.id)}>Use in this workout</button> : <button type="button" className="text-button" onClick={() => onOpen(alternative)}>View guide</button>}</article>)}</div>}
-        {inCurrentWorkout && todaySession?.status === "in_progress" && <p className="field-hint">This workout has started. Keep its saved exercise history; record any actual substitution in the workout logger.</p>}
-      </>}
-      <button className="button button-primary full-width" onClick={() => onClose()}>Close guide</button></section></div>
+    <div className="modal-backdrop guide-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
+      <section className="exercise-modal guide" role="dialog" aria-modal="true" aria-labelledby="exercise-modal-title">
+        <div className="guide-head">
+          <div><p className="guide-kicker">{exercise.category === "core" ? "Core" : exercise.category === "conditioning" ? "Conditioning" : "Strength"} · {exercise.difficulty}</p><h2 id="exercise-modal-title">{exercise.name}</h2></div>
+          <button className="guide-close" aria-label="Close guide" onClick={() => onClose()}><X aria-hidden="true" /></button>
+        </div>
+        <div className="chip-row">
+          <span className="chip"><Repeat aria-hidden="true" /> {exercise.sets} × {exercise.reps}</span>
+          <span className="chip"><Clock aria-hidden="true" /> {exercise.restSeconds ? `${exercise.restSeconds} sec rest` : "No timed rest"}</span>
+          <span className={`chip ${ready ? "chip-ok" : "chip-warn"}`}><Dumbbell aria-hidden="true" /> {exercise.equipment}</span>
+        </div>
+        {!ready && !restricted && <p className="guide-note warn">This needs equipment that is not ticked in your Settings. Confirm you have it before using this movement.</p>}
+
+        {restricted ? <div className="locked-note">This movement is restricted until your trainer approves it, so its instructions are not shown.</div> : <>
+          <div className="guide-visual">
+            {hasIllustration && <div className="guide-pose"><ExerciseIllustration exerciseId={exercise.id} name={exercise.name} /></div>}
+            <div className="guide-muscles">
+              <BodyFigure figure={figure} highlight={regions} />
+              <div><small>Works</small><strong>{exercise.targetMuscles.join(" · ")}</strong></div>
+            </div>
+          </div>
+          {hasIllustration && <p className="illustration-note">Simple position guide. Follow the written steps for detail.</p>}
+
+          <div className="guide-video">
+            <a className="button button-subtle" href={demoVideo.url} target="_blank" rel="noopener noreferrer"><Play aria-hidden="true" /> Watch a demonstration</a>
+            <small>{demoVideo.curated ? "Opens the video your trainer chose, in a new tab." : "Opens a YouTube search in a new tab. These videos are not reviewed by your trainer; the steps below come first."}</small>
+          </div>
+
+          {exercise.selectionReason && <p className="guide-note">{exercise.selectionReason}</p>}
+
+          <h3>How to do it</h3>
+          <ol className="guide-steps">{instructions.map((instruction, index) => <li key={`${index}-${instruction}`}><span>{index + 1}</span><p>{instruction}</p></li>)}</ol>
+
+          {exercise.cautionNotes.length > 0 && <div className="guide-caution"><strong><ShieldCheck aria-hidden="true" /> Comfort and safety</strong><ul>{exercise.cautionNotes.map((caution) => <li key={caution}>{caution}</li>)}</ul></div>}
+
+          {alternatives.length > 0 && <>
+            <h3>Other options</h3>
+            <p className="guide-sub">Movements that fit your equipment and work the same area.</p>
+            <div className="guide-alternatives">{alternatives.map((alternative) => (
+              <article key={alternative.id} className="guide-alternative">
+                <span className="exercise-thumb"><ExerciseIllustration exerciseId={alternative.id} name={alternative.name} thumb /></span>
+                <div><strong>{alternative.name}</strong><small>{alternative.equipment} · {alternative.sets} × {alternative.reps}</small></div>
+                {inPlannedSession
+                  ? <button type="button" className="button button-subtle" onClick={() => applyAlternative(alternative.id)}>Use instead</button>
+                  : <button type="button" className="button button-subtle" onClick={() => onOpen(alternative)}>View</button>}
+              </article>
+            ))}</div>
+          </>}
+          {inCurrentWorkout && todaySession?.status === "in_progress" && <p className="guide-sub">This workout has started, so the plan stays as it is. If you swap a movement, note it under “Notes, form, and why this exercise”.</p>}
+        </>}
+        <button className="button button-primary guide-done" onClick={() => onClose()}>Close</button>
+      </section>
+    </div>
   );
 }

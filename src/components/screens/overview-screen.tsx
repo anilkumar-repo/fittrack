@@ -1,75 +1,127 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import { ArrowRight, CalendarDays, Check, Clock, ListChecks, Moon, Repeat, Trophy } from "lucide-react";
+import { BodyFigure } from "@/components/app/body-figure";
 import { sessionForDate, useFitTrack } from "@/components/app/fit-track-provider";
 import { DEFAULT_CHECK_IN, useWorkoutDay } from "@/components/app/use-workout-day";
-import { dateLabel, describeNextDay, nextTrainingDate, shiftDate, todayHref, weekdayOf, WEEKDAY_LABELS } from "@/lib/dates";
+import { dateLabel, greetingFor, nextTrainingDate, shortDate, todayHref, weekDates, weekdayOf } from "@/lib/dates";
+import { REGION_LABELS, regionsForExercises } from "@/lib/figure";
+
+const DAY_INITIALS = ["S", "M", "T", "W", "T", "F", "S"];
+
+/** A ring that fills as the week's sessions are completed. */
+function GoalRing({ done, goal }: { done: number; goal: number }) {
+  const radius = 42;
+  const length = 2 * Math.PI * radius;
+  const share = goal > 0 ? Math.min(1, done / goal) : 0;
+  return (
+    <svg viewBox="0 0 100 100" className="goal-ring" role="img" aria-label={`${done} of ${goal} sessions completed this week`}>
+      <circle cx="50" cy="50" r={radius} className="goal-ring-track" />
+      <circle cx="50" cy="50" r={radius} className="goal-ring-value" strokeDasharray={`${share * length} ${length}`} transform="rotate(-90 50 50)" />
+      <text x="50" y="49" className="goal-ring-number">{done}/{goal}</text>
+      <text x="50" y="64" className="goal-ring-caption">this week</text>
+    </svg>
+  );
+}
 
 export function OverviewScreen() {
   const router = useRouter();
-  const { state, currentDate, recordedSessions } = useFitTrack();
+  const { state, currentDate, recordedSessions, figure } = useFitTrack();
   const { session: todaySession, generatedPlan } = useWorkoutDay(currentDate, DEFAULT_CHECK_IN);
-  const dueToday = Boolean(generatedPlan || todaySession);
-  const completedSessions = recordedSessions.filter((session) => session.status === "completed");
-  const completedThisWeek = completedSessions.filter((session) => {
-    const daysAgo = (Date.parse(`${currentDate}T12:00:00Z`) - Date.parse(`${session.date}T12:00:00Z`)) / 86_400_000;
-    return daysAgo >= 0 && daysAgo < 7;
-  }).length;
-
-  function openNextWorkout() {
-    const next = nextTrainingDate(state.profile, currentDate);
-    if (next) router.push(todayHref(next, currentDate));
-  }
+  const plan = todaySession?.plan ?? generatedPlan;
+  const status = todaySession?.status;
+  const goal = state.profile.sessionsPerWeek;
+  const week = weekDates(currentDate);
+  const completed = recordedSessions.filter((session) => session.status === "completed");
+  const doneThisWeek = completed.filter((session) => week.includes(session.date)).length;
+  const nextDate = nextTrainingDate(state.profile, currentDate);
+  const regions = plan ? regionsForExercises(plan.exercises).slice(0, 4) : [];
+  const totalSets = plan?.exercises.reduce((sum, exercise) => sum + exercise.sets, 0) ?? 0;
+  const recent = completed.slice(-3).reverse();
+  const openDay = (date: string) => router.push(todayHref(date, currentDate));
 
   return (
-    <section className="overview-page">
-      <div className="welcome-row"><div><p className="welcome-kicker">You’re building a rhythm</p><h2>Good to see you, {state.profile.displayName} <span>✦</span></h2><p className="muted">A little consistency goes a long way. Let’s take today one step at a time.</p></div><div className="streak-pill"><span className="streak-icon">✧</span><div><strong>{completedThisWeek} / {state.profile.sessionsPerWeek}</strong><small>sessions this week</small></div></div></div>
+    <section className="home">
+      <header className="home-greet">
+        <p>{dateLabel(currentDate)}</p>
+        <h2>{greetingFor(state.profile.timeZone)}, {state.profile.displayName}</h2>
+      </header>
 
-      <div className="dashboard-grid">
-        <div className="primary-column">
-          <article className="today-card">
-            <div className="today-card-top"><div><span className="pill pill-light">{dueToday ? "YOUR NEXT SESSION" : "REST & RECOVER"}</span><p className="card-date">{dateLabel(currentDate)}</p></div><span className="session-number">{todaySession?.status === "completed" ? "✓" : "01"}</span></div>
-            <div className="today-card-content">
-              <div className="today-card-copy"><h3>{dueToday ? (todaySession?.plan.title ?? generatedPlan?.title) : "A rest day is part of the plan"}</h3><p>{dueToday ? (todaySession?.plan.description ?? generatedPlan?.description) : `Your next planned session is ${describeNextDay(state.profile, currentDate)}.`}</p><div className="today-meta"><span><b>◷</b> {todaySession?.plan.durationMinutes ?? generatedPlan?.durationMinutes ?? state.profile.preferredSessionMinutes} min</span><span><b>▦</b> {todaySession?.plan.exercises.length ?? generatedPlan?.exercises.length ?? 0} movements</span><span><b>⌁</b> Beginner friendly</span></div>
-                {dueToday ? <button className="button button-white" onClick={() => router.push("/today")}>{todaySession?.status === "completed" ? "View session" : todaySession?.status === "in_progress" ? "Continue workout" : "Start today’s workout"}<span>→</span></button> : <button className="button button-white" onClick={openNextWorkout}>View next session <span>→</span></button>}
+      <div className="home-grid">
+        <article className={`hero-card panel ${status === "completed" ? "is-done" : ""}`}>
+          {plan ? <>
+            <div className="hero-copy">
+              <span className="hero-tag">{status === "completed" ? <><Check aria-hidden="true" /> Done today</> : status === "in_progress" ? "In progress" : plan.sessionType === "recovery" ? "Recovery today" : "Today’s workout"}</span>
+              <h3>{plan.title}</h3>
+              <div className="chip-row">
+                <span className="chip"><Clock aria-hidden="true" /> {plan.durationMinutes} min</span>
+                <span className="chip"><ListChecks aria-hidden="true" /> {plan.exercises.length} moves</span>
+                <span className="chip"><Repeat aria-hidden="true" /> {totalSets} sets</span>
               </div>
-              <div className="workout-art" aria-hidden="true"><div className="art-orbit orbit-one" /><div className="art-orbit orbit-two" /><div className="art-disc"><span>✦</span></div><div className="art-spark spark-one">✦</div><div className="art-spark spark-two">·</div><div className="art-spark spark-three">✧</div></div>
+              {regions.length > 0 && <p className="hero-targets"><strong>Targets</strong> {regions.map((region) => REGION_LABELS[region]).join(" · ")}</p>}
+              <button className="button button-primary hero-cta" onClick={() => router.push("/today")}>{status === "completed" ? "View session" : status === "in_progress" ? "Continue workout" : "Start workout"} <ArrowRight aria-hidden="true" /></button>
             </div>
-            <div className="today-card-footer"><span><span className="footer-check">✓</span> Your plan follows your weekly rhythm</span><span>Template {todaySession?.plan.templateVersion ?? generatedPlan?.templateVersion ?? "1.0.0"}</span></div>
-          </article>
+            <div className="hero-figure"><BodyFigure figure={figure} highlight={regions} /></div>
+          </> : <>
+            <div className="hero-copy">
+              <span className="hero-tag"><Moon aria-hidden="true" /> Rest day</span>
+              <h3>Rest is part of the plan</h3>
+              <p className="hero-rest">{nextDate ? `Your next session is ${dateLabel(nextDate)}.` : "No training days are set yet. Choose them in Settings."}</p>
+              {nextDate
+                ? <button className="button button-primary hero-cta" onClick={() => openDay(nextDate)}>See next session <ArrowRight aria-hidden="true" /></button>
+                : <button className="button button-primary hero-cta" onClick={() => router.push("/settings")}>Open Settings <ArrowRight aria-hidden="true" /></button>}
+            </div>
+            <div className="hero-figure"><BodyFigure figure={figure} /></div>
+          </>}
+        </article>
 
-          <div className="section-heading"><div><h3>This week</h3><p>A rhythm that fits your week</p></div><button className="text-button" onClick={() => router.push("/progress")}>See progress <span>→</span></button></div>
-          <div className="week-card">
-            {Array.from({ length: 7 }, (_, index) => {
-              const weekday = (weekdayOf(currentDate) + index) % 7;
-              const itemDate = shiftDate(currentDate, index);
-              const session = sessionForDate(state, itemDate);
-              const scheduled = state.profile.trainingDays.includes(weekday);
-              const isToday = itemDate === currentDate;
-              return <button key={itemDate} className={`week-day ${isToday ? "today" : ""} ${scheduled ? "scheduled" : ""}`} onClick={() => router.push(todayHref(itemDate, currentDate))} aria-label={`${dateLabel(itemDate)}, ${session?.status ?? (scheduled ? "planned workout" : "rest day")}`}>
-                <small>{WEEKDAY_LABELS[weekday]}</small><strong>{Number(itemDate.slice(-2))}</strong><span className={`week-marker ${session?.status === "completed" ? "done" : scheduled ? "planned" : "rest"}`}>{session?.status === "completed" ? "✓" : scheduled ? "·" : ""}</span>
-              </button>;
+        <article className="goal-panel panel">
+          <GoalRing done={doneThisWeek} goal={goal} />
+          <div className="goal-copy">
+            <h3>{doneThisWeek >= goal ? "Weekly goal reached" : `${goal - doneThisWeek} to go this week`}</h3>
+            <p>{doneThisWeek >= goal ? "Nicely done. Rest well before next week." : "Each session you finish fills the ring."}</p>
+            <dl className="mini-stats">
+              <div><dt><Trophy aria-hidden="true" /> Workouts</dt><dd>{completed.length}</dd></div>
+              <div><dt><CalendarDays aria-hidden="true" /> Next</dt><dd>{plan && status !== "completed" ? "Today" : nextDate ? shortDate(nextDate) : "—"}</dd></div>
+            </dl>
+          </div>
+        </article>
+
+        <article className="week-panel panel">
+          <div className="panel-title"><h3>This week</h3><button className="text-button" onClick={() => router.push("/progress")}>Progress <ArrowRight aria-hidden="true" /></button></div>
+          <div className="week-strip">
+            {week.map((date) => {
+              const session = sessionForDate(state, date);
+              const scheduled = state.profile.trainingDays.includes(weekdayOf(date));
+              const done = session?.status === "completed";
+              const mark = done ? "done" : scheduled ? (date < currentDate ? "missed" : "planned") : "rest";
+              const description = done ? "completed" : scheduled ? (date < currentDate ? "no session recorded" : "training day") : "rest day";
+              return (
+                <button key={date} className={`day-pill ${mark} ${date === currentDate ? "today" : ""}`} onClick={() => openDay(date)} aria-label={`${dateLabel(date)}, ${description}`} aria-current={date === currentDate ? "date" : undefined}>
+                  <small>{DAY_INITIALS[weekdayOf(date)]}</small>
+                  <strong>{Number(date.slice(-2))}</strong>
+                  <span className="day-mark">{done && <Check aria-hidden="true" />}</span>
+                </button>
+              );
             })}
           </div>
+          <p className="week-key"><span className="key done" /> Done <span className="key planned" /> Training day <span className="key missed" /> Not logged <span className="key rest" /> Rest</p>
+        </article>
 
-          <div className="section-heading section-heading-spaced"><div><h3>Pick up where you left off</h3><p>Your recent training at a glance</p></div></div>
-          <div className="recent-list">
-            {completedSessions.slice(-2).reverse().map((session) => <button className="recent-row" key={session.id} onClick={() => router.push(todayHref(session.date, currentDate))}>
-              <span className="recent-icon">✦</span><span className="recent-label"><strong>{session.plan.title}</strong><small>{dateLabel(session.date)} · {session.plan.exercises.length} movements</small></span><span className="status-complete">Completed</span><span className="row-arrow">→</span>
-            </button>)}
-            {completedSessions.length === 0 && <div className="empty-inline">Your first completed workout will show up here.</div>}
-          </div>
-        </div>
-
-        <aside className="secondary-column">
-          <article className="readiness-card"><div className="side-card-title"><span className="side-card-icon purple-icon">☼</span><div><h3>Today’s check-in</h3><p>A quick pause before you begin</p></div></div><div className="readiness-meter"><div className="meter-label"><span>Ready for training</span><strong>{todaySession?.checkIn ? `${Math.round(todaySession.checkIn.energy / 5 * 100)}%` : "—"}</strong></div><div className="meter-track"><span style={{ width: `${todaySession?.checkIn ? todaySession.checkIn.energy / 5 * 100 : 0}%` }} /></div><p>{todaySession?.checkIn ? `Energy ${todaySession.checkIn.energy}/5 · Soreness ${todaySession.checkIn.soreness}/5` : "Your plan will adjust to how you feel."}</p></div><button className="button button-subtle full-width" onClick={() => router.push("/today")}>{todaySession?.checkIn ? "Review check-in" : "Do your check-in"}<span>→</span></button></article>
-
-          <article className="goal-card"><div className="goal-head"><span className="side-card-icon green-icon">✧</span><span className="goal-caption">YOUR WEEKLY GOAL</span></div><strong className="goal-number">{Math.min(completedThisWeek, state.profile.sessionsPerWeek)}<span> / {state.profile.sessionsPerWeek}</span></strong><p>sessions completed</p><div className="goal-progress"><span style={{ width: `${Math.min(100, completedThisWeek / Math.max(1, state.profile.sessionsPerWeek) * 100)}%` }} /></div><div className="goal-footer"><span>{Math.max(0, state.profile.sessionsPerWeek - completedThisWeek)} to go this week</span><span>✦</span></div></article>
-
-          <article className="tip-card"><span className="tip-spark">✦</span><span className="pill pill-tip">A GENTLE REMINDER</span><p>Leave a little energy in the tank. You can always do a bit more next time.</p><small>FITTRACK PRINCIPLE 01</small></article>
-
-          <div className="rule-note"><span>⌁</span><p><strong>Made for steady progress</strong><br />No AI API or daily prompt needed. Your plan uses transparent rules and saved templates.</p></div>
-        </aside>
+        <article className="recent-panel panel">
+          <div className="panel-title"><h3>Recent workouts</h3></div>
+          {recent.length ? <div className="recent-rows">{recent.map((session) => {
+            const setsDone = session.exerciseLogs.reduce((sum, log) => sum + log.sets.filter((set) => set.completed).length, 0);
+            return (
+              <button key={session.id} className="recent-item" onClick={() => openDay(session.date)}>
+                <span className="recent-check"><Check aria-hidden="true" /></span>
+                <span className="recent-text"><strong>{session.plan.title}</strong><small>{dateLabel(session.date, { weekday: "short", month: "short", day: "numeric" })} · {setsDone} {setsDone === 1 ? "set" : "sets"} done</small></span>
+                <ArrowRight aria-hidden="true" />
+              </button>
+            );
+          })}</div> : <p className="recent-empty">Your first finished workout will show up here.</p>}
+        </article>
       </div>
     </section>
   );

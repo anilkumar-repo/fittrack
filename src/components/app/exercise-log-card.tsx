@@ -1,6 +1,7 @@
 "use client";
 
 import { shortDate } from "@/lib/dates";
+import { ExerciseIllustration } from "./exercise-illustration";
 import { describeLastPerformance, displayToKg, kgToDisplay, lastLoadKg, type LastPerformance, type WeightUnit } from "@/lib/logging";
 import type { ExerciseDefinition, ExerciseLog } from "@/lib/types";
 import { statusForSets } from "@/lib/workout-tracking";
@@ -36,7 +37,7 @@ export function ExerciseLogCard({ exercise, index, log, substitutedForName, last
       <div className="exercise-log-head">
         <span className="exercise-index">{String(index + 1).padStart(2, "0")}</span>
         <div className="exercise-title">
-          <button className="plain-link" onClick={onOpenGuide}>{exercise.name}<span> ↗</span></button>
+          <button className="plain-link" onClick={onOpenGuide}>{exercise.name}</button>
           <small>{exercise.equipment} · {log.plannedSets} planned sets × {log.plannedReps} reps</small>
           {substitutedForName && <small>Substituted for {substitutedForName}</small>}
         </div>
@@ -45,7 +46,7 @@ export function ExerciseLogCard({ exercise, index, log, substitutedForName, last
       <p className="last-time">{last
         ? <><strong>Last time</strong> ({shortDate(last.date)}): {describeLastPerformance(last, unit)}</>
         : <><strong>First time</strong> logging this movement. Start light and comfortable.</>}</p>
-      {exercise.selectionReason && <p className="exercise-reason">{exercise.selectionReason}</p>}
+      <button type="button" className="exercise-visual" onClick={onOpenGuide} aria-label={`Open the guide for ${exercise.name}`}><ExerciseIllustration exerciseId={exercise.id} name={exercise.name} compact /><span>How to do it</span></button>
       {exercise.progressionAdvice && <div className="progression-note"><strong>{exercise.progressionAction === "consider_small_load_step" ? "Progression check" : exercise.progressionAction === "hold_load_add_reps" ? "Rep target" : "Load guidance"}</strong><p>{exercise.progressionAdvice} {exercise.loadGuidance}</p></div>}
 
       <div className="set-grid set-grid-phase2">
@@ -71,7 +72,8 @@ export function ExerciseLogCard({ exercise, index, log, substitutedForName, last
       <button className="add-set" disabled={skipped} onClick={onAddSet}>＋ Add set</button>
 
       <details className="exercise-more">
-        <summary>Notes, form, and substitutions</summary>
+        <summary>Notes, form, and why this exercise</summary>
+        {exercise.selectionReason && <p className="exercise-reason">{exercise.selectionReason}</p>}
         <div className="exercise-extra-fields">
           <label className="field-label">Substituted movement <input maxLength={120} value={log.substitutionName} disabled={skipped} onChange={(event) => onUpdate((current) => ({ ...current, substitutionName: event.target.value }))} placeholder="Optional movement name" /></label>
           <label className="field-label">How did your form feel? <select value={log.formQuality} disabled={skipped} onChange={(event) => onUpdate((current) => ({ ...current, formQuality: event.target.value as ExerciseLog["formQuality"] }))}><option value="not_rated">Not rated</option><option value="sound">Controlled and comfortable</option><option value="needs_practice">Needs more practice</option></select><small className="field-hint">Load progression requires controlled form and no pain.</small></label>

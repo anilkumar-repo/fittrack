@@ -3,22 +3,14 @@
 import { AccountCard, DataCard, TrainerInviteCard, TrainerLinkCard } from "@/components/app/account-cards";
 import { useFitTrack } from "@/components/app/fit-track-provider";
 import { TrainerControls } from "@/components/trainer-controls";
-import { WEEKDAY_LABELS } from "@/lib/dates";
+import { CalendarDays, Moon, Palette, ShieldCheck, Sun, SunMoon } from "lucide-react";
+import { shortDate, WEEKDAY_LABELS } from "@/lib/dates";
+import { FIGURE_OPTIONS } from "@/lib/figure";
 import { EQUIPMENT_OPTIONS, RULE_VERSION, TEMPLATE_VERSION } from "@/lib/templates";
 import type { Profile } from "@/lib/types";
 
-function adjustTrainingDays(days: number[], count: number): number[] {
-  const order = [2, 4, 6, 1, 3, 5, 0];
-  const selected = [...days];
-  for (const day of order) {
-    if (selected.length >= count) break;
-    if (!selected.includes(day)) selected.push(day);
-  }
-  return selected.slice(0, count);
-}
-
 export function SettingsScreen() {
-  const { state, updateState, isDemo, browserClient, updateProfile, refreshTrainerClients, setNotice, weightUnit, setWeightUnit } = useFitTrack();
+  const { state, recordedSessions, updateState, isDemo, browserClient, updateProfile, refreshTrainerClients, setNotice, weightUnit, setWeightUnit, theme, setTheme, figure, setFigure } = useFitTrack();
   function setEquipmentAvailability(availability: Profile["equipmentAvailability"]) {
     void updateProfile(availability === "unknown"
       ? { equipmentAvailability: "unknown", availableEquipment: [] }
@@ -42,20 +34,82 @@ export function SettingsScreen() {
     setNotice(enabled ? "Demo-only hinge setting changed. A signed-in trainer must approve this for a client." : "Deadlift variations are locked in this demo.");
   }
 
+  const profile = state.profile;
+  const workouts = recordedSessions.filter((session) => session.status === "completed").length;
+
   return (
-    <section className="trainer-page">
-      <div className="page-intro"><div><span className="eyebrow">The plan behind your plan</span><h2>Keep the rules simple and clear.</h2><p>Update the weekly rhythm and see what is currently guiding the workouts.</p></div></div>
-      <div className="trainer-grid">
-        <article className="panel settings-panel"><div className="section-heading"><div><h3>Your profile</h3><p>Basic training preferences</p></div><span className="pill pill-outline">{isDemo ? "DEMO" : "SAVED"}</span></div><label className="field-label">Your name<input type="text" value={state.profile.displayName} onChange={(event) => updateProfile({ displayName: event.target.value })} /></label><label className="field-label">Sessions per week<select value={state.profile.sessionsPerWeek} onChange={(event) => { const count = Number(event.target.value); void updateProfile({ sessionsPerWeek: count, trainingDays: adjustTrainingDays(state.profile.trainingDays, count) }); }}><option value={2}>2 days</option><option value={3}>3 days</option><option value={4}>4 days</option></select></label><div className="field-label"><span>Training days</span><div className="training-days">{WEEKDAY_LABELS.map((label, day) => <button key={label} className={state.profile.trainingDays.includes(day) ? "selected" : ""} onClick={() => {
-          const next = state.profile.trainingDays.includes(day) ? state.profile.trainingDays.filter((value) => value !== day) : [...state.profile.trainingDays, day];
-          if (next.length >= 2 && next.length <= 4) void updateProfile({ trainingDays: next, sessionsPerWeek: next.length });
-        }}>{label}</button>)}</div><small className="field-hint">Choose 2–4 days. Missed sessions are not carried forward or crammed into the next day.</small></div><label className="field-label">Preferred session length<select value={state.profile.preferredSessionMinutes} onChange={(event) => updateProfile({ preferredSessionMinutes: Number(event.target.value) })}><option value={30}>About 30 minutes</option><option value={40}>About 40 minutes</option><option value={50}>About 50 minutes</option></select></label><label className="field-label">Weight unit<select value={weightUnit} onChange={(event) => setWeightUnit(event.target.value === "lb" ? "lb" : "kg")}><option value="kg">Kilograms (kg)</option><option value="lb">Pounds (lb)</option></select><small className="field-hint">Used for loads and body weight on this device.</small></label><div className="field-label"><span>Available equipment</span><div className="availability-buttons"><button type="button" className={state.profile.equipmentAvailability === "unknown" ? "selected" : ""} aria-pressed={state.profile.equipmentAvailability === "unknown"} onClick={() => setEquipmentAvailability("unknown")}>Not confirmed</button><button type="button" className={state.profile.equipmentAvailability === "verified" ? "selected" : ""} aria-pressed={state.profile.equipmentAvailability === "verified"} onClick={() => setEquipmentAvailability("verified")}>Confirm what is available</button></div><small className="field-hint">Unknown equipment uses safe alternatives. Confirmed equipment is used only when checked below.</small></div>{state.profile.equipmentAvailability === "verified" && <div className="equipment-options">{EQUIPMENT_OPTIONS.map((item) => <label className="checkbox-row" key={item.id}><input type="checkbox" checked={state.profile.availableEquipment.includes(item.id)} onChange={() => toggleAvailableEquipment(item.id)} /><span><strong>{item.label}</strong></span></label>)}{state.profile.availableEquipment.length === 0 && <small className="field-hint">No gym equipment selected. The plan will use bodyweight alternatives.</small>}</div>}</article>
+    <section className="settings">
+      <article className="panel profile-card">
+        <span className="profile-avatar" aria-hidden="true">{profile.displayName.slice(0, 1).toUpperCase() || "?"}</span>
+        <div className="profile-id"><h2>{profile.displayName}</h2><p>{isDemo ? "Saved on this device" : state.userEmail ?? "Signed in"}{profile.trainerRole && !isDemo ? " · Trainer" : ""}</p></div>
+        <dl className="profile-stats">
+          <div><dd>{workouts}</dd><dt>workouts</dt></div>
+          <div><dd>{profile.trainingDays.length}</dd><dt>days a week</dt></div>
+          <div><dd>{shortDate(profile.trainingStartDate)}</dd><dt>started</dt></div>
+        </dl>
+      </article>
 
-        <div className="trainer-side-stack">{state.profile.trainerRole && !isDemo ? <TrainerControls client={browserClient} trainerId={state.profile.id} trainerRole={state.profile.trainerRole} clients={state.trainerClients ?? []} refresh={refreshTrainerClients} /> : <article className="panel trainer-rule-panel"><div className="side-card-title"><span className="side-card-icon peach-icon">⌁</span><div><h3>Deadlift variations</h3><p>Beginner ramp-up guardrail</p></div></div><div className="rule-setting"><div><strong>{state.profile.deadliftEnabled ? "Explicitly trainer-approved" : "Restricted by default"}</strong><small>{isDemo ? "Demo-only setting; no cloud trainer rule is changed." : "This rule never unlocks automatically by date or training phase."}</small></div>{isDemo && <button type="button" className={`toggle ${state.profile.deadliftEnabled ? "on" : ""}`} role="switch" aria-checked={state.profile.deadliftEnabled} onClick={() => void toggleDeadlift(!state.profile.deadliftEnabled)} aria-label={`${state.profile.deadliftEnabled ? "Lock" : "Approve demo"} deadlift variations`}><span /></button>}</div>{!isDemo && <div className="permission-note">Only an authenticated assigned trainer can change this restriction.</div>}<p className="rule-foot">The rule applies to future plans only. Existing workout snapshots keep their original rules.</p></article>}
+      <div className="settings-columns">
+        <div className="settings-column">
+          <article className="panel settings-group">
+            <h3><CalendarDays aria-hidden="true" /> Your plan</h3>
+            <label className="settings-field">Your name<input type="text" maxLength={80} autoComplete="given-name" value={profile.displayName} onChange={(event) => updateProfile({ displayName: event.target.value })} /></label>
+            <div className="settings-field"><span>Training days</span>
+              <div className="onb-days">{WEEKDAY_LABELS.map((label, day) => <button key={label} type="button" className={profile.trainingDays.includes(day) ? "selected" : ""} aria-pressed={profile.trainingDays.includes(day)} onClick={() => {
+                const next = profile.trainingDays.includes(day) ? profile.trainingDays.filter((value) => value !== day) : [...profile.trainingDays, day];
+                if (next.length >= 2 && next.length <= 4) void updateProfile({ trainingDays: next, sessionsPerWeek: next.length });
+              }}>{label}</button>)}</div>
+              <small>Between 2 and 4 days. Missed sessions are never crammed into the next day.</small>
+            </div>
+            <div className="settings-field"><span>Session length</span>
+              <div className="segmented">{[30, 40, 50].map((minutes) => <button key={minutes} type="button" className={profile.preferredSessionMinutes === minutes ? "selected" : ""} aria-pressed={profile.preferredSessionMinutes === minutes} onClick={() => updateProfile({ preferredSessionMinutes: minutes })}>{minutes} min</button>)}</div>
+            </div>
+            <div className="settings-field"><span>Equipment</span>
+              <div className="segmented"><button type="button" className={profile.equipmentAvailability === "unknown" ? "selected" : ""} aria-pressed={profile.equipmentAvailability === "unknown"} onClick={() => setEquipmentAvailability("unknown")}>None / not sure</button><button type="button" className={profile.equipmentAvailability === "verified" ? "selected" : ""} aria-pressed={profile.equipmentAvailability === "verified"} onClick={() => setEquipmentAvailability("verified")}>I’ll tick what I have</button></div>
+              {profile.equipmentAvailability === "verified" && <div className="onb-chips">{EQUIPMENT_OPTIONS.map((item) => <button key={item.id} type="button" className={profile.availableEquipment.includes(item.id) ? "selected" : ""} aria-pressed={profile.availableEquipment.includes(item.id)} onClick={() => toggleAvailableEquipment(item.id)}>{item.label}</button>)}</div>}
+              <small>{profile.equipmentAvailability === "verified" ? (profile.availableEquipment.length ? "Your plan uses only what is ticked." : "Nothing ticked yet, so your plan uses bodyweight movements.") : "Your plan uses bodyweight movements only."}</small>
+            </div>
+          </article>
 
-          <article className="panel template-panel"><div className="section-heading"><div><h3>Active rules & templates</h3><p>Deterministic plan generation</p></div></div><div className="version-row"><span><strong>Beginner foundation</strong><small>Approved schedule · conservative rotation</small></span><span>{TEMPLATE_VERSION}</span></div><div className="version-row"><span><strong>Planning rules</strong><small>Progression, recovery, missed days, equipment</small></span><span>{RULE_VERSION}</span></div><div className="no-ai-chip"><span>✦</span> No paid AI API used</div></article>
+          <article className="panel settings-group">
+            <h3><Palette aria-hidden="true" /> Appearance</h3>
+            <div className="settings-field"><span>Theme</span>
+              <div className="theme-switch"><button type="button" className={theme === "dark" ? "selected" : ""} aria-pressed={theme === "dark"} onClick={() => setTheme("dark")}><Moon aria-hidden="true" /> Midnight green</button><button type="button" className={theme === "light" ? "selected" : ""} aria-pressed={theme === "light"} onClick={() => setTheme("light")}><Sun aria-hidden="true" /> Liquid glass</button><button type="button" className={theme === "auto" ? "selected" : ""} aria-pressed={theme === "auto"} onClick={() => setTheme("auto")}><SunMoon aria-hidden="true" /> Automatic</button></div>
+              <small>Automatic follows your phone’s light or dark setting.</small>
+            </div>
+            <div className="settings-field"><span>Figure</span>
+              <div className="segmented">{FIGURE_OPTIONS.map((option) => <button key={option.id} type="button" className={figure === option.id ? "selected" : ""} aria-pressed={figure === option.id} onClick={() => setFigure(option.id)}>{option.label}</button>)}</div>
+              <small>The body drawing in pictures and muscle maps. It does not change your plan.</small>
+            </div>
+            <div className="settings-field"><span>Weight unit</span>
+              <div className="segmented"><button type="button" className={weightUnit === "kg" ? "selected" : ""} aria-pressed={weightUnit === "kg"} onClick={() => setWeightUnit("kg")}>Kilograms</button><button type="button" className={weightUnit === "lb" ? "selected" : ""} aria-pressed={weightUnit === "lb"} onClick={() => setWeightUnit("lb")}>Pounds</button></div>
+            </div>
+          </article>
+        </div>
 
-          <TrainerInviteCard onLinked={refreshTrainerClients} /><TrainerLinkCard /><AccountCard /><DataCard /></div>
+        <div className="settings-column">
+          {profile.trainerRole && !isDemo
+            ? <TrainerControls client={browserClient} trainerId={profile.id} trainerRole={profile.trainerRole} clients={state.trainerClients ?? []} refresh={refreshTrainerClients} />
+            : <article className="panel settings-group">
+                <h3><ShieldCheck aria-hidden="true" /> Safety rules</h3>
+                <div className="settings-row">
+                  <div><strong>Deadlift movements</strong><small>{profile.deadliftEnabled ? "Approved by your trainer." : "Locked until your trainer approves them. Time in training never unlocks them."}</small></div>
+                  {isDemo
+                    ? <button type="button" className={`toggle ${profile.deadliftEnabled ? "on" : ""}`} role="switch" aria-checked={profile.deadliftEnabled} onClick={() => void toggleDeadlift(!profile.deadliftEnabled)} aria-label="Allow deadlift movements in this demo"><span /></button>
+                    : <span className={`settings-status ${profile.deadliftEnabled ? "ok" : ""}`}>{profile.deadliftEnabled ? "Approved" : "Locked"}</span>}
+                </div>
+                <div className="settings-row"><div><strong>Pain always means recovery</strong><small>If you tick pain in a check-in, that day switches to gentle recovery. This cannot be turned off.</small></div><span className="settings-status ok">On</span></div>
+              </article>}
+          <TrainerInviteCard onLinked={refreshTrainerClients} />
+          <TrainerLinkCard />
+          <AccountCard />
+          <DataCard />
+          <details className="why-plan">
+            <summary>About this plan</summary>
+            <p>Workouts are built by fixed, written rules from your schedule, equipment, check-ins and logged results. No AI service is involved.</p>
+            <small>Exercise templates {TEMPLATE_VERSION} · Planning rules {RULE_VERSION}</small>
+          </details>
+        </div>
       </div>
     </section>
   );

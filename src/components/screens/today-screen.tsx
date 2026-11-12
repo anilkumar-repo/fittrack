@@ -2,9 +2,13 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { ArrowLeft, ArrowRight, Check, ChevronRight, Clock, ListChecks, Moon, Pencil, Play, Repeat } from "lucide-react";
+import { BodyFigure } from "@/components/app/body-figure";
+import { ExerciseIllustration } from "@/components/app/exercise-illustration";
 import { ExerciseGuideModal, toGuideExercise } from "@/components/app/exercise-guide-modal";
 import { ExerciseLogCard } from "@/components/app/exercise-log-card";
 import { RestTimer } from "@/components/app/rest-timer";
+import { REGION_LABELS, regionsForExercises } from "@/lib/figure";
 import { lastPerformance } from "@/lib/logging";
 import { sessionForDate, useFitTrack } from "@/components/app/fit-track-provider";
 import { emptyCheckIn, useWorkoutDay } from "@/components/app/use-workout-day";
@@ -14,7 +18,7 @@ import { createInitialExerciseLogs } from "@/lib/supabase-repository";
 import type { CheckIn, ExerciseDefinition, ExerciseLog, WorkoutReview, WorkoutSession } from "@/lib/types";
 import { createExerciseLog, createInFlightDeduper, statusForSets, validateCheckIn, validateWorkoutSession } from "@/lib/workout-tracking";
 
-type FlowStep = "checkin" | "workout" | "review" | "done";
+type FlowStep = "preview" | "checkin" | "workout" | "review" | "done";
 
 const emptyReview = (): WorkoutReview => ({ effort: 5, mood: "same", energyAfter: 3, discomfort: false, discomfortNote: "", note: "" });
 const dedupeWorkoutSubmission = createInFlightDeduper<boolean>();
@@ -30,15 +34,15 @@ export function TodayScreen() {
 
 function WorkoutDayView({ date }: { date: string }) {
   const router = useRouter();
-  const { state, getState, currentDate, recordedSessions, trainerRuleSettings, planningProfile, upsertSession, savingSession, saveError, weightUnit } = useFitTrack();
-  const [flowStep, setFlowStep] = useState<FlowStep>("checkin");
+  const { state, getState, currentDate, recordedSessions, trainerRuleSettings, planningProfile, upsertSession, savingSession, saveError, weightUnit, figure } = useFitTrack();
+  const [flowStep, setFlowStep] = useState<FlowStep>("preview");
   const [checkIn, setCheckIn] = useState<CheckIn>(emptyCheckIn);
   const [checkInEdited, setCheckInEdited] = useState(false);
   const [review, setReview] = useState<WorkoutReview>(emptyReview);
   const reviewRef = useRef(review);
   const [formError, setFormError] = useState("");
   const [guideExercise, setGuideExercise] = useState<ExerciseDefinition | null>(null);
-  const { session: todaySession, plan } = useWorkoutDay(date, flowStep === "checkin" ? checkIn : undefined, checkInEdited);
+  const { session: todaySession, plan } = useWorkoutDay(date, flowStep === "preview" || flowStep === "checkin" ? checkIn : undefined, checkInEdited);
   /** True while a saved session is reopened to correct its entries. */
   const [editing, setEditing] = useState(false);
   const [rest, setRest] = useState<{ endsAt: number; exerciseName: string } | null>(null);
@@ -46,7 +50,7 @@ function WorkoutDayView({ date }: { date: string }) {
   const [oneAtATime, setOneAtATime] = useState(() => typeof window !== "undefined" && window.matchMedia("(max-width: 700px)").matches);
   const [focusIndex, setFocusIndex] = useState<number | null>(null);
   const displayReview = todaySession?.review ?? review;
-  const displayFlowStep = todaySession?.status === "in_progress" && flowStep === "checkin" ? (todaySession.review ? "review" : "workout") : flowStep;
+  const displayFlowStep = todaySession?.status === "in_progress" && (flowStep === "preview" || flowStep === "checkin") ? (todaySession.review ? "review" : "workout") : flowStep;
   const exerciseCount = todaySession?.plan.exercises.length ?? 0;
   // Until the person picks one, show the first exercise that still has sets to do.
   const firstOpenIndex = Math.max(0, (todaySession?.plan.exercises ?? []).findIndex((exercise) => {
@@ -57,6 +61,8 @@ function WorkoutDayView({ date }: { date: string }) {
   const dismissRest = useCallback(() => setRest(null), []);
 
   useEffect(() => { if (todaySession?.review) reviewRef.current = todaySession.review; }, [todaySession?.review]);
+  // Each step of the workout starts at the top of the page.
+  useEffect(() => { window.scrollTo({ top: 0 }); }, [displayFlowStep]);
 
   function updateCheckIn(patch: Partial<CheckIn>) {
     setCheckInEdited(true);
@@ -154,82 +160,163 @@ function WorkoutDayView({ date }: { date: string }) {
     });
   }
 
+  const preStart = !todaySession || todaySession.status === "planned";
+  const isDone = todaySession?.status === "completed" && !editing;
+  const logging = Boolean(todaySession) && !preStart && !isDone;
+  const regions = plan ? regionsForExercises(plan.exercises).slice(0, 4) : [];
+  const totalSets = plan?.exercises.reduce((sum, exercise) => sum + exercise.sets, 0) ?? 0;
+  const setsPlanned = todaySession?.exerciseLogs.reduce((sum, log) => sum + (log.status === "skipped" ? 0 : log.sets.length), 0) ?? 0;
+  const setsDone = todaySession?.exerciseLogs.reduce((sum, log) => sum + log.sets.filter((set) => set.completed).length, 0) ?? 0;
+  const saveNote = savingSession ? "Saving…" : saveError ? "Saved on this device; sync needs attention" : "Saved as you go";
+
   return (
     <>
-      <section className="today-page">
-        <div className="page-intro"><div><span className="eyebrow">{dateLabel(date)}</span><h2>{plan?.title ?? "Rest and recover"}</h2><p>{plan?.description ?? `Your next training day is ${describeNextDay(state.profile, date)}. Take today for recovery.`}</p></div><span className="pill pill-outline">{plan ? `${plan.exercises.length} MOVEMENTS · ${plan.durationMinutes} MIN` : "RECOVERY DAY"}</span></div>
-        {plan && <div className="version-strip"><span>{todaySession?.status === "planned" ? savingSession ? "Saving today’s plan…" : saveError ? "Plan saved on this device; cloud sync needs attention" : "This date’s plan is saved and reused. Check-in and equipment are applied when you begin." : "Plan versions are saved with each session"}</span><strong>Template {plan.templateVersion} <i>·</i> Rules {plan.ruleVersion}</strong></div>}
-        {plan && <div className={`plan-explanation ${plan.sessionType === "recovery" ? "recovery-explanation" : ""}`}><strong>{plan.sessionType === "recovery" ? "Recovery recommendation" : "Why this plan"}</strong><p>{plan.generationReasons.join(" ")}</p></div>}
-        {plan && <div className="workout-layout">
-          <div className="workout-main-column">
-            {(!todaySession || todaySession.status === "planned") && displayFlowStep === "checkin" && <article className="panel checkin-panel">
-              <div className="panel-heading"><span className="panel-step">01</span><div><h3>Before you begin</h3><p>A quick check-in helps keep the session comfortable.</p></div></div>
-              <div className="checkin-question"><label>How’s your energy today?</label><div className="choice-row">{[1, 2, 3, 4, 5].map((value) => <button key={value} onClick={() => updateCheckIn({ energy: value })} className={`choice-chip ${checkIn.energy === value ? "selected" : ""}`} aria-pressed={checkIn.energy === value}><strong>{value}</strong><small>{["Low", "A little low", "Okay", "Good", "Great"][value - 1]}</small></button>)}</div></div>
-              <div className="checkin-question"><label>Any muscle soreness?</label><div className="choice-row compact">{[1, 2, 3, 4, 5].map((value) => <button key={value} onClick={() => updateCheckIn({ soreness: value })} className={`choice-dot ${checkIn.soreness === value ? "selected" : ""}`} aria-label={`Soreness ${value} out of 5`} aria-pressed={checkIn.soreness === value}>{value}</button>)}</div><small className="field-hint">1 is none · 5 is quite sore</small></div>
-              <div className="checkin-question"><label>How recovered do you feel?</label><div className="choice-row compact">{[1, 2, 3, 4, 5].map((value) => <button key={value} onClick={() => updateCheckIn({ recovery: value })} className={`choice-dot ${checkIn.recovery === value ? "selected" : ""}`} aria-label={`Recovery ${value} out of 5`} aria-pressed={checkIn.recovery === value}>{value}</button>)}</div><small className="field-hint">1 is not recovered · 5 is fully recovered</small></div>
-              <label className="checkbox-row"><input type="checkbox" checked={checkIn.pain} onChange={(event) => updateCheckIn({ pain: event.target.checked })} /><span><strong>I have pain or an injury concern</strong><small>Skip any movement that does not feel comfortable.</small></span></label>
-              {checkIn.pain && <><label className="field-label">Where or what feels uncomfortable? <textarea value={checkIn.discomfort} maxLength={1000} onChange={(event) => updateCheckIn({ discomfort: event.target.value })} placeholder="Optional details" rows={2} /></label><p className="safety-note" role="note">Today’s plan switches to optional recovery. Stop anything that causes pain. If pain is new, severe, persists, or limits normal activity, seek assessment from an appropriate health professional.</p></>}
-              <label className="field-label">Anything else you want to note? <textarea value={checkIn.note} maxLength={2000} onChange={(event) => updateCheckIn({ note: event.target.value })} placeholder="Optional note for your session" rows={2} /></label>
-              {formError && <p role="alert" className="form-error">{formError}</p>}
-              <div className="panel-footer"><span className="muted small">Your answers shape today’s volume.</span><button className="button button-primary" onClick={startWorkout}>Continue to workout <span>→</span></button></div>
-            </article>}
+      <section className="train">
+        <header className="train-head">
+          <p>{date === currentDate ? "Today" : dateLabel(date)}</p>
+          <h2>{plan?.title ?? "Rest day"}</h2>
+        </header>
 
-            {todaySession && todaySession.status === "completed" && !editing && <article className="panel complete-panel"><span className="complete-badge">✓</span><h3>Session complete. Nice work.</h3><p>{todaySession.review?.note || "You showed up and put in steady work."}</p><div className="complete-summary"><span><strong>{todaySession.plan.exercises.length}</strong><small>movements</small></span><span><strong>{todaySession.review?.effort ?? "—"}/10</strong><small>effort</small></span><span><strong>{todaySession.plan.durationMinutes} min</strong><small>planned</small></span></div><div className="account-card-actions"><button className="button button-subtle" onClick={() => router.push("/progress")}>See your progress <span>→</span></button><button className="text-button" onClick={() => { setEditing(true); setFlowStep("workout"); }}>Edit entries</button></div></article>}
+        {!plan && <article className="panel train-rest">
+          <span className="train-rest-icon"><Moon aria-hidden="true" /></span>
+          <h3>Rest is part of getting stronger</h3>
+          <p>No workout is planned for this day. Your next session is {describeNextDay(state.profile, date)}.</p>
+          <button className="button button-primary" onClick={openNextWorkout}>See next session <ArrowRight aria-hidden="true" /></button>
+        </article>}
 
-            {todaySession && (todaySession.status !== "completed" || editing) && <>
-              {displayFlowStep === "workout" && <article className="panel logger-panel">
-                <div className="logger-top"><div className="panel-heading"><span className="panel-step">02</span><div><h3>Your workout</h3><p>Go at your own pace. Rest whenever you need.</p></div></div><span className="live-badge"><span /> {editing ? "EDITING" : "IN PROGRESS"}</span></div>
-                <div className="logger-mode">
-                  <span>{oneAtATime ? `Exercise ${shownIndex + 1} of ${exerciseCount}` : `${exerciseCount} exercises`}</span>
-                  <button type="button" className="text-button" onClick={() => setOneAtATime((value) => !value)}>{oneAtATime ? "Show all exercises" : "One at a time"}</button>
-                </div>
-                {oneAtATime && <div className="logger-steps" role="tablist" aria-label="Exercises in this workout">{todaySession.plan.exercises.map((exercise, index) => {
-                  const status = todaySession.exerciseLogs.find((item) => item.exerciseId === exercise.id)?.status ?? "not_started";
-                  return <button key={exercise.id} type="button" role="tab" aria-selected={index === shownIndex} aria-label={`${exercise.name}, ${status.replaceAll("_", " ")}`} className={`logger-step ${status} ${index === shownIndex ? "current" : ""}`} onClick={() => setFocusIndex(index)}>{index + 1}</button>;
-                })}</div>}
-                <div className="exercise-log-list">
-                  {todaySession.plan.exercises.map((exercise, index) => {
-                    if (oneAtATime && index !== shownIndex) return null;
-                    const log = todaySession.exerciseLogs.find((item) => item.exerciseId === exercise.id) ?? createExerciseLog(exercise.id, exercise.sets, exercise.reps);
-                    return <ExerciseLogCard key={exercise.id} exercise={exercise} index={index} log={log} unit={weightUnit}
-                      substitutedForName={exercise.substitutedFor ? plan.originalExercises.find((item) => item.id === exercise.substitutedFor)?.name ?? exercise.substitutedFor : undefined}
-                      last={lastPerformance(exercise.id, recordedSessions, date)}
-                      onUpdate={(updater) => updateExercise(exercise.id, updater)}
-                      onAddSet={() => addSet(exercise.id)}
-                      onOpenGuide={() => setGuideExercise(toGuideExercise(exercise))}
-                      onSetCompleted={() => { if (!editing && exercise.restSeconds > 0) setRest({ endsAt: Date.now() + exercise.restSeconds * 1000, exerciseName: exercise.name }); }} />;
-                  })}
-                </div>
-                {oneAtATime && exerciseCount > 1 && <div className="logger-nav">
-                  <button type="button" className="button button-subtle" disabled={shownIndex === 0} onClick={() => setFocusIndex(shownIndex - 1)}><span>←</span> Previous</button>
-                  {shownIndex < exerciseCount - 1 && <button type="button" className="button button-primary" onClick={() => setFocusIndex(shownIndex + 1)}>Next exercise <span>→</span></button>}
-                </div>}
-                <div className="logger-bottom"><span className="muted small">{savingSession ? "Saving your progress…" : saveError ? "Sync needs attention; your draft is on this device." : "Your entries save as you go."}</span><button className="button button-primary" onClick={finishLogging}>Finish & review <span>→</span></button></div>
-              </article>}
-
-              {displayFlowStep === "review" && <article className="panel review-panel">
-                <div className="panel-heading"><span className="panel-step">03</span><div><h3>How did that feel?</h3><p>A short reflection helps you and your trainer tune the plan.</p></div></div>
-                <div className="checkin-question"><label>Overall effort (1 feels easy · 10 feels maximal)</label><div className="effort-row">{Array.from({ length: 10 }, (_, index) => index + 1).map((value) => <button key={value} onClick={() => updateReview({ effort: value })} className={displayReview.effort === value ? "selected" : ""} aria-pressed={displayReview.effort === value}>{value}</button>)}</div></div>
-                <div className="checkin-question"><label>Compared with what you expected?</label><div className="mood-row">{(["better", "same", "tougher"] as const).map((mood) => <button key={mood} onClick={() => updateReview({ mood })} className={displayReview.mood === mood ? "selected" : ""} aria-pressed={displayReview.mood === mood}>{mood === "better" ? "A little better" : mood === "same" ? "About the same" : "A bit tougher"}</button>)}</div></div>
-                <div className="checkin-question"><label>How is your energy now?</label><div className="choice-row compact">{[1, 2, 3, 4, 5].map((value) => <button key={value} onClick={() => updateReview({ energyAfter: value })} className={`choice-dot ${displayReview.energyAfter === value ? "selected" : ""}`} aria-label={`After-workout energy ${value} out of 5`} aria-pressed={displayReview.energyAfter === value}>{value}</button>)}</div></div>
-                <label className="checkbox-row"><input type="checkbox" checked={displayReview.discomfort} onChange={(event) => updateReview({ discomfort: event.target.checked })} /><span><strong>Any discomfort during the workout?</strong><small>Share what happened so the next session can stay comfortable.</small></span></label>
-                {displayReview.discomfort && <label className="field-label">Discomfort details <textarea maxLength={1000} value={displayReview.discomfortNote} onChange={(event) => updateReview({ discomfortNote: event.target.value })} placeholder="Optional details" rows={2} /></label>}
-                <label className="field-label">Anything to remember next time? <textarea maxLength={2000} value={displayReview.note} onChange={(event) => updateReview({ note: event.target.value })} placeholder="Optional note" rows={3} /></label>
-                {formError && <p role="alert" className="form-error">{formError}</p>}
-                <div className="panel-footer"><button className="text-button" onClick={() => setFlowStep("workout")}>← Back to logger</button><button className="button button-primary" disabled={savingSession} onClick={completeWorkout}>{savingSession ? "Saving…" : "Save my session"} <span>✓</span></button></div>
-              </article>}
-            </>}
+        {plan && preStart && displayFlowStep === "preview" && <>
+          <article className="panel target-card">
+            <div className="target-figure"><BodyFigure figure={figure} highlight={regions} /></div>
+            <div className="target-copy">
+              <h3>{plan.sessionType === "recovery" ? "Recovery session" : "Today’s targets"}</h3>
+              {regions.length > 0
+                ? <ul className="target-list">{regions.map((region) => <li key={region}><span className="target-dot" />{REGION_LABELS[region]}</li>)}</ul>
+                : <p>Easy movement only. Skip anything that does not feel comfortable.</p>}
+            </div>
+          </article>
+          <div className="chip-row">
+            <span className="chip"><Clock aria-hidden="true" /> About {plan.durationMinutes} min</span>
+            <span className="chip"><ListChecks aria-hidden="true" /> {plan.exercises.length} moves</span>
+            <span className="chip"><Repeat aria-hidden="true" /> {totalSets} sets</span>
           </div>
+          <p className="train-description">{plan.description}</p>
 
-          <aside className="workout-aside">
-            <article className="panel movement-panel"><div className="side-card-title"><span className="side-card-icon purple-icon">✦</span><div><h3>Today’s movements</h3><p>{plan.exercises.length} simple steps</p></div></div><div className="movement-list">{plan.exercises.map((exercise, index) => <button key={exercise.id} onClick={() => setGuideExercise(toGuideExercise(exercise))} className="movement-item"><span className="movement-number">{String(index + 1).padStart(2, "0")}</span><span><strong>{exercise.name}</strong><small>{exercise.sets} sets · {exercise.reps}</small></span><span className="row-arrow">↗</span></button>)}</div></article>
-            <article className="mini-tip"><span>✦</span><p><strong>Keep it comfortable.</strong><br />Use a load that lets every rep feel controlled.</p></article>
-          </aside>
-        </div>}
-        {!plan && <div className="rest-panel panel"><span className="rest-illustration">☼</span><h3>Rest is part of getting stronger.</h3><p>There’s no workout scheduled for this day. Your next session is {describeNextDay(state.profile, date)}.</p><button className="button button-primary" onClick={openNextWorkout}>View next session <span>→</span></button></div>}
+          <h3 className="train-subhead">Exercises</h3>
+          <ol className="exercise-list">
+            {plan.exercises.map((exercise, index) => {
+              const area = regionsForExercises([exercise])[0];
+              return (
+                <li key={exercise.id}>
+                  <button className="exercise-row" onClick={() => setGuideExercise(toGuideExercise(exercise))} aria-label={`${exercise.name}, ${exercise.sets} sets of ${exercise.reps}. Open guide`}>
+                    <span className="exercise-num">{index + 1}</span>
+                    <span className="exercise-thumb"><ExerciseIllustration exerciseId={exercise.id} name={exercise.name} thumb /></span>
+                    <span className="exercise-text"><strong>{exercise.name}</strong><small>{exercise.sets} × {exercise.reps}{area ? ` · ${REGION_LABELS[area]}` : ""}</small></span>
+                    <ChevronRight aria-hidden="true" />
+                  </button>
+                </li>
+              );
+            })}
+          </ol>
+
+          <details className="why-plan">
+            <summary>Why this plan</summary>
+            <p>{plan.generationReasons.join(" ")}</p>
+            <small>Template {plan.templateVersion} · Rules {plan.ruleVersion}</small>
+          </details>
+
+          <div className="train-cta"><button className="button button-primary" onClick={() => { setFormError(""); setFlowStep("checkin"); }}>Start workout <Play aria-hidden="true" /></button></div>
+        </>}
+
+        {plan && preStart && displayFlowStep === "checkin" && <article className="panel flow-card">
+          <div className="flow-head"><button type="button" className="onb-back" aria-label="Back to the workout" onClick={() => setFlowStep("preview")}><ArrowLeft aria-hidden="true" /></button><div><h3>Before you begin</h3><p>Four quick taps so today’s plan fits how you feel.</p></div></div>
+          <Scale label="How is your energy?" low="Low" high="Great" value={checkIn.energy} onChange={(energy) => updateCheckIn({ energy })} />
+          <Scale label="Any muscle soreness?" low="None" high="Very sore" value={checkIn.soreness} onChange={(soreness) => updateCheckIn({ soreness })} />
+          <Scale label="How recovered do you feel?" low="Not at all" high="Fully" value={checkIn.recovery} onChange={(recovery) => updateCheckIn({ recovery })} />
+          <label className="flow-check"><input type="checkbox" checked={checkIn.pain} onChange={(event) => updateCheckIn({ pain: event.target.checked })} /><span><strong>I have pain or an injury concern</strong><small>Today switches to gentle recovery.</small></span></label>
+          {checkIn.pain && <>
+            <label className="field-label">Where, or what feels uncomfortable?<textarea value={checkIn.discomfort} maxLength={1000} rows={2} placeholder="Optional details" onChange={(event) => updateCheckIn({ discomfort: event.target.value })} /></label>
+            <p className="safety-note" role="note">Stop anything that causes pain. If pain is new, severe, persists, or limits normal activity, see an appropriate health professional.</p>
+          </>}
+          <label className="field-label">Anything else to note?<textarea value={checkIn.note} maxLength={2000} rows={2} placeholder="Optional" onChange={(event) => updateCheckIn({ note: event.target.value })} /></label>
+          {plan.sessionType === "recovery" && <p className="flow-note">With these answers, today is a recovery session: {plan.exercises.map((exercise) => exercise.name).join(", ")}.</p>}
+          {formError && <p role="alert" className="form-error">{formError}</p>}
+          <button className="button button-primary flow-cta" onClick={startWorkout}>Begin workout <ArrowRight aria-hidden="true" /></button>
+        </article>}
+
+        {isDone && todaySession && <article className="panel done-card">
+          <span className="done-badge"><Check aria-hidden="true" /></span>
+          <h3>Session complete. Nice work.</h3>
+          <p>{todaySession.review?.note || "You showed up and put in steady work."}</p>
+          <dl className="done-stats">
+            <div><dd>{todaySession.exerciseLogs.filter((log) => log.status === "completed" || log.status === "partial").length}</dd><dt>moves done</dt></div>
+            <div><dd>{setsDone}</dd><dt>sets done</dt></div>
+            <div><dd>{todaySession.review?.effort ?? "—"}<small>/10</small></dd><dt>effort</dt></div>
+          </dl>
+          <div className="done-actions"><button className="button button-primary" onClick={() => router.push("/progress")}>See your progress <ArrowRight aria-hidden="true" /></button><button className="button button-subtle" onClick={() => { setEditing(true); setFlowStep("workout"); }}><Pencil aria-hidden="true" /> Edit entries</button></div>
+        </article>}
+
+        {logging && todaySession && plan && displayFlowStep !== "review" && <article className="logger">
+          <div className="logger-progress">
+            <div className="logger-progress-text"><strong>{editing ? "Editing your entries" : `${setsDone} of ${setsPlanned} sets done`}</strong><span>{saveNote}</span></div>
+            <div className="logger-progress-bar" role="progressbar" aria-label="Sets completed" aria-valuemin={0} aria-valuemax={setsPlanned} aria-valuenow={Math.min(setsDone, setsPlanned)}><span style={{ width: `${setsPlanned ? Math.min(100, (setsDone / setsPlanned) * 100) : 0}%` }} /></div>
+          </div>
+          <div className="logger-mode">
+            <span>{oneAtATime ? `Exercise ${shownIndex + 1} of ${exerciseCount}` : `${exerciseCount} exercises`}</span>
+            <button type="button" className="text-button" onClick={() => setOneAtATime((value) => !value)}>{oneAtATime ? "Show all exercises" : "One at a time"}</button>
+          </div>
+          {oneAtATime && <div className="logger-steps" role="tablist" aria-label="Exercises in this workout">{todaySession.plan.exercises.map((exercise, index) => {
+            const status = todaySession.exerciseLogs.find((item) => item.exerciseId === exercise.id)?.status ?? "not_started";
+            return <button key={exercise.id} type="button" role="tab" aria-selected={index === shownIndex} aria-label={`${exercise.name}, ${status.replaceAll("_", " ")}`} className={`logger-step ${status} ${index === shownIndex ? "current" : ""}`} onClick={() => setFocusIndex(index)}>{status === "completed" ? <Check aria-hidden="true" /> : index + 1}</button>;
+          })}</div>}
+          <div className="exercise-log-list">
+            {todaySession.plan.exercises.map((exercise, index) => {
+              if (oneAtATime && index !== shownIndex) return null;
+              const log = todaySession.exerciseLogs.find((item) => item.exerciseId === exercise.id) ?? createExerciseLog(exercise.id, exercise.sets, exercise.reps);
+              return <ExerciseLogCard key={exercise.id} exercise={exercise} index={index} log={log} unit={weightUnit}
+                substitutedForName={exercise.substitutedFor ? plan.originalExercises.find((item) => item.id === exercise.substitutedFor)?.name ?? exercise.substitutedFor : undefined}
+                last={lastPerformance(exercise.id, recordedSessions, date)}
+                onUpdate={(updater) => updateExercise(exercise.id, updater)}
+                onAddSet={() => addSet(exercise.id)}
+                onOpenGuide={() => setGuideExercise(toGuideExercise(exercise))}
+                onSetCompleted={() => { if (!editing && exercise.restSeconds > 0) setRest({ endsAt: Date.now() + exercise.restSeconds * 1000, exerciseName: exercise.name }); }} />;
+            })}
+          </div>
+          <div className="logger-nav">
+            {oneAtATime && exerciseCount > 1 && <button type="button" className="button button-subtle" disabled={shownIndex === 0} onClick={() => setFocusIndex(shownIndex - 1)}><ArrowLeft aria-hidden="true" /> Previous</button>}
+            {oneAtATime && shownIndex < exerciseCount - 1
+              ? <button type="button" className="button button-primary" onClick={() => setFocusIndex(shownIndex + 1)}>Next exercise <ArrowRight aria-hidden="true" /></button>
+              : <button type="button" className="button button-primary" onClick={finishLogging}>Finish and review <ArrowRight aria-hidden="true" /></button>}
+          </div>
+          {oneAtATime && shownIndex < exerciseCount - 1 && <button type="button" className="text-button logger-finish-early" onClick={finishLogging}>Finish workout early</button>}
+        </article>}
+
+        {logging && todaySession && displayFlowStep === "review" && <article className="panel flow-card">
+          <div className="flow-head"><button type="button" className="onb-back" aria-label="Back to the exercises" onClick={() => setFlowStep("workout")}><ArrowLeft aria-hidden="true" /></button><div><h3>How did that feel?</h3><p>A short reflection helps tune your next session.</p></div></div>
+          <Scale label="Overall effort" low="Easy" high="Maximal" max={10} value={displayReview.effort} onChange={(effort) => updateReview({ effort })} />
+          <div className="scale"><span className="scale-label">Compared with what you expected</span><div className="flow-options">{(["better", "same", "tougher"] as const).map((mood) => <button key={mood} type="button" className={displayReview.mood === mood ? "selected" : ""} aria-pressed={displayReview.mood === mood} onClick={() => updateReview({ mood })}>{mood === "better" ? "A little better" : mood === "same" ? "About the same" : "A bit tougher"}</button>)}</div></div>
+          <Scale label="How is your energy now?" low="Drained" high="Great" value={displayReview.energyAfter} onChange={(energyAfter) => updateReview({ energyAfter })} />
+          <label className="flow-check"><input type="checkbox" checked={displayReview.discomfort} onChange={(event) => updateReview({ discomfort: event.target.checked })} /><span><strong>I felt discomfort during the workout</strong><small>Your next session will be lighter.</small></span></label>
+          {displayReview.discomfort && <label className="field-label">What happened?<textarea maxLength={1000} rows={2} placeholder="Optional details" value={displayReview.discomfortNote} onChange={(event) => updateReview({ discomfortNote: event.target.value })} /></label>}
+          <label className="field-label">Anything to remember next time?<textarea maxLength={2000} rows={2} placeholder="Optional" value={displayReview.note} onChange={(event) => updateReview({ note: event.target.value })} /></label>
+          {formError && <p role="alert" className="form-error">{formError}</p>}
+          <button className="button button-primary flow-cta" disabled={savingSession} onClick={completeWorkout}>{savingSession ? "Saving…" : "Save my session"} <Check aria-hidden="true" /></button>
+        </article>}
       </section>
-      {rest && displayFlowStep === "workout" && <RestTimer key={rest.endsAt} endsAt={rest.endsAt} exerciseName={rest.exerciseName} onAddTime={() => setRest((current) => current ? { ...current, endsAt: Math.max(current.endsAt, Date.now()) + 15_000 } : current)} onDismiss={dismissRest} />}
+      {rest && logging && displayFlowStep === "workout" && <RestTimer key={rest.endsAt} endsAt={rest.endsAt} exerciseName={rest.exerciseName} onAddTime={() => setRest((current) => current ? { ...current, endsAt: Math.max(current.endsAt, Date.now()) + 15_000 } : current)} onDismiss={dismissRest} />}
       {guideExercise && <ExerciseGuideModal exercise={guideExercise} workout={{ date, session: todaySession, plan }} onOpen={(exercise) => setGuideExercise(toGuideExercise(exercise))} onClose={() => setGuideExercise(null)} />}
     </>
+  );
+}
+
+/** A row of numbered buttons for a 1-to-5 (or 1-to-10) answer, with words at each end. */
+function Scale({ label, low, high, value, onChange, max = 5 }: { label: string; low: string; high: string; value: number; onChange: (value: number) => void; max?: number }) {
+  return (
+    <div className="scale">
+      <span className="scale-label">{label}</span>
+      <div className={`scale-buttons ${max > 5 ? "wide" : ""}`} role="radiogroup" aria-label={label}>
+        {Array.from({ length: max }, (_, index) => index + 1).map((option) => <button key={option} type="button" role="radio" aria-checked={value === option} aria-label={`${option} out of ${max}`} className={value === option ? "selected" : ""} onClick={() => onChange(option)}>{option}</button>)}
+      </div>
+      <div className="scale-ends"><span>{low}</span><span>{high}</span></div>
+    </div>
   );
 }

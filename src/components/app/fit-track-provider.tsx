@@ -8,12 +8,24 @@ import { clearPendingSession, readPendingSessions, writePendingSession } from "@
 import { getSupabaseBrowserClient } from "@/lib/supabase-browser";
 import { loadCloudState, saveCloudProfile, saveCloudSession } from "@/lib/supabase-repository";
 import { DEFAULT_TRAINER_RULE_SETTINGS, profileWithTrainerEquipment } from "@/lib/trainer-rules";
+import { isFigureChoice, type FigureChoice } from "@/lib/figure";
 import type { WeightUnit } from "@/lib/logging";
 import type { FitTrackState, Profile, TrainerRuleSettings, WorkoutSession } from "@/lib/types";
 import { validateWorkoutSession } from "@/lib/workout-tracking";
 
 const SESSION_SAVE_DELAY_MS = 800;
 const WEIGHT_UNIT_KEY = "fittrack-weight-unit";
+const THEME_KEY = "fittrack-theme";
+const FIGURE_KEY = "fittrack-figure";
+export type Theme = "dark" | "light" | "auto";
+
+/** Puts the chosen look on the page. "auto" follows the phone or computer's light/dark setting. */
+function applyTheme(theme: Theme) {
+  const light = theme === "light" || (theme === "auto" && window.matchMedia("(prefers-color-scheme: light)").matches);
+  if (light) document.documentElement.dataset.theme = "light";
+  else delete document.documentElement.dataset.theme;
+  document.querySelector('meta[name="theme-color"]')?.setAttribute("content", light ? "#ece9f8" : "#0e1614");
+}
 
 interface FitTrackContextValue {
   state: FitTrackState;
@@ -46,6 +58,12 @@ interface FitTrackContextValue {
   /** How weights are shown and typed on this device. They are always stored in kilograms. */
   weightUnit: WeightUnit;
   setWeightUnit: (unit: WeightUnit) => void;
+  /** Midnight green (dark), Liquid glass (light), or automatic; remembered on this device. */
+  theme: Theme;
+  setTheme: (theme: Theme) => void;
+  /** Which body drawing to show, remembered on this device. */
+  figure: FigureChoice;
+  setFigure: (figure: FigureChoice) => void;
 }
 
 const FitTrackContext = createContext<FitTrackContextValue | null>(null);
@@ -79,6 +97,8 @@ export function FitTrackProvider({ children }: { children: React.ReactNode }) {
   const [savingSession, setSavingSession] = useState(false);
   const [pendingSessions, setPendingSessions] = useState<WorkoutSession[]>([]);
   const [weightUnit, setWeightUnitState] = useState<WeightUnit>("kg");
+  const [theme, setThemeState] = useState<Theme>("dark");
+  const [figure, setFigureState] = useState<FigureChoice>("neutral");
   const stateRef = useRef(state);
   const sessionSaveQueue = useRef<Promise<void>>(Promise.resolve());
   const pendingSessionWrites = useRef(0);
@@ -105,6 +125,13 @@ export function FitTrackProvider({ children }: { children: React.ReactNode }) {
         setState(localState);
       }
       try { if (window.localStorage.getItem(WEIGHT_UNIT_KEY) === "lb") setWeightUnitState("lb"); } catch { /* Kilograms remain the default. */ }
+      // The page already shows the saved theme (set before first paint in app/layout.tsx).
+      try {
+        const saved = window.localStorage.getItem(THEME_KEY);
+        if (saved === "light" || saved === "auto") setThemeState(saved);
+        const savedFigure = window.localStorage.getItem(FIGURE_KEY);
+        if (isFigureChoice(savedFigure)) setFigureState(savedFigure);
+      } catch { /* Midnight green remains the default. */ }
       writeDemoState(localState);
       setReady(true);
     }, 0);
@@ -325,6 +352,26 @@ export function FitTrackProvider({ children }: { children: React.ReactNode }) {
     try { window.localStorage.setItem(WEIGHT_UNIT_KEY, unit); } catch { /* The choice still applies until the page closes. */ }
   }, []);
 
+  const setTheme = useCallback((next: Theme) => {
+    setThemeState(next);
+    applyTheme(next);
+    try { window.localStorage.setItem(THEME_KEY, next); } catch { /* The choice still applies until the page closes. */ }
+  }, []);
+
+  const setFigure = useCallback((next: FigureChoice) => {
+    setFigureState(next);
+    try { window.localStorage.setItem(FIGURE_KEY, next); } catch { /* The choice still applies until the page closes. */ }
+  }, []);
+
+  // In automatic mode, switch as soon as the device changes between light and dark.
+  useEffect(() => {
+    if (theme !== "auto") return;
+    const media = window.matchMedia("(prefers-color-scheme: light)");
+    const onChange = () => applyTheme("auto");
+    media.addEventListener("change", onChange);
+    return () => media.removeEventListener("change", onChange);
+  }, [theme]);
+
   // Sessions that could not sync while offline are sent again as soon as the connection returns.
   useEffect(() => {
     window.addEventListener("online", retryPendingSessions);
@@ -334,9 +381,9 @@ export function FitTrackProvider({ children }: { children: React.ReactNode }) {
   const value = useMemo<FitTrackContextValue>(() => ({
     state, getState, updateState, ready, isDemo: state.mode === "demo", accountLoading, authChecked, browserClient, currentDate,
     trainerRuleSettings, planningProfile, recordedSessions, notice, setNotice, saveError, savingSession,
-    retryPendingSessions, upsertSession, updateProfile, completeOnboarding, signOut, refreshTrainerClients, weightUnit, setWeightUnit,
+    retryPendingSessions, upsertSession, updateProfile, completeOnboarding, signOut, refreshTrainerClients, weightUnit, setWeightUnit, theme, setTheme, figure, setFigure,
   }), [state, getState, updateState, ready, accountLoading, authChecked, browserClient, currentDate, trainerRuleSettings, planningProfile,
-    recordedSessions, notice, saveError, savingSession, retryPendingSessions, upsertSession, updateProfile, completeOnboarding, signOut, refreshTrainerClients, weightUnit, setWeightUnit]);
+    recordedSessions, notice, saveError, savingSession, retryPendingSessions, upsertSession, updateProfile, completeOnboarding, signOut, refreshTrainerClients, weightUnit, setWeightUnit, theme, setTheme, figure, setFigure]);
 
   return <FitTrackContext.Provider value={value}>{children}</FitTrackContext.Provider>;
 }

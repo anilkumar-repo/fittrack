@@ -39,7 +39,7 @@ function Figure({ pose, top }: { pose: Pose; top: number }) {
 }
 
 /** A start-and-finish position guide for an exercise. Renders nothing if the exercise has no drawing. */
-export function ExerciseIllustration({ exerciseId, name, compact = false }: { exerciseId: string; name: string; compact?: boolean }) {
+export function ExerciseIllustration({ exerciseId, name, compact = false, thumb = false }: { exerciseId: string; name: string; compact?: boolean; thumb?: boolean }) {
   const illustration = getExerciseIllustration(exerciseId);
   if (!illustration) return null;
   const { start, finish } = illustration;
@@ -48,6 +48,14 @@ export function ExerciseIllustration({ exerciseId, name, compact = false }: { ex
   const top = Math.max(0, Math.floor(highest - 12));
   const bottom = compact ? 96 : 108;
   const arrowY = Math.round((top + FLOOR_Y) / 2);
+  // A thumbnail shows one position only: where the movement finishes (or the hold).
+  if (thumb) {
+    return (
+      <svg className="exercise-illustration thumb" viewBox={`0 ${top} 100 ${96 - top}`} aria-hidden="true">
+        <Figure pose={finish ?? start} top={top} />
+      </svg>
+    );
+  }
   return (
     <svg className={`exercise-illustration ${compact ? "compact" : ""}`} viewBox={`0 ${top} 224 ${bottom - top}`} role="img"
       aria-label={finish ? `${name}: start and finish positions` : `${name}: hold position`}>

@@ -44,3 +44,16 @@ export function describeNextDay(profile: Pick<Profile, "trainingDays">, date: st
 export function todayHref(date: string, currentDate: string): string {
   return date === currentDate ? "/today" : `/today?date=${date}`;
 }
+
+/** The seven dates, Monday to Sunday, of the week containing `date`. */
+export function weekDates(date: string): string[] {
+  const monday = shiftDate(date, -((weekdayOf(date) + 6) % 7));
+  return Array.from({ length: 7 }, (_, index) => shiftDate(monday, index));
+}
+
+/** A greeting for the current time of day in the given time zone. */
+export function greetingFor(timeZone: string, now: Date = new Date()): string {
+  let hour = now.getHours();
+  try { hour = Number(new Intl.DateTimeFormat("en-GB", { timeZone, hour: "2-digit", hourCycle: "h23" }).format(now)); } catch { /* Use the device clock. */ }
+  return hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
+}
