@@ -57,7 +57,8 @@ export function Welcome() {
   }
 
   function next() {
-    if (!canContinue) return;
+    // The email step finishes by signing in, never by this button or a bubbled form submit.
+    if (!canContinue || step === "account") return;
     if (position === QUESTIONS.length - 1) finish();
     else setStep(QUESTIONS[position + 1]);
   }
@@ -89,7 +90,7 @@ export function Welcome() {
   return (
     <main className="onb">
       {/* The email step has its own form, and forms cannot sit inside each other. */}
-      <Frame className="onb-frame" aria-labelledby="onb-title" onSubmit={(event: React.FormEvent) => { event.preventDefault(); next(); }}>
+      <Frame className="onb-frame" aria-labelledby="onb-title" onSubmit={step === "account" ? undefined : (event: React.FormEvent) => { event.preventDefault(); next(); }}>
         <div className="onb-top">
           <button type="button" className="onb-back" aria-label="Back" onClick={() => setStep(position === 0 ? "hero" : QUESTIONS[position - 1])}><ArrowLeft aria-hidden="true" /></button>
           <div className="onb-progress" role="progressbar" aria-label="Setup progress" aria-valuemin={1} aria-valuemax={QUESTIONS.length} aria-valuenow={position + 1}>{QUESTIONS.map((item, index) => <span key={item} className={index <= position ? "done" : ""} />)}</div>

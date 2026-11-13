@@ -40,6 +40,7 @@ export function SignInForm({ beforeVerify, intro }: { beforeVerify?: () => void;
 
   async function verify(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    event.stopPropagation();
     if (!browserClient || busy) return;
     const token = code.replace(/\D/g, "");
     if (token.length < 6) { setError("Enter the code from the email."); return; }
@@ -76,7 +77,7 @@ export function SignInForm({ beforeVerify, intro }: { beforeVerify?: () => void;
   }
 
   return (
-    <form onSubmit={(event) => { event.preventDefault(); void sendCode(email.trim()); }} className="sign-in-form">
+    <form onSubmit={(event) => { event.preventDefault(); event.stopPropagation(); void sendCode(email.trim()); }} className="sign-in-form">
       {intro && <p className="sign-in-intro">{intro}</p>}
       <label className="field-label">Email address<input type="email" required autoComplete="email" inputMode="email" value={email} onChange={(event) => setEmail(event.target.value)} placeholder="you@example.com" /></label>
       {error && <p role="alert" className="form-error">{error}</p>}

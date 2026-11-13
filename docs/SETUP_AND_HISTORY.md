@@ -285,6 +285,8 @@ automatically.
 | 11 | Friends, shared streaks, nudges, challenges, Friends tab |
 | 12 | Phone notifications (morning, evening, nudges) |
 | Sign-up | Email code sign-in as the last Get started step; code-based sign-in everywhere |
+| Fix (2026-11-13) | Step 7 jumped to Home when "Email me a code" was pressed (the email form's submit also triggered "finish setup"). Fixed so the code screen shows; tested with the send stubbed. |
+| Email setup | Gmail SMTP connected (sender name RozFit). Templates still to paste (section 6). |
 
 Tests: `npm test` (112 at the last update), `npm run lint`, `npx tsc --noEmit`, `npm run build`.
 
@@ -308,7 +310,8 @@ Tests: `npm test` (112 at the last update), `npm run lint`, `npx tsc --noEmit`, 
 | Problem | Check |
 |---|---|
 | No code email | Supabase → Logs → Auth for SMTP errors; Gmail app password and 2-Step Verification; Spam folder |
-| Email has a link but no code | Templates (section 6) not saved, or custom SMTP off |
+| Email has a link but no code (subject "Confirm your email address" / "Your sign-in link") | Supabase default templates are still in use: paste both templates from section 6 (new people get **Confirm signup**, returning people get **Magic link or OTP**) |
+| Step 7 opens Home without asking for the code | Fixed on 2026-11-13; make sure the latest code is deployed |
 | Sign-in link goes to an old address | Vercel `NEXT_PUBLIC_SITE_URL` and Supabase Site URL must be `https://rozfit-a.vercel.app` |
 | Notifications never arrive | Vercel has all four keys (2.1) and was redeployed; Supabase: `select status_code, content from net._http_response order by created desc limit 5;` (200 = working, 401 = secret mismatch, 503 = keys missing in Vercel, 404 = wrong address in vault) |
 | iPhone can't turn notifications on | Must be opened from the Home Screen app, iOS 16.4+ |
