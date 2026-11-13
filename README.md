@@ -4,6 +4,8 @@ A workout planner for steady beginner training (formerly FitTrack). The reposito
 
 A mobile-first workout planner for a beginner training plan. Workout generation uses deterministic, versioned rules in this repository; it does not call a paid AI API.
 
+**Start here: [docs/SETUP_AND_HISTORY.md](docs/SETUP_AND_HISTORY.md)** — every key and where it lives, every Supabase/Vercel/email setting, what each phase built, and the test checklist. Live app: https://rozfit-a.vercel.app
+
 For the architecture, source map, database/access model, safety rules, metric definitions, setup, and current release handoff, see [docs/PROJECT_CONTEXT.md](docs/PROJECT_CONTEXT.md). Release and recovery procedures are in [docs/RELEASE_READINESS.md](docs/RELEASE_READINESS.md).
 
 ## Current features
@@ -47,7 +49,7 @@ The local `.env.local` file is ignored by Git and contains the project's public 
 - `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` to the project's publishable key from Supabase **Project Settings → API Keys**. This key is intended for browser use; never put a service-role or secret key in a `NEXT_PUBLIC_` variable or frontend code.
 - `NEXT_PUBLIC_SITE_URL` to `http://localhost:3000` for local use.
 
-The app uses email one-time-password links. For production, set Supabase Authentication → URL Configuration → Site URL to `https://fittrack-anilkumarm.vercel.app` and allow `https://fittrack-anilkumarm.vercel.app/auth/callback`. Also allow `http://localhost:3000/auth/callback` for local testing, and enable the Email sign-in provider. Set `NEXT_PUBLIC_SITE_URL` to the local origin when running locally and to the production origin in Vercel Production. Add each preview callback URL to the allow-list before testing a Vercel preview. Supabase Auth dashboard settings are separate from the Vercel environment variables.
+The app uses a 6-digit email code (with a link as backup); see docs/SETUP_AND_HISTORY.md sections 5–6 for the email sender and templates. For production, set Supabase Authentication → URL Configuration → Site URL to `https://rozfit-a.vercel.app` and allow `https://rozfit-a.vercel.app/**`. Also allow `http://localhost:3000/auth/callback` for local testing, and enable the Email sign-in provider. Set `NEXT_PUBLIC_SITE_URL` to the local origin when running locally and to the production origin in Vercel Production. Add each preview callback URL to the allow-list before testing a Vercel preview. Supabase Auth dashboard settings are separate from the Vercel environment variables.
 
 For future migrations, install the Supabase CLI, run `supabase login`, `supabase link --project-ref <project-ref>`, review the pending SQL, then use `supabase db push` from this folder. The Phase 2 migration keeps Phase 1 JSON snapshots and backfills their check-ins, exercise logs, sets, and reviews into related tables. Phase 3 adds columns to existing RLS-protected profile and exercise-log tables. Phase 5 creates `public.body_weight_entries`, grants only authenticated select/insert/update, and applies owner-only row-level policies; trainers do not receive access to these private measurements. Phase 6 adds append-only trainer-rule audits and rejects invalid rule settings or unapproved deadlift plans at the database boundary.
 
@@ -94,7 +96,7 @@ In demo mode, open **Today’s workout** and note the saved plan version and its
 
 ## GitHub and Vercel setup
 
-The local `origin` points to https://github.com/anilkumar-repo/fittrack. The latest verified `main` commit is `246e02be75fc8bae3b71b9f5c83e8eb73fa7f65d` (`NEW`). On 2026-10-27, Vercel confirmed the latest deployment as `READY` with `target: production`, sourced from that main commit. Its deployment URL is https://fittrack-a92dmuoae-anilkumarm.vercel.app; project aliases include https://fittrack-anilkumarm.vercel.app, https://fittrack-inky-eta.vercel.app, and https://fittrack-git-main-anilkumarm.vercel.app.
+The local `origin` points to https://github.com/anilkumar-repo/fittrack. The latest verified `main` commit is `246e02be75fc8bae3b71b9f5c83e8eb73fa7f65d` (`NEW`). On 2026-10-27, Vercel confirmed the latest deployment as `READY` with `target: production`, sourced from that main commit. Its deployment URL is https://fittrack-a92dmuoae-anilkumarm.vercel.app; project aliases then were the old fittrack addresses. The production address is now https://rozfit-a.vercel.app (see docs/SETUP_AND_HISTORY.md).
 
 The Vercel project metadata still reports live=false, and SSO protection is enabled for all deployments except custom domains. Treat the build as a verified production-target deployment, but do not claim public or client access is verified. Keep SSO enabled until authentication, persistence, and authorization have been smoke-tested.
 
