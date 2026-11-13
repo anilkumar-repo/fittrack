@@ -1,5 +1,6 @@
 import { calculateAchievements, type AchievementId } from "./achievements.ts";
-import { shiftDate, weekdayOf } from "./dates.ts";
+import { weekdayOf } from "./dates.ts";
+import { buildStreakTimeline, type StreakRepair } from "./streak.ts";
 import { calculatePersonalRecords } from "./progress.ts";
 import type { Profile, WorkoutSession } from "./types";
 
@@ -25,50 +26,36 @@ export interface Streak {
   todayDone: boolean;
   /** Today's workout is the first one after a missed day. */
   comebackToday: boolean;
+  /** Repairs left for this streak (see streak.ts). */
+  repairsLeft: number;
+  /** Set while a broken streak can still be won back by a workout. */
+  repair: StreakRepair | null;
+  /** Today's workout repaired the streak. */
+  repairedToday: boolean;
 }
 
 const LONG_BREAK_DAYS = 14;
 
-function isPlanned(profile: Pick<Profile, "trainingDays" | "trainingStartDate">, date: string): boolean {
-  return date >= profile.trainingStartDate && profile.trainingDays.includes(weekdayOf(date));
-}
 
 /**
- * A streak counts planned training days completed in a row. Rest days are skipped, a workout on a rest day
- * adds to it, and today's planned workout does not break it until the day is over.
+ * The streak follows the streak calendar (see streak.ts): workouts build it, rest days never break it,
+ * a missed day can be repaired by a workout within 7 days (5 repairs per streak), and missing for illness,
+ * soreness or travel only pauses it.
  */
 export function calculateStreak(profile: Pick<Profile, "trainingDays" | "trainingStartDate">, sessions: WorkoutSession[], today: string): Streak {
-  const done = new Set(sessions.filter((session) => !session.sampleData && session.status === "completed" && session.date <= today).map((session) => session.date));
-  const todayPlanned = isPlanned(profile, today);
-  const todayDone = done.has(today);
-  const lastDone = [...done].sort().at(-1) ?? null;
+  const timeline = buildStreakTimeline(profile, sessions, today);
+  const done = Object.entries(timeline.days).filter(([, status]) => status === "done").map(([date]) => date).sort();
+  const todayDone = timeline.days[today] === "done";
+  const lastDone = done.at(-1) ?? null;
   const daysSinceLastWorkout = lastDone === null ? null : Math.round((Date.parse(`${today}T12:00:00Z`) - Date.parse(`${lastDone}T12:00:00Z`)) / 86_400_000);
-
-  // Walk forward from the start so the best streak and the current one use the same rules.
-  let current = 0;
-  let best = 0;
-  let missedBeforeCurrent = false;
-  const start = [...done].sort()[0] && [...done].sort()[0] < profile.trainingStartDate ? [...done].sort()[0] : profile.trainingStartDate;
-  for (let date = start, guard = 0; date <= today && guard < 2000; date = shiftDate(date, 1), guard += 1) {
-    if (done.has(date)) {
-      if (current === 0) missedBeforeCurrent = false;
-      current += 1;
-      best = Math.max(best, current);
-    } else if (isPlanned(profile, date) && date < today) {
-      if (current > 0 || done.size > 0) missedBeforeCurrent = true;
-      current = 0;
-    }
-  }
-
-  const started = done.size > 0;
-  const broken = started && current === 0 && missedBeforeCurrent;
-  // The run that ends today started right after a missed day.
-  let comebackToday = false;
-  if (todayDone && current === 1) {
-    const before = [...done].filter((date) => date < today);
-    comebackToday = before.length > 0;
-  }
-  return { current, best, started, broken, daysSinceLastWorkout, todayPlanned, todayDone, comebackToday };
+  const todayPlanned = today >= profile.trainingStartDate && profile.trainingDays.includes(weekdayOf(today));
+  // A comeback: today's workout repaired a broken streak, or started a new one after earlier workouts.
+  const comebackToday = todayDone && (timeline.repairedOn.includes(today) || (timeline.current === 1 && done.length > 1));
+  return {
+    current: timeline.current, best: timeline.best, started: done.length > 0, broken: timeline.broken,
+    daysSinceLastWorkout, todayPlanned, todayDone, comebackToday,
+    repairsLeft: timeline.repairsLeft, repair: timeline.repair, repairedToday: timeline.repairedOn.includes(today),
+  };
 }
 
 export interface WorkoutWins {
@@ -118,6 +105,7 @@ export function roziMoment({ streak, todaySession, hour, name, wins }: MomentInp
     if (wins?.newRecord) return { mood: "personal-record", title: "New personal record!", message: `You lifted more than ever before. ${inARow}.` };
     if (wins?.bigMilestone) return { mood: "trophy", title: "Big milestone!", message: "You earned a new achievement. Look how far you’ve come." };
     if (wins?.milestone) return { mood: "milestone", title: "Achievement unlocked!", message: "A new badge is waiting on your Progress page." };
+    if (streak.repairedToday) return { mood: "cheer", title: "Streak repaired!", message: `Your streak is back: ${inARow}. ${streak.repairsLeft} ${streak.repairsLeft === 1 ? "repair" : "repairs"} left.` };
     if (streak.comebackToday) return { mood: "comeback", title: "Welcome back!", message: "You came back, and that’s what counts. New streak started." };
     return { mood: "cheer", title: "Workout done!", message: run > 1 ? `That’s ${inARow}. Keep it going!` : "Great job showing up today." };
   }
@@ -127,7 +115,11 @@ export function roziMoment({ streak, todaySession, hour, name, wins }: MomentInp
   }
   if (streak.broken) {
     if ((streak.daysSinceLastWorkout ?? 0) >= LONG_BREAK_DAYS) return { mood: "comeback", title: `I missed you, ${name}!`, message: "No pressure. Your next session is a gentle restart." };
-    return { mood: "grumpy", title: "Hmph. We missed one.", message: "It happens. Tomorrow’s a fresh start, and I’ll be here." };
+    if (streak.repair) {
+      const by = new Intl.DateTimeFormat("en", { weekday: "short", month: "short", day: "numeric", timeZone: "UTC" }).format(new Date(`${streak.repair.deadline}T12:00:00Z`));
+      return { mood: "grumpy", title: "Hmph. We missed one.", message: `Do a workout by ${by} to win back your ${streak.repair.lostStreak}-workout streak.` };
+    }
+    return { mood: "grumpy", title: "Hmph. We missed one.", message: "It happens. Your next workout starts a fresh streak, and I’ll be here." };
   }
   if (streak.todayPlanned && !streak.todayDone && hour >= 17) {
     return { mood: "streak-risk", title: "Still time today!", message: run > 0 ? `Keep your ${inARow} going. Even a short session counts.` : "A short session tonight still counts." };

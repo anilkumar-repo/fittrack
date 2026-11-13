@@ -283,6 +283,16 @@ Settings → tap your picture: upload a photo (resized to 256 px on the phone, s
 ### First-time tour
 Shown once after sign-up (7 cards with Rozi, highlighting each menu button). Settings → "Show the app tour again".
 
+### Streak calendar and repairs — `src/lib/streak.ts`, `streak-screen.tsx` (`/streak`), `workout-celebration.tsx`
+- Each finished workout adds 1. Rest days never break the streak.
+- A missed training day breaks it. Any workout within **7 days** repairs it (bandage icon) and gives the old streak back plus 1.
+- Each streak gets **5 repairs**. When all 5 are used, the next break starts a new streak from day one. A fresh streak gets 5 new repairs.
+- If the missed-day reason is unwell, sore or travelling, the day is **paused** (pause icon). It neither breaks nor grows the streak.
+- `/streak` shows a big streak number, Rozi, repairs left, a "Repair your streak" card while a repair is possible, and a month calendar (flame = done, dot = rest, bandage = repaired, pause, ✕ = missed).
+- Open it from the Home streak chip or "See my streak" after a workout.
+- After finishing a workout, a Rozi popup appears once per day. It shows the streak counting up, this week's checks, and moves, sets and minutes.
+- No database change: everything is worked out from saved workouts and missed-day reasons.
+
 ## 8. Build history
 
 | Phase / step | What changed |
@@ -304,15 +314,17 @@ Shown once after sign-up (7 cards with Rozi, highlighting each menu button). Set
 | Fix (2026-11-13) | Step 7 jumped to Home when "Email me a code" was pressed (the email form's submit also triggered "finish setup"). Fixed so the code screen shows; tested with the send stubbed. |
 | Email setup | Gmail SMTP connected (sender name RozFit). Both templates (Confirm signup, Magic link or OTP) pasted. Codes delivered; first emails landed in Spam. |
 | Polish round (2026-11-13) | iPhone app feel (no zoom / sideways wobble), "Lose weight" goal, trainer can edit a client's goal/days/length and sets/reps for every program exercise, first-time tour (replay in Settings), profile picture (photo / Rozi / initials), "demo" wording removed, sync status moved to Settings, compact data buttons, body-weight form fixed, faster images (lazy loading, 30-day caching, `next.config.ts`). Migration `20261113160000_avatars_fatloss_trainer_plan.sql` applied (SQL Editor). Trainer role set on the owner's account. |
+| Fixes (2026-11-13) | Trainer Settings crash fixed (null client check); trainer-controls spacing; notices close by themselves after 12 s. |
+| Streaks (2026-11-13) | Streak calendar page `/streak`, 5 repairs per streak (7-day window), pause for unwell/sore/travel, Rozi workout-done popup with the streak counting up and this week's checks. |
 
-Tests: `npm test` (112 at the last update), `npm run lint`, `npx tsc --noEmit`, `npm run build`.
+Tests: `npm test` (120 at the last update), `npm run lint`, `npx tsc --noEmit`, `npm run build`.
 
 ---
 
 ## 9. Full test checklist (after each deploy)
 
 1. Open `https://rozfit-a.vercel.app` on a phone → Get started → 7 steps → code email arrives (check Spam first time) → typing the code lands on Home, signed in, with the chosen plan.
-2. Train → today's workout matches the goal; log and finish a workout → Rozi celebrates.
+2. Train → today's workout matches the goal; log and finish a workout → Rozi popup shows the streak counting up → "See my streak calendar" opens `/streak` with today's flame.
 3. Settings → change goal → next planned day uses the new split.
 4. Skip a planned day → next day the missed-day dialog appears; reason shows in Progress.
 5. Friends → create invite → second account accepts → both see each other; nudge → banner (and phone notification if on).

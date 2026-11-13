@@ -1,7 +1,8 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowRight, CalendarDays, Check, Clock, Flame, ListChecks, Moon, Repeat, Sparkles, Trophy } from "lucide-react";
+import { ArrowRight, CalendarDays, Check, ChevronRight, Clock, Flame, ListChecks, Moon, Repeat, Sparkles, Trophy } from "lucide-react";
 import { motivationFor } from "@/lib/motivation";
 import { NudgeBanner } from "@/components/app/nudge-banner";
 import { MusclePicture } from "@/components/app/muscle-picture";
@@ -58,7 +59,7 @@ export function OverviewScreen() {
           <p>{dateLabel(currentDate)}</p>
           <h2>{moment.title}</h2>
           <span className="rozi-bubble">{moment.message}</span>
-          {streak.started && <span className="streak-chip"><Flame aria-hidden="true" /> {streak.current} in a row{streak.best > streak.current ? ` · best ${streak.best}` : ""}</span>}
+          {streak.started && <Link className="streak-chip" href="/streak"><Flame aria-hidden="true" /> {streak.repair ? `Repair your ${streak.repair.lostStreak} streak` : `${streak.current} in a row${streak.best > streak.current ? ` · best ${streak.best}` : ""}`} <ChevronRight aria-hidden="true" /></Link>}
         </div>
       </header>
 

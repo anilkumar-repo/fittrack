@@ -29,16 +29,23 @@ test("rest days never break a streak and today's workout is not missed until the
   assert.equal(mondayMorning.todayDone, false);
 });
 
-test("a missed training day breaks the streak, and the next workout is a comeback", () => {
+test("a missed training day breaks the streak, and a workout within 7 days repairs it", () => {
   const sessions = [done("2026-11-02"), done("2026-11-04")];
   const after = calculateStreak(profile, sessions, "2026-11-07");
   assert.equal(after.current, 0);
   assert.equal(after.broken, true);
   assert.equal(after.best, 2);
-  const comeback = calculateStreak(profile, [...sessions, done("2026-11-09")], "2026-11-09");
-  assert.equal(comeback.current, 1);
-  assert.equal(comeback.broken, false);
-  assert.equal(comeback.comebackToday, true);
+  assert.deepEqual(after.repair, { lostStreak: 2, deadline: "2026-11-13" });
+  assert.match(roziMoment({ streak: after, hour: 10, name: "P" }).message, /win back your 2-workout streak/);
+  const repaired = calculateStreak(profile, [...sessions, done("2026-11-09")], "2026-11-09");
+  assert.equal(repaired.current, 3);
+  assert.equal(repaired.broken, false);
+  assert.equal(repaired.repairedToday, true);
+  assert.equal(roziMoment({ streak: repaired, todaySession: done("2026-11-09"), hour: 10, name: "P" }).title, "Streak repaired!");
+  // Too late to repair: the next workout starts a new streak (a comeback).
+  const fresh = calculateStreak(profile, [...sessions, done("2026-11-20")], "2026-11-20");
+  assert.equal(fresh.current, 1);
+  assert.equal(fresh.comebackToday, true);
 });
 
 test("a brand-new person who has not trained yet is never shown as grumpy", () => {

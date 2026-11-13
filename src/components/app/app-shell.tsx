@@ -37,7 +37,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const missedDays = unexplainedMissedDays(state.profile, state.sessions, currentDate);
 
   const active = navItems.find((item) => item.href === pathname);
-  const pageTitle = active?.title ?? (pathname === "/sign-in" ? "Sign in" : "RozFit");
+  const pageTitle = active?.title ?? (pathname === "/sign-in" ? "Sign in" : pathname === "/streak" ? "Your streak" : "RozFit");
   const dueToday = state.profile.trainingDays.includes(weekdayOf(currentDate)) || Boolean(sessionForDate(state, currentDate));
   const saveLabel = isDemo
     ? accountLoading ? "Loading your account…" : "Saved on this device"

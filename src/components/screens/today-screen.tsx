@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ArrowLeft, ArrowRight, Check, ChevronRight, Clock, ListChecks, Pencil, Play, Repeat } from "lucide-react";
 import { Rozi, RoziEnergy } from "@/components/app/rozi";
+import { WorkoutCelebration } from "@/components/app/workout-celebration";
 import { MusclePicture } from "@/components/app/muscle-picture";
 import { MuscleThumb } from "@/components/app/muscle-thumb";
 import { ExerciseGuideModal, toGuideExercise } from "@/components/app/exercise-guide-modal";
@@ -254,6 +255,7 @@ function WorkoutDayView({ date }: { date: string }) {
           <button className="button button-primary flow-cta" onClick={startWorkout}>Begin workout <ArrowRight aria-hidden="true" /></button>
         </article>}
 
+        {isDone && todaySession && doneMoment && <WorkoutCelebration session={todaySession} setsDone={setsDone} roziMood={doneMoment.mood} />}
         {isDone && todaySession && doneMoment && <article className="panel done-card">
           <Rozi mood={doneMoment.mood} size={170} />
           <h3>{doneMoment.title}</h3>
@@ -263,7 +265,7 @@ function WorkoutDayView({ date }: { date: string }) {
             <div><dd>{setsDone}</dd><dt>sets done</dt></div>
             <div><dd>{todaySession.review?.effort ?? "—"}<small>/10</small></dd><dt>effort</dt></div>
           </dl>
-          <div className="done-actions"><button className="button button-primary" onClick={() => router.push("/progress")}>See your progress <ArrowRight aria-hidden="true" /></button><button className="button button-subtle" onClick={() => { setEditing(true); setFlowStep("workout"); }}><Pencil aria-hidden="true" /> Edit entries</button></div>
+          <div className="done-actions"><button className="button button-primary" onClick={() => router.push("/streak")}>See my streak <ArrowRight aria-hidden="true" /></button><button className="button button-subtle" onClick={() => { setEditing(true); setFlowStep("workout"); }}><Pencil aria-hidden="true" /> Edit entries</button></div>
         </article>}
 
         {logging && todaySession && plan && displayFlowStep !== "review" && <article className="logger">
