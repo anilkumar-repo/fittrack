@@ -291,6 +291,27 @@ Settings → tap your picture: upload a photo (resized to 256 px on the phone, s
 ### First-time tour
 Shown once after sign-up (7 cards with Rozi, highlighting each menu button). Settings → "Show the app tour again".
 
+### Fitness level — `src/lib/levels.ts`, `level-panel.tsx`, `level-change.tsx`
+- Four levels: Beginner, Intermediate, Advanced, Pro. Asked in Get started (step 3, after the goal); changeable in Settings → Your plan → Level; a linked trainer can set it in Client plan.
+- What a level changes in the plan:
+  - Start stage of the 52-week program: Beginner week 1, Intermediate week 13, Advanced week 25, Pro week 37. The week counts on from the day the level started (`levelSince`).
+  - Only Beginners get the gentle two-set foundation weeks.
+  - Advanced: +1 set on the two main exercises. Pro: +1 set on the three main exercises. Never on a return-after-break session.
+  - Pain, recovery and the trainer's deadlift approval rules are unchanged at every level.
+- Moving up by itself: all four must be true at the current level:
+
+  | From | Weeks at level | Workouts at level |
+  |---|---|---|
+  | Beginner → Intermediate | 8 | 20 |
+  | Intermediate → Advanced | 12 | 36 |
+  | Advanced → Pro | 16 | 56 |
+
+  The other two: at least 75% of planned workouts in the last 4 weeks, and no pain or discomfort reported in the last 2 weeks.
+- Moving down: 6 weeks without a workout moves down one level (once per break).
+- A change shows a Rozi pop-up ("Level up!" / "Welcome back") and is saved with today's date. Progress → Your level shows the four steps and the checklist for the next level. Train shows the level next to the program week.
+- Database: migration `20261113163106_fitness_levels.sql` allows the 4 levels, adds `profiles.level_since`, and adds an optional level to `trainer_update_client_plan`.
+  Applied 2026-11-13 (verified: 4-level check, `level_since date`, one 5-argument trainer function, execute for signed-in users only, no invalid rows).
+
 ### Streak calendar and repairs — `src/lib/streak.ts`, `streak-screen.tsx` (`/streak`), `workout-celebration.tsx`
 - Each finished workout adds 1. Rest days never break the streak.
 - A missed training day breaks it. Any workout within **7 days** repairs it (bandage icon) and gives the old streak back plus 1.
@@ -324,9 +345,10 @@ Shown once after sign-up (7 cards with Rozi, highlighting each menu button). Set
 | Polish round (2026-11-13) | iPhone app feel (no zoom / sideways wobble), "Lose weight" goal, trainer can edit a client's goal/days/length and sets/reps for every program exercise, first-time tour (replay in Settings), profile picture (photo / Rozi / initials), "demo" wording removed, sync status moved to Settings, compact data buttons, body-weight form fixed, faster images (lazy loading, 30-day caching, `next.config.ts`). Migration `20261113160000_avatars_fatloss_trainer_plan.sql` applied (SQL Editor). Trainer role set on the owner's account. |
 | Fixes (2026-11-13) | Trainer Settings crash fixed (null client check); trainer-controls spacing; notices close by themselves after 12 s. |
 | Streaks (2026-11-13) | Streak calendar page `/streak`, 5 repairs per streak (7-day window), pause for unwell/sore/travel, Rozi workout-done popup with the streak counting up and this week's checks. |
+| Fitness levels (2026-11-13) | Beginner / Intermediate / Advanced / Pro: picked in Get started, Settings or by the trainer; sets the starting program stage and volume; moves up by itself with steady pain-free training and down one after a 6-week break. Migration `20261113163106_fitness_levels.sql`. |
 | Liquid glass (2026-11-13) | Whole app restyled as liquid glass. Light, Dark and Auto themes replace Soft pastel and the purple glass. Home has a "Day N" glass hero with Rozi. The phone menu is a floating glass pill plus a round Settings button. |
 
-Tests: `npm test` (120 at the last update), `npm run lint`, `npx tsc --noEmit`, `npm run build`.
+Tests: `npm test` (127 at the last update), `npm run lint`, `npx tsc --noEmit`, `npm run build`.
 
 ---
 

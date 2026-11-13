@@ -1,5 +1,6 @@
 "use client";
 
+import { checkLevelChange, type LevelChange } from "@/lib/levels";
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import type { SupabaseClient, User } from "@supabase/supabase-js";
 import { createDemoState, readDemoState, todayInTimeZone, writeDemoState } from "@/lib/demo-data";
@@ -75,6 +76,9 @@ interface FitTrackContextValue {
   /** Which body drawing to show, remembered on this device. */
   figure: FigureChoice;
   setFigure: (figure: FigureChoice) => void;
+  /** A level change made by itself today (shown once as a Rozi pop-up). */
+  levelChange: LevelChange | null;
+  dismissLevelChange: () => void;
 }
 
 const FitTrackContext = createContext<FitTrackContextValue | null>(null);
@@ -404,6 +408,21 @@ export function FitTrackProvider({ children }: { children: React.ReactNode }) {
     return () => window.removeEventListener("online", retryPendingSessions);
   }, [retryPendingSessions]);
 
+  // Levels move by themselves: up after steady, pain-free training; down one after a 6-week break.
+  const [levelChange, setLevelChange] = useState<LevelChange | null>(null);
+  const dismissLevelChange = useCallback(() => setLevelChange(null), []);
+  useEffect(() => {
+    if (!ready || accountLoading || !state.onboarded) return;
+    const change = checkLevelChange(state.profile, recordedSessions, currentDate);
+    if (!change) return;
+    // Applied just after render, once the workouts on screen are settled.
+    const timer = window.setTimeout(() => {
+      updateProfile({ experience: change.to, levelSince: currentDate });
+      setLevelChange(change);
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, [ready, accountLoading, state.onboarded, state.profile, recordedSessions, currentDate, updateProfile]);
+
   // Share a small summary (streak, workouts this week, recent workout dates) with friends. Signed-in accounts only.
   const publishedStats = useRef("");
   useEffect(() => {
@@ -443,8 +462,8 @@ export function FitTrackProvider({ children }: { children: React.ReactNode }) {
   const value = useMemo<FitTrackContextValue>(() => ({
     state, getState, updateState, ready, isDemo: state.mode === "demo", accountLoading, authChecked, browserClient, currentDate,
     trainerRuleSettings, planningProfile, recordedSessions, notice, setNotice, saveError, savingSession,
-    retryPendingSessions, upsertSession, recordMissedDays, updateProfile, completeOnboarding, stageOnboarding, signOut, refreshTrainerClients, weightUnit, setWeightUnit, theme, setTheme, figure, setFigure,
-  }), [stageOnboarding, recordMissedDays, state, getState, updateState, ready, accountLoading, authChecked, browserClient, currentDate, trainerRuleSettings, planningProfile,
+    retryPendingSessions, upsertSession, recordMissedDays, updateProfile, completeOnboarding, stageOnboarding, signOut, refreshTrainerClients, weightUnit, setWeightUnit, theme, setTheme, figure, setFigure, levelChange, dismissLevelChange,
+  }), [levelChange, dismissLevelChange, stageOnboarding, recordMissedDays, state, getState, updateState, ready, accountLoading, authChecked, browserClient, currentDate, trainerRuleSettings, planningProfile,
     recordedSessions, notice, saveError, savingSession, retryPendingSessions, upsertSession, updateProfile, completeOnboarding, signOut, refreshTrainerClients, weightUnit, setWeightUnit, theme, setTheme, figure, setFigure]);
 
   return <FitTrackContext.Provider value={value}>{children}</FitTrackContext.Provider>;

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { BrandMark } from "./brand-mark";
 import { MissedDayPrompt } from "./missed-day-prompt";
 import { TourGuide } from "./tour-guide";
+import { LevelChangePopup } from "./level-change";
 import { Avatar } from "./avatar";
 import { unexplainedMissedDays } from "@/lib/missed-days";
 import { BookOpen, ChartColumn, Dumbbell, House, Settings, Users, type LucideIcon } from "lucide-react";
@@ -47,6 +48,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     <div className="app-shell">
       {missedDays.length > 0 && <MissedDayPrompt dates={missedDays} />}
       <TourGuide blocked={missedDays.length > 0} />
+      <LevelChangePopup />
       <aside className="sidebar">
         <Link className="brand" href="/">
           <BrandMark /><span><strong>RozFit</strong><small>Small steps, every day</small></span>

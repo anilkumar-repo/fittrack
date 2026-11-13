@@ -3,6 +3,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { MissedDaysList } from "@/components/app/missed-days-card";
 import { GOAL_OPTIONS, goalOf } from "@/lib/program";
+import { LEVEL_OPTIONS, levelOf } from "@/lib/levels";
+import type { ExperienceLevel } from "@/lib/types";
 import { MAX_TRAINING_DAYS, MIN_TRAINING_DAYS, trainingDaysValid, WEEKDAY_LABELS } from "@/lib/dates";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { generateWorkout } from "@/lib/planner";
@@ -68,7 +70,7 @@ export function TrainerControls({ client, trainerId, trainerRole, clients, refre
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
   const [pickedExerciseId, setExerciseId] = useState("");
-  const [planDraft, setPlanDraft] = useState<{ clientId: string; goal: ReturnType<typeof goalOf>; days: number[]; minutes: number } | null>(null);
+  const [planDraft, setPlanDraft] = useState<{ clientId: string; goal: ReturnType<typeof goalOf>; level: ExperienceLevel; days: number[]; minutes: number } | null>(null);
   const [savingPlan, setSavingPlan] = useState(false);
 
   const selectedClient = clients.find((item) => item.id === selectedClientId) ?? clients[0];
@@ -77,9 +79,9 @@ export function TrainerControls({ client, trainerId, trainerRole, clients, refre
   const exerciseId = TEMPLATE_EXERCISES.some((item) => item.id === pickedExerciseId) ? pickedExerciseId : TEMPLATE_EXERCISES[0]?.id ?? "";
   // With no linked clients both ids are undefined, so check that a draft and a client really exist.
   const plan = planDraft && selectedClient && planDraft.clientId === selectedClient.id ? planDraft : selectedClient
-    ? { clientId: selectedClient.id, goal: goalOf(selectedClient.profile), days: selectedClient.profile.trainingDays, minutes: selectedClient.profile.preferredSessionMinutes }
+    ? { clientId: selectedClient.id, goal: goalOf(selectedClient.profile), level: levelOf(selectedClient.profile), days: selectedClient.profile.trainingDays, minutes: selectedClient.profile.preferredSessionMinutes }
     : null;
-  const planDirty = Boolean(selectedClient && plan && (plan.goal !== goalOf(selectedClient.profile) || plan.minutes !== selectedClient.profile.preferredSessionMinutes
+  const planDirty = Boolean(selectedClient && plan && (plan.goal !== goalOf(selectedClient.profile) || plan.level !== levelOf(selectedClient.profile) || plan.minutes !== selectedClient.profile.preferredSessionMinutes
     || [...plan.days].sort().join() !== [...selectedClient.profile.trainingDays].sort().join()));
 
   async function saveClientPlan() {
@@ -88,7 +90,7 @@ export function TrainerControls({ client, trainerId, trainerRole, clients, refre
     setError("");
     setMessage("");
     try {
-      await saveCloudClientPlan(client, selectedClient.id, plan.goal, [...plan.days].sort((a, b) => a - b), plan.minutes);
+      await saveCloudClientPlan(client, selectedClient.id, plan.goal, [...plan.days].sort((a, b) => a - b), plan.minutes, plan.level);
       await refresh();
       setPlanDraft(null);
       setMessage(`${selectedClient.displayName}’s plan was updated. Their next unstarted workout uses it.`);
@@ -249,6 +251,7 @@ export function TrainerControls({ client, trainerId, trainerRole, clients, refre
             <h4>Client plan</h4>
             {plan && <>
               <label className="field-label">Goal<select value={plan.goal} disabled={!canEdit} onChange={(event) => setPlanDraft({ ...plan, goal: event.target.value as typeof plan.goal })}>{GOAL_OPTIONS.map((option) => <option key={option.id} value={option.id}>{option.title} — {option.note}</option>)}</select></label>
+              <label className="field-label">Level<select value={plan.level} disabled={!canEdit} onChange={(event) => setPlanDraft({ ...plan, level: event.target.value as ExperienceLevel })}>{LEVEL_OPTIONS.map((option) => <option key={option.id} value={option.id}>{option.title} — {option.note}</option>)}</select></label>
               <div className="field-label">Training days
                 <div className="onb-days">{WEEKDAY_LABELS.map((label, day) => <button key={label} type="button" disabled={!canEdit} className={plan.days.includes(day) ? "selected" : ""} aria-pressed={plan.days.includes(day)} onClick={() => setPlanDraft({ ...plan, days: plan.days.includes(day) ? plan.days.filter((value) => value !== day) : [...plan.days, day] })}>{label}</button>)}</div>
                 <small>{trainingDaysValid(plan.days) ? `${plan.days.length} days a week` : `Choose ${MIN_TRAINING_DAYS} to ${MAX_TRAINING_DAYS} days`}</small>

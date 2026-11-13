@@ -1,5 +1,6 @@
 "use client";
 
+import { levelTitle } from "@/lib/levels";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ArrowLeft, ArrowRight, Check, ChevronRight, Clock, ListChecks, Pencil, Play, Repeat } from "lucide-react";
@@ -181,7 +182,8 @@ function WorkoutDayView({ date }: { date: string }) {
         <header className="train-head">
           <p>{date === currentDate ? "Today" : dateLabel(date)}</p>
           <h2>{plan?.title ?? "Rest day"}</h2>
-          {plan?.stage && <span className={`stage-chip ${plan.recoveryWeek ? "light" : ""}`}>Week {plan.weekNumber} of 52 · {plan.stage}</span>}
+          {plan?.stage ? <span className={`stage-chip ${plan.recoveryWeek ? "light" : ""}`}>{plan.level ? `${levelTitle(plan.level)} · ` : ""}Week {plan.weekNumber} of 52 · {plan.stage}</span>
+            : plan?.level && plan.sessionType !== "recovery" && <span className="stage-chip">{levelTitle(plan.level)} level</span>}
         </header>
 
         {!plan && <article className="panel train-rest">

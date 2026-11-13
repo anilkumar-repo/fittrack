@@ -1945,3 +1945,31 @@ img.day-rozi { position: absolute; bottom: -6px; width: 200px; height: 200px; fi
 .glass-pill { display: inline-flex; height: 40px; align-items: center; padding: 0 16px; border: 1px solid rgba(255, 255, 255, .7); border-radius: 999px; color: #ffffff; background: linear-gradient(160deg, rgba(255, 255, 255, .45), rgba(255, 255, 255, .12)); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .8), 0 6px 16px rgba(20, 50, 80, .18); font-size: 14px; font-weight: 800; text-decoration: none; -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px); }
 @media (min-width: 701px) { .home { padding-top: 28px; } }
 .day-hero .day-stage { margin-top: 10px; }
+
+/* ---------- Fitness level ---------- */
+.level-steps { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; width: 100%; margin: 4px 0 0; padding: 0; list-style: none; counter-reset: lvl; }
+.level-steps li { display: grid; justify-items: center; gap: 6px; color: var(--faint); font-size: 12px; font-weight: 700; text-align: center; }
+.level-steps li span { position: relative; width: 100%; height: 10px; border-radius: 999px; background: var(--surface-3); box-shadow: inset 0 1px 3px rgba(0, 0, 0, .08); }
+.level-steps li.past { color: var(--muted); }
+.level-steps li.past span { background: color-mix(in srgb, var(--tint) 55%, transparent); }
+.level-steps li.now { color: var(--ink); font-weight: 900; }
+.level-steps li.now span { background: linear-gradient(180deg, color-mix(in srgb, var(--tint) 85%, #ffffff), var(--tint)); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .7), 0 3px 10px rgba(31, 111, 99, .3); }
+.level-panel { display: grid; gap: 12px; scroll-margin-top: 20px; }
+.level-effect, .level-next { margin: 0; color: var(--ink-2); font-size: 14px; line-height: 1.5; }
+.level-meter { height: 8px; overflow: hidden; border-radius: 999px; background: var(--surface-3); }
+.level-meter span { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, var(--tint), color-mix(in srgb, var(--tint) 60%, var(--accent))); transition: width .4s ease; }
+.level-reqs { display: grid; gap: 6px; margin: 0; padding: 0; list-style: none; }
+.level-reqs li { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 10px; padding: 9px 12px; border: var(--glass-edge); border-radius: 16px; background: var(--surface); font-size: 14px; }
+.level-reqs li strong { color: var(--muted); font-size: 13px; }
+.level-reqs li.met strong { color: var(--tint-ink); }
+.level-tick { display: grid; width: 22px; height: 22px; place-items: center; border-radius: 50%; color: #ffffff; background: var(--surface-3); }
+.level-reqs li.met .level-tick { background: var(--tint); }
+.level-tick svg { width: 14px; height: 14px; }
+.level-note { color: var(--muted); font-size: 12px; line-height: 1.5; }
+.level-switch button { padding: 0 6px; font-size: 13px; }
+.level-card .level-kicker { position: relative; padding: 4px 12px; border-radius: 999px; color: var(--tint-ink); background: var(--tint-soft); font-size: 13px; font-weight: 900; letter-spacing: .4px; text-transform: uppercase; }
+.level-card .level-steps { margin: 6px 0 4px; }
+@media (max-width: 520px) {
+  .segmented.level-switch { display: grid; grid-template-columns: 1fr 1fr; border-radius: 26px; }
+  .level-switch button { min-height: 40px; font-size: 14px; }
+}

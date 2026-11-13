@@ -1,4 +1,4 @@
-export type ExperienceLevel = "beginner" | "intermediate";
+export type ExperienceLevel = "beginner" | "intermediate" | "advanced" | "pro";
 export type SessionStatus = "planned" | "in_progress" | "completed" | "skipped";
 export type ExerciseStatus = "not_started" | "partial" | "completed" | "skipped";
 export type WorkoutFocus =
@@ -23,7 +23,10 @@ export type FormQuality = "not_rated" | "sound" | "needs_practice";
 export interface Profile {
   id: string;
   displayName: string;
+  /** Fitness level; it moves up by itself with steady training (see levels.ts). */
   experience: ExperienceLevel;
+  /** Day the current level started. Missing means the training start date. */
+  levelSince?: string;
   sessionsPerWeek: number;
   trainingDays: number[];
   trainingStartDate: string;
@@ -170,6 +173,8 @@ export interface WorkoutPlan {
   goal?: TrainingGoal;
   weekNumber?: number;
   stage?: string;
+  /** Fitness level the plan was made for. */
+  level?: ExperienceLevel;
   /** Every fourth week is lighter: fewer sets, or a conditioning week for the muscle goal. */
   recoveryWeek?: boolean;
 }

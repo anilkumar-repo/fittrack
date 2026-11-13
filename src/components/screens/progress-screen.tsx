@@ -1,6 +1,7 @@
 "use client";
 
 import { MissedDaysList } from "@/components/app/missed-days-card";
+import { LevelPanel } from "@/components/app/level-panel";
 
 import { useState } from "react";
 import { Award, CalendarCheck, Check, ChevronRight, Clock, Dumbbell, Flame, Lock, Medal, Sparkles, Target, Trophy, Zap, type LucideIcon } from "lucide-react";
@@ -98,6 +99,8 @@ export function ProgressScreen() {
           <article className="panel stat"><span className="stat-ico"><CalendarCheck aria-hidden="true" /></span><strong>{completedRecentSessions}</strong><small>Workouts</small><em>Finished in the last 4 weeks</em></article>
           <article className="panel stat"><span className="stat-ico"><Trophy aria-hidden="true" /></span><strong>{personalRecords.length}</strong><small>Personal records</small><em>Heaviest logged set per exercise</em></article>
         </div>
+
+        <LevelPanel />
 
         <article className="panel">
           <div className="panel-title"><h3>Achievements</h3><span className="panel-count">{achievements.filter((item) => item.earned).length} of {achievements.length} earned</span></div>

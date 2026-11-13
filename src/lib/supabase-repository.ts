@@ -48,7 +48,8 @@ function mapProfile(row: DbRow, id: string, trainerRole: boolean, deadliftEnable
   return {
     id,
     displayName: typeof row.display_name === "string" ? row.display_name : defaults.displayName,
-    experience: row.experience === "intermediate" ? "intermediate" : "beginner",
+    experience: row.experience === "intermediate" || row.experience === "advanced" || row.experience === "pro" ? row.experience : "beginner",
+    ...(typeof row.level_since === "string" ? { levelSince: row.level_since } : {}),
     sessionsPerWeek: Number(row.sessions_per_week ?? defaults.sessionsPerWeek),
     trainingDays: Array.isArray(row.training_days) ? row.training_days.map(Number) : defaults.trainingDays,
     trainingStartDate: typeof row.training_start_date === "string" ? row.training_start_date : defaults.trainingStartDate,
@@ -355,6 +356,7 @@ export async function saveCloudProfile(client: SupabaseClient, profile: Profile)
     id: profile.id,
     display_name: profile.displayName,
     experience: profile.experience,
+    level_since: profile.levelSince ?? null,
     sessions_per_week: profile.sessionsPerWeek,
     training_days: profile.trainingDays,
     training_start_date: profile.trainingStartDate,
@@ -371,8 +373,8 @@ export async function saveCloudProfile(client: SupabaseClient, profile: Profile)
 }
 
 /** A linked trainer changes a client's goal, training days and session length (checked on the server). */
-export async function saveCloudClientPlan(client: SupabaseClient, clientId: string, goal: string, trainingDays: number[], minutes: number): Promise<void> {
-  const { error } = await client.rpc("trainer_update_client_plan", { p_client: clientId, p_goal: goal, p_training_days: trainingDays, p_minutes: minutes });
+export async function saveCloudClientPlan(client: SupabaseClient, clientId: string, goal: string, trainingDays: number[], minutes: number, experience?: string): Promise<void> {
+  const { error } = await client.rpc("trainer_update_client_plan", { p_client: clientId, p_goal: goal, p_training_days: trainingDays, p_minutes: minutes, ...(experience ? { p_experience: experience } : {}) });
   if (error) throw new Error(error.message);
 }
 

@@ -8,6 +8,7 @@ import { replayTour } from "@/components/app/tour-guide";
 import { TrainerControls } from "@/components/trainer-controls";
 import { CalendarDays, Moon, Palette, ShieldCheck, Smartphone, Sun } from "lucide-react";
 import { GOAL_OPTIONS, goalOf } from "@/lib/program";
+import { LEVEL_OPTIONS, levelOf } from "@/lib/levels";
 import { MAX_TRAINING_DAYS, MIN_TRAINING_DAYS, shortDate, trainingDaysValid, WEEKDAY_LABELS } from "@/lib/dates";
 import { FIGURE_OPTIONS } from "@/lib/figure";
 import { EQUIPMENT_OPTIONS, RULE_VERSION, TEMPLATE_VERSION } from "@/lib/templates";
@@ -21,7 +22,7 @@ const THEME_OPTIONS: Array<{ id: Theme; label: string; icon: typeof Sun }> = [
 ];
 
 export function SettingsScreen() {
-  const { state, recordedSessions, updateState, isDemo, browserClient, updateProfile, refreshTrainerClients, setNotice, weightUnit, setWeightUnit, theme, setTheme, figure, setFigure, saveError, savingSession } = useFitTrack();
+  const { state, currentDate, recordedSessions, updateState, isDemo, browserClient, updateProfile, refreshTrainerClients, setNotice, weightUnit, setWeightUnit, theme, setTheme, figure, setFigure, saveError, savingSession } = useFitTrack();
   function setEquipmentAvailability(availability: Profile["equipmentAvailability"]) {
     void updateProfile(availability === "unknown"
       ? { equipmentAvailability: "unknown", availableEquipment: [] }
@@ -69,6 +70,10 @@ export function SettingsScreen() {
             <div className="settings-field"><span>Goal</span>
               <div className="goal-options">{GOAL_OPTIONS.map((option) => <button key={option.id} type="button" className={goalOf(profile) === option.id ? "selected" : ""} aria-pressed={goalOf(profile) === option.id} onClick={() => updateProfile({ goal: option.id })}><strong>{option.title}</strong><small>{option.note}</small></button>)}</div>
               <small>Changing your goal starts its plan from the first workout. Your history and records stay.</small>
+            </div>
+            <div className="settings-field"><span>Level</span>
+              <div className="segmented level-switch">{LEVEL_OPTIONS.map((option) => <button key={option.id} type="button" className={levelOf(profile) === option.id ? "selected" : ""} aria-pressed={levelOf(profile) === option.id} onClick={() => { if (levelOf(profile) !== option.id) updateProfile({ experience: option.id, levelSince: currentDate }); }}>{option.title}</button>)}</div>
+              <small>{LEVEL_OPTIONS.find((option) => option.id === levelOf(profile))?.note}. RozFit moves you up by itself as you train; see Progress → Your level.</small>
             </div>
             <div className="settings-field"><span>Training days</span>
               <div className="onb-days">{WEEKDAY_LABELS.map((label, day) => <button key={label} type="button" className={profile.trainingDays.includes(day) ? "selected" : ""} aria-pressed={profile.trainingDays.includes(day)} onClick={() => {

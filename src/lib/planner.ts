@@ -1,5 +1,6 @@
 import { EXERCISE_LIBRARY, FOCUS_SUBTITLES, GOAL_CYCLES, getExerciseDefinition, getOptionalDeadliftExercise, getRecoveryExercises, getTemplateExercises, RULE_VERSION, TEMPLATE_VERSION, type TemplateFocus } from "./templates.ts";
-import { goalOf, goalTitle, isRecoveryWeek, recoveryWeekSets, setCap, stageLabel, trainingWeek } from "./program.ts";
+import { goalOf, goalTitle, isRecoveryWeek, recoveryWeekSets, setCap, stageLabel } from "./program.ts";
+import { extraSets, levelOf, levelSetBonus, levelTitle, programWeek, usesFoundationWeeks } from "./levels.ts";
 import { exerciseEquipmentIsAvailable, isDeadliftVariation, isExerciseAllowedForProfile } from "./exercise-library.ts";
 import type { CheckIn, ExerciseDefinition, Profile, TrainerRuleSettings, TrainingGoal, TrainingPhase, WorkoutFocus, WorkoutPlan, WorkoutSession } from "./types";
 import { DEFAULT_TRAINER_RULE_SETTINGS, normalizeTrainerRuleSettings, profileWithTrainerEquipment } from "./trainer-rules.ts";
@@ -298,16 +299,20 @@ export function generateWorkout({ date, profile, sessions, checkIn, trainerRuleS
   const gapDays = lastTrainingAttempt ? daysBetween(date, lastTrainingAttempt.date) : null;
   const isReturnSession = gapDays !== null && gapDays >= 14;
   const goal = goalOf(profile);
-  const week = trainingWeek(profile.trainingStartDate, date);
+  const level = levelOf(profile);
+  // The program week starts at the level's stage (an intermediate begins at week 13, not at "learn the movements").
+  const week = programWeek(profile, date);
   const program = goal !== "general";
   const recoveryWeek = isRecoveryWeek(goal, week);
   const stage = stageLabel(goal, week);
   const focus: WorkoutFocus = program ? chooseProgramFocus(goal, trainingAttempts, date, week) : chooseFocus(trainingAttempts, isReturnSession);
-  const phase = phaseFor(date, profile, completed, isReturnSession);
+  const foundPhase = phaseFor(date, profile, completed, isReturnSession);
+  // Only beginners get the gentle two-set foundation phase.
+  const phase: TrainingPhase = foundPhase === "foundation_1" && !usesFoundationWeeks(level) ? "foundation_2" : foundPhase;
   const feedback = recoveryDecision(date, checkIn, prior, profile.sessionsPerWeek, settings);
   if (feedback.recover) {
     const plan = recoveryPlan(date, trainingAttempts, phase, feedback.reasons, checkIn?.pain === true, settings, trainerRuleRevision);
-    return program ? { ...plan, goal, weekNumber: week, stage, recoveryWeek } : plan;
+    return program ? { ...plan, goal, weekNumber: week, stage, recoveryWeek, level } : { ...plan, level };
   }
 
   const baseFocus: TemplateFocus = focus === "Return to training" || focus === "Recovery" ? CYCLE[0] : focus;
@@ -360,6 +365,9 @@ export function generateWorkout({ date, profile, sessions, checkIn, trainerRuleS
       : phase === "return"
         ? "A break of at least 14 days makes this a lighter return session."
         : "Foundation phase 1 uses conservative beginner volume and a repeatable full-body template.",
+    level === "beginner"
+      ? "Beginner level: gentle volume while the movements become familiar."
+      : `${levelTitle(level)} level: the program starts at a later stage${level === "advanced" || level === "pro" ? " and the main exercises get an extra set" : ""}.`,
     ...(feedback.reasons.length ? feedback.reasons : ["Recent check-ins and training frequency support the standard conservative volume."]),
     profile.equipmentAvailability === "verified"
       ? `Only confirmed equipment is used: ${profile.availableEquipment.length ? profile.availableEquipment.join(", ") : "bodyweight only"}.`
@@ -430,7 +438,10 @@ export function generateWorkout({ date, profile, sessions, checkIn, trainerRuleS
       ? `Substituted for ${source.name} while preserving the saved source plan.`
       : program ? `Part of the ${baseFocus} session.` : `Selected from the ${baseFocus} template as part of the approved beginner rotation.`);
     const progression = progressionFor(candidate, prior, settings);
-    const cappedSets = Math.min(candidate.sets, setCap(goal, week, isEarlyFoundation, isReturnSession));
+    // Advanced and pro levels add a set to the main (first) exercises; a return session never does.
+    const levelSets = isReturnSession ? 0 : extraSets(level, exercises.length);
+    const cap = setCap(goal, week, isEarlyFoundation, isReturnSession) + (isReturnSession ? 0 : levelSetBonus(level));
+    const cappedSets = Math.min(candidate.sets + levelSets, cap);
     const plannedSets = recoveryWeek && goal !== "muscle" ? recoveryWeekSets(cappedSets) : cappedSets;
     exercises.push({
       ...candidate,
@@ -481,6 +492,7 @@ export function generateWorkout({ date, profile, sessions, checkIn, trainerRuleS
     generationReasons,
     trainerRuleRevision,
     trainerRuleSettings: settings,
+    level,
     ...(program ? { goal, weekNumber: week, stage, recoveryWeek } : {}),
   };
 }

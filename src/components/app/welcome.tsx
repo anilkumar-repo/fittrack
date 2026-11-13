@@ -5,17 +5,18 @@ import { ArrowLeft, ArrowRight, Check } from "lucide-react";
 import { MAX_TRAINING_DAYS, MIN_TRAINING_DAYS, trainingDaysHint, trainingDaysValid, WEEKDAY_LABELS } from "@/lib/dates";
 import { FIGURE_OPTIONS, type FigureChoice } from "@/lib/figure";
 import { GOAL_OPTIONS, goalOf } from "@/lib/program";
+import { LEVEL_OPTIONS, levelOf } from "@/lib/levels";
 import { hasSupabaseConfig } from "@/lib/supabase-browser";
 import { EQUIPMENT_OPTIONS } from "@/lib/templates";
-import type { EquipmentKey, Profile, TrainingGoal } from "@/lib/types";
+import type { EquipmentKey, ExperienceLevel, Profile, TrainingGoal } from "@/lib/types";
 import { MusclePicture } from "./muscle-picture";
 import { Rozi } from "./rozi";
 import { BrandMark } from "./brand-mark";
 import { useFitTrack } from "./fit-track-provider";
 import { SignInForm } from "./sign-in-form";
 
-type Step = "hero" | "name" | "goal" | "figure" | "days" | "length" | "equipment" | "account";
-const BASE_QUESTIONS: Step[] = ["name", "goal", "figure", "days", "length", "equipment"];
+type Step = "hero" | "name" | "goal" | "level" | "figure" | "days" | "length" | "equipment" | "account";
+const BASE_QUESTIONS: Step[] = ["name", "goal", "level", "figure", "days", "length", "equipment"];
 const LENGTHS = [
   { minutes: 30, title: "About 30 minutes", note: "Short and focused" },
   { minutes: 40, title: "About 40 minutes", note: "A steady, unhurried session" },
@@ -32,6 +33,7 @@ export function Welcome() {
   const [name, setName] = useState(isDemo ? "" : state.profile.displayName);
   const [days, setDays] = useState<number[]>(state.profile.trainingDays);
   const [goal, setGoal] = useState<TrainingGoal>(goalOf(state.profile));
+  const [level, setLevel] = useState<ExperienceLevel>(levelOf(state.profile));
   const [minutes, setMinutes] = useState(state.profile.preferredSessionMinutes);
   const [knowsEquipment, setKnowsEquipment] = useState(state.profile.equipmentAvailability === "verified");
   const [equipment, setEquipment] = useState<EquipmentKey[]>(state.profile.availableEquipment);
@@ -44,6 +46,9 @@ export function Welcome() {
     return {
       displayName: name.trim() || state.profile.displayName,
       goal,
+      experience: level,
+      // The level starts with training (day one is set when setup finishes).
+      levelSince: undefined,
       trainingDays: days,
       sessionsPerWeek: days.length,
       preferredSessionMinutes: minutes,
@@ -101,6 +106,12 @@ export function Welcome() {
           <h1 id="onb-title">What should we call you?</h1>
           <p className="onb-lead">Your first name is enough.</p>
           <input className="onb-input" type="text" autoComplete="given-name" autoFocus maxLength={80} value={name} onChange={(event) => setName(event.target.value)} placeholder="Your first name" aria-label="Your first name" />
+        </>}
+
+        {step === "level" && <>
+          <h1 id="onb-title">How much have you trained?</h1>
+          <p className="onb-lead">Your first workouts start at this level. As you keep showing up, RozFit moves you up by itself.</p>
+          <div className="onb-options" role="radiogroup" aria-label="Fitness level">{LEVEL_OPTIONS.map((option) => <button key={option.id} type="button" role="radio" aria-checked={level === option.id} className={`onb-option ${level === option.id ? "selected" : ""}`} onClick={() => setLevel(option.id)}><span><strong>{option.title}</strong><small>{option.note}</small></span><span className="onb-check">{level === option.id && <Check aria-hidden="true" />}</span></button>)}</div>
         </>}
 
         {step === "goal" && <>
