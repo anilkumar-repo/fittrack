@@ -8,17 +8,20 @@ test("every pictured figure has a plain picture and one for every muscle group",
 });
 
 test("one-sided muscle groups use a single view, for every figure including neutral", () => {
-  assert.deepEqual(musclePicture("female", "chest"), { src: "/figures/v2/female-chest.webp", width: 418, height: 820 });
-  assert.equal(musclePicture("male", "hips")?.src, "/figures/v2/male-glutes.webp");
-  assert.equal(musclePicture("male", "arms")?.width, 760);
-  assert.equal(musclePicture("female")?.src, "/figures/female-base.webp");
-  assert.equal(musclePicture("neutral", "chest")?.src, "/figures/v2/neutral-chest.webp");
+  assert.deepEqual(musclePicture("female", "chest"), { src: "/figures/v3/female-chest.webp", width: 489, height: 820 });
+  assert.equal(musclePicture("male", "hips")?.src, "/figures/v3/male-glutes.webp");
+  assert.equal(musclePicture("male", "arms")?.width, 978);
+  assert.equal(musclePicture("female")?.src, "/figures/v3/female-base.webp");
+  assert.equal(musclePicture("neutral", "chest")?.src, "/figures/v3/neutral-chest.webp");
 });
 
 test("the turnable figure starts on the side where the muscle group is seen", () => {
   assert.equal(startingSide("hamstrings"), "back");
   assert.equal(startingSide("chest"), "front");
   assert.equal(startingSide(), "front");
-  assert.equal(sidePicture("male", "back", "hips")?.src, "/figures/v2/male-glutes-back.webp");
-  assert.equal(sidePicture("neutral", "front")?.src, "/figures/v2/neutral-base-front.webp");
+  assert.equal(sidePicture("male", "back", "hips")?.src, "/figures/v3/male-glutes-back.webp");
+  assert.equal(sidePicture("neutral", "front")?.src, "/figures/v3/neutral-base-front.webp");
+  // A view where the muscle cannot be seen shows the plain body.
+  assert.equal(sidePicture("female", "back", "chest")?.src, "/figures/v3/female-base-back.webp");
+  assert.equal(sidePicture("male", "front", "hamstrings")?.src, "/figures/v3/male-base-front.webp");
 });
