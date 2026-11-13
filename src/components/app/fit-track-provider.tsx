@@ -58,6 +58,8 @@ interface FitTrackContextValue {
   updateProfile: (patch: Partial<Profile>) => void;
   /** Saves the answers from the welcome steps and opens the app. */
   completeOnboarding: (patch: Partial<Profile>) => void;
+  /** Saves the welcome answers on this device without leaving the welcome steps, so signing in carries them into the new account. */
+  stageOnboarding: (patch: Partial<Profile>) => void;
   signOut: () => Promise<void>;
   refreshTrainerClients: () => Promise<void>;
   /** How weights are shown and typed on this device. They are always stored in kilograms. */
@@ -341,6 +343,14 @@ export function FitTrackProvider({ children }: { children: React.ReactNode }) {
     }
   }, [browserClient, updateState]);
 
+  const stageOnboarding = useCallback((patch: Partial<Profile>) => {
+    const current = stateRef.current;
+    if (current.mode !== "demo") return;
+    const hasHistory = current.sessions.some((session) => !session.sampleData && session.status !== "planned");
+    const profile = { ...current.profile, ...patch, ...(hasHistory ? {} : { trainingStartDate: todayInTimeZone(current.profile.timeZone) }) };
+    writeDemoState({ ...current, profile, onboarded: true });
+  }, []);
+
   const signOut = useCallback(async () => {
     if (!browserClient) return;
     flushDelayedCloudWrites();
@@ -414,8 +424,8 @@ export function FitTrackProvider({ children }: { children: React.ReactNode }) {
   const value = useMemo<FitTrackContextValue>(() => ({
     state, getState, updateState, ready, isDemo: state.mode === "demo", accountLoading, authChecked, browserClient, currentDate,
     trainerRuleSettings, planningProfile, recordedSessions, notice, setNotice, saveError, savingSession,
-    retryPendingSessions, upsertSession, recordMissedDays, updateProfile, completeOnboarding, signOut, refreshTrainerClients, weightUnit, setWeightUnit, theme, setTheme, figure, setFigure,
-  }), [recordMissedDays, state, getState, updateState, ready, accountLoading, authChecked, browserClient, currentDate, trainerRuleSettings, planningProfile,
+    retryPendingSessions, upsertSession, recordMissedDays, updateProfile, completeOnboarding, stageOnboarding, signOut, refreshTrainerClients, weightUnit, setWeightUnit, theme, setTheme, figure, setFigure,
+  }), [stageOnboarding, recordMissedDays, state, getState, updateState, ready, accountLoading, authChecked, browserClient, currentDate, trainerRuleSettings, planningProfile,
     recordedSessions, notice, saveError, savingSession, retryPendingSessions, upsertSession, updateProfile, completeOnboarding, signOut, refreshTrainerClients, weightUnit, setWeightUnit, theme, setTheme, figure, setFigure]);
 
   return <FitTrackContext.Provider value={value}>{children}</FitTrackContext.Provider>;

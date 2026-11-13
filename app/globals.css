@@ -1564,3 +1564,9 @@ img.area-rozi { flex: none; width: 78px; height: 78px; margin-bottom: -4px; }
 .notify-row select { margin-left: auto; height: 34px; padding: 0 8px; border: 1.5px solid var(--line); border-radius: 10px; color: var(--ink); background: var(--surface); font: inherit; }
 .notify-row select:disabled { opacity: .5; }
 .notify-options > small { color: var(--muted); font-size: 12.5px; line-height: 1.45; }
+
+/* Email code sign-in. */
+.code-input { letter-spacing: 6px; font-size: 22px !important; font-weight: 800; text-align: center; }
+.sign-in-links { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px; }
+.sign-in-intro { margin: 0; color: var(--muted); }
+img.onb-account-rozi { width: 110px; height: auto; margin: 4px 0 -4px; }

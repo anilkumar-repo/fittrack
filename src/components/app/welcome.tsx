@@ -7,15 +7,15 @@ import { FIGURE_OPTIONS, type FigureChoice } from "@/lib/figure";
 import { GOAL_OPTIONS, goalOf } from "@/lib/program";
 import { hasSupabaseConfig } from "@/lib/supabase-browser";
 import { EQUIPMENT_OPTIONS } from "@/lib/templates";
-import type { EquipmentKey, TrainingGoal } from "@/lib/types";
+import type { EquipmentKey, Profile, TrainingGoal } from "@/lib/types";
 import { MusclePicture } from "./muscle-picture";
 import { Rozi } from "./rozi";
 import { BrandMark } from "./brand-mark";
 import { useFitTrack } from "./fit-track-provider";
 import { SignInForm } from "./sign-in-form";
 
-type Step = "hero" | "name" | "goal" | "figure" | "days" | "length" | "equipment";
-const QUESTIONS: Step[] = ["name", "goal", "figure", "days", "length", "equipment"];
+type Step = "hero" | "name" | "goal" | "figure" | "days" | "length" | "equipment" | "account";
+const BASE_QUESTIONS: Step[] = ["name", "goal", "figure", "days", "length", "equipment"];
 const LENGTHS = [
   { minutes: 30, title: "About 30 minutes", note: "Short and focused" },
   { minutes: 40, title: "About 40 minutes", note: "A steady, unhurried session" },
@@ -24,7 +24,9 @@ const LENGTHS = [
 
 /** First-run setup, one question per screen. Every answer can be changed later in Settings. */
 export function Welcome() {
-  const { state, isDemo, completeOnboarding, figure, setFigure } = useFitTrack();
+  const { state, isDemo, completeOnboarding, stageOnboarding, figure, setFigure } = useFitTrack();
+  // With account sync available, the last step creates the account (or signs in) by email code.
+  const QUESTIONS: Step[] = isDemo && hasSupabaseConfig() ? [...BASE_QUESTIONS, "account"] : BASE_QUESTIONS;
   const [step, setStep] = useState<Step>("hero");
   const [showSignIn, setShowSignIn] = useState(false);
   const [name, setName] = useState(isDemo ? "" : state.profile.displayName);
@@ -38,8 +40,8 @@ export function Welcome() {
   const daysHint = trainingDaysHint(days.length);
   const canContinue = step === "name" ? Boolean(name.trim()) : step === "days" ? daysValid : true;
 
-  function finish() {
-    completeOnboarding({
+  function answers(): Partial<Profile> {
+    return {
       displayName: name.trim() || state.profile.displayName,
       goal,
       trainingDays: days,
@@ -47,7 +49,11 @@ export function Welcome() {
       preferredSessionMinutes: minutes,
       equipmentAvailability: knowsEquipment ? "verified" : "unknown",
       availableEquipment: knowsEquipment ? equipment : [],
-    });
+    };
+  }
+
+  function finish() {
+    completeOnboarding(answers());
   }
 
   function next() {
@@ -55,6 +61,8 @@ export function Welcome() {
     if (position === QUESTIONS.length - 1) finish();
     else setStep(QUESTIONS[position + 1]);
   }
+
+  const Frame = step === "account" ? "section" : "form";
 
   if (step === "hero") {
     return (
@@ -80,7 +88,8 @@ export function Welcome() {
 
   return (
     <main className="onb">
-      <form className="onb-frame" aria-labelledby="onb-title" onSubmit={(event) => { event.preventDefault(); next(); }}>
+      {/* The email step has its own form, and forms cannot sit inside each other. */}
+      <Frame className="onb-frame" aria-labelledby="onb-title" onSubmit={(event: React.FormEvent) => { event.preventDefault(); next(); }}>
         <div className="onb-top">
           <button type="button" className="onb-back" aria-label="Back" onClick={() => setStep(position === 0 ? "hero" : QUESTIONS[position - 1])}><ArrowLeft aria-hidden="true" /></button>
           <div className="onb-progress" role="progressbar" aria-label="Setup progress" aria-valuemin={1} aria-valuemax={QUESTIONS.length} aria-valuenow={position + 1}>{QUESTIONS.map((item, index) => <span key={item} className={index <= position ? "done" : ""} />)}</div>
@@ -133,8 +142,15 @@ export function Welcome() {
           {knowsEquipment && <div className="onb-chips">{EQUIPMENT_OPTIONS.map((item) => <button key={item.id} type="button" className={equipment.includes(item.id) ? "selected" : ""} aria-pressed={equipment.includes(item.id)} onClick={() => setEquipment((current) => current.includes(item.id) ? current.filter((value) => value !== item.id) : [...current, item.id])}>{item.label}</button>)}</div>}
         </>}
 
-        <button className="button button-primary onb-cta" disabled={!canContinue}>{position === QUESTIONS.length - 1 ? "Start my plan" : "Continue"} <ArrowRight aria-hidden="true" /></button>
-      </form>
+        {step === "account" && <>
+          <Rozi mood="signin" size={120} className="onb-account-rozi" />
+          <h1 id="onb-title">Save your plan{name.trim() ? `, ${name.trim()}` : ""}</h1>
+          <p className="onb-lead">Enter your email and we’ll send a 6-digit code. No password. Your plan, streak and progress stay safe on any phone, and you can add friends.</p>
+          <div className="onb-sign-in"><SignInForm beforeVerify={() => stageOnboarding(answers())} /></div>
+        </>}
+
+        {step !== "account" && <button className="button button-primary onb-cta" disabled={!canContinue}>{position === QUESTIONS.length - 1 ? "Start my plan" : "Continue"} <ArrowRight aria-hidden="true" /></button>}
+      </Frame>
     </main>
   );
 }
