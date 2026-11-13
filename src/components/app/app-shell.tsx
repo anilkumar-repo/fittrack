@@ -2,7 +2,9 @@
 
 import Link from "next/link";
 import { BrandMark } from "./brand-mark";
-import { BookOpen, ChartColumn, Dumbbell, House, Settings, type LucideIcon } from "lucide-react";
+import { MissedDayPrompt } from "./missed-day-prompt";
+import { unexplainedMissedDays } from "@/lib/missed-days";
+import { BookOpen, ChartColumn, Dumbbell, House, Settings, Users, type LucideIcon } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { dateLabel, weekdayOf } from "@/lib/dates";
 import { RULE_VERSION } from "@/lib/templates";
@@ -14,6 +16,7 @@ const navItems: Array<{ href: string; label: string; shortLabel: string; icon: L
   { href: "/", label: "Home", shortLabel: "Home", icon: House, title: "Home" },
   { href: "/today", label: "Train", shortLabel: "Train", icon: Dumbbell, title: "Train" },
   { href: "/progress", label: "Progress", shortLabel: "Progress", icon: ChartColumn, title: "Your progress" },
+  { href: "/friends", label: "Friends", shortLabel: "Friends", icon: Users, title: "Friends" },
   { href: "/library", label: "Library", shortLabel: "Library", icon: BookOpen, title: "Exercise library" },
   { href: "/settings", label: "Settings", shortLabel: "Settings", icon: Settings, title: "Settings" },
 ];
@@ -29,6 +32,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   if (!ready || !authChecked || (accountLoading && isDemo)) return <main className="app-loading"><BrandMark /><span>Getting your training space ready…</span></main>;
   if (!state.onboarded) return <Welcome />;
+  const missedDays = unexplainedMissedDays(state.profile, state.sessions, currentDate);
 
   const active = navItems.find((item) => item.href === pathname);
   const pageTitle = active?.title ?? (pathname === "/sign-in" ? "Sign in" : "RozFit");
@@ -40,6 +44,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="app-shell">
+      {missedDays.length > 0 && <MissedDayPrompt dates={missedDays} />}
       <aside className="sidebar">
         <Link className="brand" href="/">
           <BrandMark /><span><strong>RozFit</strong><small>Small steps, every day</small></span>

@@ -4,6 +4,7 @@ import { AccountCard, DataCard, TrainerInviteCard, TrainerLinkCard } from "@/com
 import { useFitTrack } from "@/components/app/fit-track-provider";
 import { TrainerControls } from "@/components/trainer-controls";
 import { CalendarDays, Palette, ShieldCheck, Sparkles, Sun } from "lucide-react";
+import { GOAL_OPTIONS, goalOf } from "@/lib/program";
 import { MAX_TRAINING_DAYS, MIN_TRAINING_DAYS, shortDate, trainingDaysValid, WEEKDAY_LABELS } from "@/lib/dates";
 import { FIGURE_OPTIONS } from "@/lib/figure";
 import { EQUIPMENT_OPTIONS, RULE_VERSION, TEMPLATE_VERSION } from "@/lib/templates";
@@ -54,6 +55,10 @@ export function SettingsScreen() {
           <article className="panel settings-group">
             <h3><CalendarDays aria-hidden="true" /> Your plan</h3>
             <label className="settings-field">Your name<input type="text" maxLength={80} autoComplete="given-name" value={profile.displayName} onChange={(event) => updateProfile({ displayName: event.target.value })} /></label>
+            <div className="settings-field"><span>Goal</span>
+              <div className="goal-options">{GOAL_OPTIONS.map((option) => <button key={option.id} type="button" className={goalOf(profile) === option.id ? "selected" : ""} aria-pressed={goalOf(profile) === option.id} onClick={() => updateProfile({ goal: option.id })}><strong>{option.title}</strong><small>{option.note}</small></button>)}</div>
+              <small>Changing your goal starts its plan from the first workout. Your history and records stay.</small>
+            </div>
             <div className="settings-field"><span>Training days</span>
               <div className="onb-days">{WEEKDAY_LABELS.map((label, day) => <button key={label} type="button" className={profile.trainingDays.includes(day) ? "selected" : ""} aria-pressed={profile.trainingDays.includes(day)} onClick={() => {
                 const next = profile.trainingDays.includes(day) ? profile.trainingDays.filter((value) => value !== day) : [...profile.trainingDays, day];

@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ArrowLeft, ArrowRight, Check, ChevronRight, Clock, ListChecks, Pencil, Play, Repeat } from "lucide-react";
-import { BodyFigure } from "@/components/app/body-figure";
 import { Rozi, RoziEnergy } from "@/components/app/rozi";
 import { MusclePicture } from "@/components/app/muscle-picture";
 import { MuscleThumb } from "@/components/app/muscle-thumb";
@@ -181,6 +180,7 @@ function WorkoutDayView({ date }: { date: string }) {
         <header className="train-head">
           <p>{date === currentDate ? "Today" : dateLabel(date)}</p>
           <h2>{plan?.title ?? "Rest day"}</h2>
+          {plan?.stage && <span className={`stage-chip ${plan.recoveryWeek ? "light" : ""}`}>Week {plan.weekNumber} of 52 · {plan.stage}</span>}
         </header>
 
         {!plan && <article className="panel train-rest">
@@ -191,13 +191,13 @@ function WorkoutDayView({ date }: { date: string }) {
         </article>}
 
         {plan && preStart && displayFlowStep === "preview" && <>
-          {figure !== "neutral" && regions.length > 0 ? <article className="panel target-card pictures">
+          {regions.length > 0 ? <article className="panel target-card pictures">
             <h3>Today’s targets</h3>
             <ul className="muscle-grid">{regions.map((region, index) => (
               <li key={region} className="muscle-card"><MusclePicture figure={figure} region={region} priority={index < 2} /><strong>{REGION_LABELS[region]}</strong></li>
             ))}</ul>
           </article> : <article className="panel target-card">
-            <div className="target-figure">{plan.sessionType === "recovery" ? <Rozi mood={checkIn.pain ? "care" : "stretch"} size={180} /> : <BodyFigure figure={figure} highlight={regions} view="both" />}</div>
+            <div className="target-figure">{plan.sessionType === "recovery" ? <Rozi mood={checkIn.pain ? "care" : "stretch"} size={180} /> : <MusclePicture figure={figure} />}</div>
             <div className="target-copy">
               <h3>{plan.sessionType === "recovery" ? "Recovery session" : "Today’s targets"}</h3>
               {regions.length > 0

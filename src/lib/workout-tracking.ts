@@ -1,5 +1,5 @@
 import { getExerciseDefinition } from "./templates.ts";
-import type { CheckIn, ExerciseDefinition, ExerciseLog, ExerciseStatus, Profile, SessionStatus, WorkoutReview, WorkoutSession } from "./types.ts";
+import type { CheckIn, ExerciseDefinition, ExerciseLog, ExerciseStatus, MissedReasonEntry, Profile, SessionStatus, WorkoutReview, WorkoutSession } from "./types.ts";
 
 export interface WorkoutActor {
   id: string;
@@ -235,7 +235,13 @@ export function normalizeWorkoutSession(raw: WorkoutSession | Record<string, unk
     id: String(value.id ?? ""), date: String(value.date ?? ""), status: value.status === "completed" || value.status === "skipped" || value.status === "in_progress" ? value.status : "planned",
     plan, exerciseLogs, ...(checkIn ? { checkIn } : {}), ...(review ? { review } : {}),
     ...(typeof value.completedAt === "string" ? { completedAt: value.completedAt } : {}),
+    ...(value.status === "skipped" && isMissedReasonEntry(value.missedReason) ? { missedReason: { reason: value.missedReason.reason, note: value.missedReason.note } } : {}),
   };
+}
+
+function isMissedReasonEntry(value: unknown): value is MissedReasonEntry {
+  const entry = value as Partial<MissedReasonEntry> | undefined;
+  return Boolean(entry) && typeof entry?.note === "string" && ["busy", "unwell", "tired", "sore", "travel", "forgot", "other"].includes(String(entry?.reason));
 }
 
 export function deadliftRuleIsTrainerApproved(profile: Profile): boolean {

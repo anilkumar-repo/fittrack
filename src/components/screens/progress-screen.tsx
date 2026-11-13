@@ -1,5 +1,7 @@
 "use client";
 
+import { MissedDaysList } from "@/components/app/missed-days-card";
+
 import { useState } from "react";
 import { Award, CalendarCheck, Check, ChevronRight, Clock, Dumbbell, Flame, Lock, Medal, Sparkles, Target, Trophy, Zap, type LucideIcon } from "lucide-react";
 import { useFitTrack } from "@/components/app/fit-track-provider";
@@ -175,6 +177,11 @@ export function ProgressScreen() {
             </>}
           </article>
         </div>
+
+        <article className="panel">
+          <div className="panel-title"><h3>Missed workouts</h3><span className="panel-count">Reasons you gave</span></div>
+          <MissedDaysList sessions={recordedSessions} />
+        </article>
 
         <article className="panel">
           <div className="panel-title"><h3>Workout history</h3><span className="panel-count">{historySessions.length} saved</span></div>

@@ -9,8 +9,8 @@ const REGION_FILES: Record<BodyRegion, string> = {
 /** Muscle groups seen from one side only are pictured with just that view. */
 const SINGLE_VIEW = new Set<BodyRegion>(["chest", "core", "thighs", "back", "hips", "hamstrings"]);
 
-/** Pictured figures. "neutral" has no pictures and uses the drawn figure instead. */
-const PICTURED = new Set<FigureChoice>(["female", "male"]);
+/** Every figure choice has a full picture set in public/figures. */
+const PICTURED = new Set<FigureChoice>(["female", "male", "neutral"]);
 
 export interface MusclePicture {
   src: string;

@@ -1433,3 +1433,123 @@ img.brand-logo { display: block; width: 40px; height: 40px; padding: 0; border-r
 .area-text small { color: rgba(22, 24, 26, .62); font-size: 13px; font-weight: 600; }
 img.area-rozi { flex: none; width: 78px; height: 78px; margin-bottom: -4px; }
 @media (min-width: 760px) { .area-cards { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+
+/* Home: one motivation line a day. */
+.daily-line { display: flex; align-items: flex-start; gap: 10px; margin: 0; padding: 12px 14px; border-radius: 20px; color: var(--ink); background: #f6e9b8; font-size: 15px; font-weight: 600; line-height: 1.45; }
+.daily-line svg { flex: none; width: 18px; height: 18px; margin-top: 2px; color: #c98a12; }
+.daily-line span { display: grid; gap: 2px; }
+.daily-line small { color: rgba(22, 24, 26, .58); font-size: 12px; font-weight: 700; letter-spacing: .3px; text-transform: uppercase; }
+:root[data-theme="light"] .daily-line { color: #16181a; }
+
+/* Settings: goal choice. */
+.goal-options { display: grid; gap: 8px; }
+.goal-options button { display: grid; gap: 2px; padding: 12px 14px; border: 2px solid transparent; border-radius: 18px; color: var(--ink); background: var(--surface-2); text-align: left; cursor: pointer; }
+.goal-options button strong { font-size: 15px; font-weight: 800; }
+.goal-options button small { color: var(--muted); font-size: 13px; }
+.goal-options button.selected { border-color: var(--ink); background: var(--surface); }
+
+/* Train: week of the year and stage for goal-based programs. */
+.stage-chip { display: inline-flex; width: fit-content; margin-top: 6px; padding: 6px 12px; border-radius: 999px; color: #16181a; background: #dcefd0; font-size: 13px; font-weight: 700; }
+.stage-chip.light { background: #cfe4f2; }
+
+/* Missed-day reason: a dialog that stays until a reason is saved. */
+.missed-backdrop { position: fixed; inset: 0; z-index: 1000; display: grid; place-items: center; padding: 16px; overflow-y: auto; background: rgba(22, 24, 26, .42); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); }
+.missed-dialog { display: grid; justify-items: center; gap: 10px; width: min(440px, 100%); padding: 22px 18px 18px; text-align: center; }
+.missed-dialog h2 { margin: 0; color: var(--ink); font-size: 22px; font-weight: 800; letter-spacing: -.4px; }
+.missed-dialog > p { margin: 0; color: var(--muted); font-size: 15px; line-height: 1.5; }
+.missed-reasons { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin-top: 4px; }
+.missed-reasons button { display: inline-flex; align-items: center; gap: 6px; min-height: 40px; padding: 8px 14px; border: 1.5px solid var(--line, rgba(22,24,26,.12)); border-radius: 999px; color: var(--ink); background: var(--surface-2); font-size: 14px; font-weight: 600; cursor: pointer; }
+.missed-reasons button svg { width: 16px; height: 16px; }
+.missed-reasons button.selected { border-color: #16181a; color: #fff; background: #16181a; }
+.missed-note { display: grid; gap: 6px; width: 100%; color: var(--ink-2, var(--ink)); font-size: 14px; font-weight: 600; text-align: left; }
+.missed-note textarea { width: 100%; padding: 10px 12px; border: 1.5px solid var(--line, rgba(22,24,26,.12)); border-radius: 14px; color: var(--ink); background: var(--surface); font: inherit; font-weight: 400; resize: vertical; }
+.missed-all { display: flex; align-items: center; gap: 8px; color: var(--ink); font-size: 14px; }
+.missed-error { color: #b4321d !important; font-weight: 600; }
+.missed-safety { margin: 0; color: var(--muted); font-size: 13px; }
+.missed-dialog .button { width: 100%; }
+
+/* Progress: missed days and their reasons. */
+.missed-list { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.missed-list li { display: grid; gap: 2px; padding: 10px 12px; border-radius: 14px; background: var(--surface-2); }
+.missed-list strong { color: var(--ink); font-size: 14px; }
+.missed-list span { color: var(--muted); font-size: 13px; }
+.missed-counts { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 10px; }
+.missed-counts span { padding: 4px 10px; border-radius: 999px; color: #16181a; background: #f6d9d2; font-size: 12px; font-weight: 700; }
+
+/* Friends: invites, friend cards, nudges and challenges. */
+.friends { display: grid; gap: 14px; width: 100%; max-width: 760px; margin: 0 auto; }
+.friends-head { display: flex; align-items: center; gap: 12px; }
+.friends-head h2 { margin: 0; color: var(--ink); font-size: 26px; font-weight: 800; letter-spacing: -.6px; }
+.friends-head p { margin: 4px 0 0; color: var(--muted); font-size: 14px; line-height: 1.45; }
+.friends-head img.rozi { flex: none; width: 88px; height: 88px; }
+.friends-empty { display: grid; justify-items: center; gap: 10px; padding: 26px 20px; text-align: center; }
+.friends-empty h2 { margin: 0; color: var(--ink); font-size: 24px; font-weight: 800; }
+.friends-empty p { max-width: 420px; margin: 0; color: var(--muted); line-height: 1.5; }
+.friends-message { margin: 0; padding: 10px 14px; border-radius: 14px; color: #16181a; background: #dcefd0; font-size: 14px; font-weight: 600; }
+.friends-accept { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; background: #f6e9b8 !important; }
+.friends-accept > svg { width: 26px; height: 26px; color: #16181a; }
+.friends-accept div { flex: 1; min-width: 160px; }
+.friends-accept h3, .friends-accept p { margin: 0; color: #16181a; }
+.friends-invite { display: grid; gap: 14px; }
+.friends-invite h3, .panel-title h3 { display: flex; align-items: center; gap: 8px; }
+.friends-invite h3 svg, .panel-title h3 svg { width: 18px; height: 18px; }
+.invite-code { display: grid; justify-items: center; gap: 8px; padding: 14px; border-radius: 18px; background: var(--surface-2); text-align: center; }
+.invite-code span { color: var(--muted); font-size: 13px; }
+.invite-code strong { color: var(--ink); font-size: 30px; font-weight: 800; letter-spacing: 4px; }
+.invite-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; }
+.invite-actions .button svg, .friend-actions .button svg { width: 16px; height: 16px; }
+.code-entry { display: grid; gap: 6px; }
+.code-entry label { color: var(--ink); font-size: 14px; font-weight: 700; }
+.code-entry div { display: flex; gap: 8px; }
+.code-entry input { flex: 1; min-width: 0; height: 44px; padding: 0 12px; border: 1.5px solid var(--line); border-radius: 14px; color: var(--ink); background: var(--surface); font: 700 16px/1 inherit; letter-spacing: 2px; text-transform: uppercase; }
+.friend-list, .challenge-list { display: grid; gap: 10px; margin: 0; padding: 0; list-style: none; }
+.friend-card { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 10px 12px; padding: 12px; border-radius: 18px; background: var(--surface-2); }
+.friend-avatar { display: grid; width: 42px; height: 42px; place-items: center; border-radius: 50%; color: #fff; background: #ef7d5c; font-weight: 800; }
+.friend-main { display: grid; gap: 3px; min-width: 0; }
+.friend-main strong { color: var(--ink); font-size: 16px; }
+.friend-main small { color: var(--muted); font-size: 12.5px; }
+.friend-week { height: 6px; overflow: hidden; border-radius: 99px; background: rgba(22, 24, 26, .1); }
+.friend-week span { display: block; height: 100%; border-radius: 99px; background: #7cc576; }
+.friend-streak { display: inline-flex; align-items: center; gap: 4px; padding: 6px 10px; border-radius: 999px; color: #16181a; background: #f6d9d2; font-weight: 800; }
+.friend-streak svg { width: 16px; height: 16px; color: #ef7d5c; }
+.friend-actions { display: flex; grid-column: 2 / -1; justify-content: flex-end; align-items: center; gap: 6px; }
+.button.small { min-height: 34px; padding: 0 12px; gap: 6px; }
+.icon-button { display: grid; width: 34px; height: 34px; place-items: center; padding: 0; border: 0; border-radius: 50%; color: var(--muted); background: transparent; cursor: pointer; }
+.icon-button svg { width: 16px; height: 16px; }
+.challenge-card { display: grid; gap: 10px; padding: 14px; border-radius: 18px; background: #fdf4dc; }
+.challenge-top { display: grid; gap: 2px; }
+.challenge-top strong { color: #16181a; font-size: 16px; }
+.challenge-top small { color: rgba(22, 24, 26, .6); font-size: 12.5px; }
+.leaderboard { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.leaderboard li { display: grid; grid-template-columns: 22px minmax(60px, 110px) 1fr auto; align-items: center; gap: 8px; color: #16181a; font-size: 14px; }
+.leaderboard li.me .who { font-weight: 800; }
+.leaderboard .rank { display: grid; width: 22px; height: 22px; place-items: center; border-radius: 50%; background: rgba(22, 24, 26, .08); font-size: 12px; font-weight: 800; }
+.leaderboard .who { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.leaderboard .bar { height: 8px; overflow: hidden; border-radius: 99px; background: rgba(22, 24, 26, .1); }
+.leaderboard .bar span { display: block; height: 100%; border-radius: 99px; background: #ef7d5c; }
+.leaderboard .count { font-weight: 700; font-variant-numeric: tabular-nums; }
+.challenge-card .text-button { justify-self: start; color: rgba(22, 24, 26, .6); }
+.challenge-form { display: grid; gap: 10px; margin-top: 12px; }
+.challenge-form h4 { margin: 0; color: var(--ink); font-size: 15px; }
+.challenge-target { display: flex; align-items: center; justify-content: space-between; gap: 10px; color: var(--ink); font-size: 14px; font-weight: 600; }
+.challenge-target input { width: 80px; height: 40px; padding: 0 10px; border: 1.5px solid var(--line); border-radius: 12px; color: var(--ink); background: var(--surface); font: inherit; text-align: center; }
+.challenge-friends { display: flex; flex-wrap: wrap; gap: 8px 14px; margin: 0; padding: 0; border: 0; color: var(--ink); font-size: 14px; }
+.challenge-friends legend { margin-bottom: 6px; font-weight: 700; }
+.challenge-friends label { display: inline-flex; align-items: center; gap: 6px; }
+.past-challenges { margin-top: 12px; color: var(--muted); font-size: 14px; }
+.past-challenges summary { color: var(--ink); font-weight: 700; cursor: pointer; }
+.past-challenges ul { margin: 8px 0 0; padding-left: 18px; }
+
+/* Home: a friend's nudge. */
+.nudge-banner { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 20px; color: #16181a; background: #cfe4f2; }
+.nudge-banner img.rozi { flex: none; width: 56px; height: 56px; }
+.nudge-banner div { flex: 1; min-width: 0; }
+.nudge-banner strong { display: block; font-size: 15px; }
+.nudge-banner span { font-size: 14px; }
+
+/* Six navigation items (Friends added) must fit a 360px phone. */
+@media (max-width: 700px) {
+  .mobile-nav { gap: 2px; padding: 5px; }
+  .mobile-nav a { flex: 1 1 0; min-width: 38px; padding: 0 6px; }
+  .mobile-nav a.active { flex: 0 0 auto; padding: 0 14px; }
+}

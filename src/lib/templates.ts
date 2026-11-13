@@ -1,6 +1,7 @@
-import type { EquipmentKey, ExerciseDefinition, MovementPattern, WorkoutFocus } from "./types";
+import type { EquipmentKey, ExerciseDefinition, MovementPattern, TrainingGoal, WorkoutFocus } from "./types";
+import { PROGRAM_EXERCISES } from "./program-exercises.ts";
 
-export const TEMPLATE_VERSION = "2.1.0";
+export const TEMPLATE_VERSION = "3.0.0";
 export const RULE_VERSION = "2026.11.12.1";
 
 export const EQUIPMENT_OPTIONS: Array<{ id: EquipmentKey; label: string }> = [
@@ -12,6 +13,13 @@ export const EQUIPMENT_OPTIONS: Array<{ id: EquipmentKey; label: string }> = [
   { id: "rack", label: "Rack" },
   { id: "mat", label: "Exercise mat" },
   { id: "chair", label: "Sturdy chair" },
+  { id: "barbell", label: "Barbell / EZ bar" },
+  { id: "smith_machine", label: "Smith machine" },
+  { id: "gym_machines", label: "Weight machines (press, pec deck, leg extension)" },
+  { id: "pullup_bar", label: "Pull-up bar / assisted pull-up" },
+  { id: "step", label: "Step platform" },
+  { id: "back_extension", label: "Hyperextension bench" },
+  { id: "cardio_machine", label: "Cardio machines" },
 ];
 
 type ExerciseSource = Omit<ExerciseDefinition, "movementPattern" | "requiredEquipment" | "fallbackId" | "instructions" | "targetMuscles" | "difficulty" | "cautionNotes" | "restriction">;
@@ -293,6 +301,11 @@ const metadata: Record<string, ExerciseMetadata> = {
   },
 };
 
+for (const item of PROGRAM_EXERCISES) {
+  sourceLibrary[item.id] = { id: item.id, name: item.name, equipment: item.equipment, category: item.category, sets: item.sets, reps: item.reps, restSeconds: item.restSeconds, cues: item.cues };
+  metadata[item.id] = { pattern: item.pattern, equipment: item.needs, fallback: item.fallback, targetMuscles: item.targetMuscles, difficulty: item.difficulty, instructions: item.instructions, cautions: item.cautions, restriction: item.restriction };
+}
+
 function decorate(id: string): ExerciseDefinition {
   const exercise = sourceLibrary[id];
   const data = metadata[id];
@@ -312,18 +325,60 @@ function decorate(id: string): ExerciseDefinition {
 
 export const EXERCISE_LIBRARY: ExerciseDefinition[] = Object.keys(sourceLibrary).map(decorate);
 
-const sessionTemplates: Record<Exclude<WorkoutFocus, "Return to training" | "Recovery">, string[]> = {
+export type TemplateFocus = Exclude<WorkoutFocus, "Return to training" | "Recovery">;
+/** One exercise in a session template; sets and reps override the library default when given. */
+type Slot = string | [id: string, sets: number, reps: string];
+
+const sessionTemplates: Record<TemplateFocus, Slot[]> = {
   "Foundation A": ["goblet_squat", "dumbbell_bench", "lat_pulldown", "glute_bridge", "dead_bug"],
   "Foundation B": ["leg_press", "seated_row", "shoulder_press", "hamstring_curl", "plank"],
   "Foundation C": ["split_squat", "incline_pushup", "chest_row", "hip_thrust", "farmer_carry"],
+
+  // Build muscle: six-day push / pull / legs (from the trainer's lean-muscle plan, plus two short core finishers).
+  "Push A": [["barbell_bench", 3, "6–10"], ["incline_db_press", 3, "8–12"], ["machine_shoulder_press", 3, "8–12"], ["lateral_raise", 3, "12–15"], ["cable_fly", 2, "12–15"], ["triceps_pushdown", 3, "10–15"], ["overhead_cable_extension", 2, "10–15"]],
+  "Pull A": [["lat_pulldown", 3, "8–12"], ["barbell_row", 3, "8–12"], ["seated_row", 3, "10–12"], ["face_pull", 2, "12–15"], ["ez_curl", 3, "8–12"], ["hammer_curl", 2, "10–12"], ["wrist_curl", 2, "12–15"], ["reverse_wrist_curl", 2, "12–15"], ["pallof_press", 2, "10 each side"]],
+  "Legs A": [["back_squat", 3, "6–10"], ["leg_press", 3, "10–12"], ["dumbbell_rdl", 3, "8–12"], ["hamstring_curl", 3, "10–15"], ["leg_extension", 2, "12–15"], ["calf_raise", 3, "12–20"]],
+  "Push B": [["incline_db_press", 3, "8–12"], ["dumbbell_bench", 3, "8–12"], ["machine_shoulder_press", 2, "10–12"], ["cable_lateral_raise", 3, "12–15"], ["pec_deck", 2, "12–15"], ["rope_pushdown", 3, "10–15"], ["overhead_cable_extension", 2, "12–15"], ["side_plank", 2, "20–30 sec each side"]],
+  "Pull B": [["lat_pulldown", 3, "8–12"], ["chest_row", 3, "8–12"], ["single_arm_cable_row", 2, "10–12 each side"], ["straight_arm_pulldown", 2, "12–15"], ["preacher_curl", 3, "8–12"], ["incline_db_curl", 2, "10–12"], ["farmer_carry", 3, "30–40 sec"], ["reverse_curl", 2, "12–15"]],
+  "Legs B": [["hack_squat", 3, "8–12"], ["bulgarian_split_squat", 3, "8–10 each leg"], ["dumbbell_rdl", 3, "8–12"], ["hamstring_curl", 3, "10–15"], ["calf_raise", 3, "12–20"], ["cable_crunch", 3, "12–15"], ["hanging_knee_raise", 3, "10–15"], ["floor_plank", 3, "30–60 sec"]],
+
+  // Get fit & toned: four-day upper / lower (from the trainer's beginner plan, plus hamstring and core additions).
+  "Lower A": [["smith_squat", 3, "8–10"], ["leg_press", 3, "10–12"], ["db_glute_bridge", 3, "12–15"], ["leg_extension", 2, "12–15"], ["slider_leg_curl", 2, "8–10"], ["calf_raise", 3, "12–15"], ["bird_dog", 2, "8 each side"], ["easy_cardio", 1, "10 min incline walk"]],
+  "Upper A": [["dumbbell_bench", 3, "8–12"], ["lat_pulldown", 3, "8–12"], ["seated_row", 3, "10–12"], ["shoulder_press", 2, "8–12"], ["lateral_raise", 2, "12–15"], ["triceps_pushdown", 2, "10–15"], ["db_curl", 2, "10–15"], ["easy_cardio", 1, "10–15 min"]],
+  "Lower B": [["smith_squat", 3, "8–12"], ["reverse_lunge", 3, "8–10 each leg"], ["db_glute_bridge", 3, "12–15"], ["leg_extension", 2, "12–15"], ["calf_raise", 3, "12–15"], ["step_up", 2, "8–10 each leg"], ["side_plank", 2, "15–20 sec each side"]],
+  "Upper B": [["incline_db_press", 3, "8–12"], ["lat_pulldown", 3, "8–12"], ["chest_row", 3, "10–12"], ["face_pull", 2, "12–15"], ["lateral_raise", 2, "12–15"], ["hammer_curl", 2, "10–12"], ["triceps_pushdown", 2, "10–12"], ["dead_bug", 3, "8–10 each side"], ["floor_plank", 3, "15–30 sec"]],
+
+  // Every fourth week for Build muscle: the 20-minute circuit (5 pull-ups, 10 push-ups, 15 squats) and easy days.
+  "Conditioning circuit": [["assisted_pullup", 4, "5"], ["pushup", 4, "10"], ["bodyweight_squat", 4, "15"]],
+  "Core and cardio": [["cable_crunch", 2, "12–15"], ["reverse_crunch", 2, "10–15"], ["side_plank", 2, "20–30 sec each side"], ["easy_cardio", 1, "20–25 min"]],
+};
+
+/** The rotation of sessions for each goal. Workouts rotate by completed sessions, so missed days never pile up. */
+export const GOAL_CYCLES: Record<TrainingGoal, TemplateFocus[]> = {
+  general: ["Foundation A", "Foundation B", "Foundation C"],
+  muscle: ["Push A", "Pull A", "Legs A", "Push B", "Pull B", "Legs B"],
+  tone: ["Lower A", "Upper A", "Lower B", "Upper B"],
+};
+
+/** Short name of what each session trains, used in the plan title. */
+export const FOCUS_SUBTITLES: Partial<Record<TemplateFocus, string>> = {
+  "Push A": "Chest, shoulders, triceps", "Push B": "Chest, shoulders, triceps",
+  "Pull A": "Back, biceps, forearms", "Pull B": "Back, biceps, forearms",
+  "Legs A": "Quads, hamstrings, glutes, calves", "Legs B": "Legs + abs",
+  "Lower A": "Lower body", "Lower B": "Lower body", "Upper A": "Upper body", "Upper B": "Upper body + core",
+  "Conditioning circuit": "20-minute circuit", "Core and cardio": "Abs + easy cardio",
 };
 
 export function getExerciseDefinition(id: string): ExerciseDefinition | undefined {
   return sourceLibrary[id] ? decorate(id) : undefined;
 }
 
-export function getTemplateExercises(focus: Exclude<WorkoutFocus, "Return to training" | "Recovery">): ExerciseDefinition[] {
-  return sessionTemplates[focus].map(decorate);
+export function getTemplateExercises(focus: TemplateFocus): ExerciseDefinition[] {
+  return sessionTemplates[focus].map((slot) => {
+    if (typeof slot === "string") return decorate(slot);
+    const [id, sets, reps] = slot;
+    return { ...decorate(id), sets, reps };
+  });
 }
 
 export function getOptionalDeadliftExercise(): ExerciseDefinition {

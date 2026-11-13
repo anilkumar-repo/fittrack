@@ -33,6 +33,13 @@ const PATTERN_REGIONS: Record<MovementPattern, BodyRegion[]> = {
   core: ["core"],
   carry: ["forearms", "back", "core"],
   recovery: [],
+  shoulder_raise: ["shoulders"],
+  chest_fly: ["chest", "shoulders"],
+  arm_curl: ["arms", "forearms"],
+  arm_extension: ["arms"],
+  knee_extension: ["thighs"],
+  calf_raise: ["calves"],
+  cardio: ["thighs", "calves"],
 };
 
 
@@ -42,6 +49,19 @@ const EXERCISE_REGIONS: Record<string, BodyRegion[]> = {
   comfortable_walk: ["thighs", "calves"],
   relaxed_breathing: ["core"],
   farmer_carry: ["forearms", "core", "back"],
+  face_pull: ["shoulders", "back"],
+  wrist_curl: ["forearms"],
+  reverse_wrist_curl: ["forearms"],
+  reverse_curl: ["forearms", "arms"],
+  hammer_curl: ["arms", "forearms"],
+  db_curl: ["arms"],
+  ez_curl: ["arms"],
+  preacher_curl: ["arms"],
+  incline_db_curl: ["arms"],
+  pushup: ["chest", "arms", "core"],
+  hanging_knee_raise: ["core"],
+  back_extension: ["hips", "hamstrings", "back"],
+  bulgarian_split_squat: ["thighs", "hips"],
 };
 
 /** Body regions a set of exercises works, most-used first; ties keep the order they first appear. */

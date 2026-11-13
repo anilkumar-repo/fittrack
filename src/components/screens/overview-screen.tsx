@@ -1,7 +1,9 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { ArrowRight, CalendarDays, Check, Clock, Flame, ListChecks, Moon, Repeat, Trophy } from "lucide-react";
+import { ArrowRight, CalendarDays, Check, Clock, Flame, ListChecks, Moon, Repeat, Sparkles, Trophy } from "lucide-react";
+import { motivationFor } from "@/lib/motivation";
+import { NudgeBanner } from "@/components/app/nudge-banner";
 import { MusclePicture } from "@/components/app/muscle-picture";
 import { Rozi } from "@/components/app/rozi";
 import { calculateStreak, roziMoment, winsForWorkout } from "@/lib/rozi";
@@ -59,6 +61,10 @@ export function OverviewScreen() {
           {streak.started && <span className="streak-chip"><Flame aria-hidden="true" /> {streak.current} in a row{streak.best > streak.current ? ` · best ${streak.best}` : ""}</span>}
         </div>
       </header>
+
+      <NudgeBanner />
+
+      <p className="daily-line"><Sparkles aria-hidden="true" /><span><small>Today’s thought</small>{motivationFor(currentDate)}</span></p>
 
       <div className="home-grid">
         <article className={`hero-card panel ${status === "completed" ? "is-done" : ""}`}>

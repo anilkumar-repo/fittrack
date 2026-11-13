@@ -1,12 +1,21 @@
 export type ExperienceLevel = "beginner" | "intermediate";
 export type SessionStatus = "planned" | "in_progress" | "completed" | "skipped";
 export type ExerciseStatus = "not_started" | "partial" | "completed" | "skipped";
-export type WorkoutFocus = "Foundation A" | "Foundation B" | "Foundation C" | "Return to training" | "Recovery";
+export type WorkoutFocus =
+  | "Foundation A" | "Foundation B" | "Foundation C"
+  | "Push A" | "Pull A" | "Legs A" | "Push B" | "Pull B" | "Legs B"
+  | "Lower A" | "Upper A" | "Lower B" | "Upper B"
+  | "Conditioning circuit" | "Core and cardio"
+  | "Return to training" | "Recovery";
+/** What the client wants from training; it picks the weekly split. */
+export type TrainingGoal = "general" | "muscle" | "tone";
 export type TrainingPhase = "foundation_1" | "foundation_2" | "return";
 export type ExerciseDifficulty = "beginner" | "intermediate";
 export type ExerciseRestriction = "trainer_deadlift_approval";
-export type EquipmentKey = "dumbbells" | "bench" | "cable_machine" | "leg_press" | "leg_curl_machine" | "rack" | "mat" | "chair";
-export type MovementPattern = "squat" | "single_leg" | "horizontal_push" | "vertical_push" | "horizontal_pull" | "vertical_pull" | "hip_extension" | "hamstring_curl" | "core" | "carry" | "recovery";
+export type EquipmentKey = "dumbbells" | "bench" | "cable_machine" | "leg_press" | "leg_curl_machine" | "rack" | "mat" | "chair"
+  | "barbell" | "smith_machine" | "gym_machines" | "pullup_bar" | "step" | "back_extension" | "cardio_machine";
+export type MovementPattern = "squat" | "single_leg" | "horizontal_push" | "vertical_push" | "horizontal_pull" | "vertical_pull" | "hip_extension" | "hamstring_curl" | "core" | "carry" | "recovery"
+  | "shoulder_raise" | "chest_fly" | "arm_curl" | "arm_extension" | "knee_extension" | "calf_raise" | "cardio";
 export type ProgressionAction = "choose_comfortable_load" | "hold_load_add_reps" | "consider_small_load_step" | "repeat_or_reduce" | "recovery";
 export type FormQuality = "not_rated" | "sound" | "needs_practice";
 
@@ -23,6 +32,8 @@ export interface Profile {
   preferredSessionMinutes: number;
   equipmentAvailability: "unknown" | "verified";
   availableEquipment: EquipmentKey[];
+  /** Missing on older saved profiles; treated as "general". */
+  goal?: TrainingGoal;
 }
 
 export interface TrainerRuleSettings {
@@ -152,6 +163,12 @@ export interface WorkoutPlan {
   generationReasons: string[];
   trainerRuleRevision?: number;
   trainerRuleSettings?: TrainerRuleSettings;
+  /** Goal-based programs: the goal, week of the training year (1–52) and its stage name. */
+  goal?: TrainingGoal;
+  weekNumber?: number;
+  stage?: string;
+  /** Every fourth week is lighter: fewer sets, or a conditioning week for the muscle goal. */
+  recoveryWeek?: boolean;
 }
 
 export interface WorkoutSession {
@@ -163,8 +180,18 @@ export interface WorkoutSession {
   exerciseLogs: ExerciseLog[];
   review?: WorkoutReview;
   completedAt?: string;
+  /** Why a planned day was missed; only on sessions with status "skipped". */
+  missedReason?: MissedReasonEntry;
   /** Marks built-in demonstration fixtures so progress never treats them as trainee logs. */
   sampleData?: boolean;
+}
+
+export type MissedReason = "busy" | "unwell" | "tired" | "sore" | "travel" | "forgot" | "other";
+
+export interface MissedReasonEntry {
+  reason: MissedReason;
+  /** Optional detail; required when the reason is "other". */
+  note: string;
 }
 
 export interface BodyWeightEntry {

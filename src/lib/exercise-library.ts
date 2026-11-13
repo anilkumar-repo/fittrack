@@ -13,6 +13,13 @@ export const MOVEMENT_PATTERN_LABELS: Record<MovementPattern, string> = {
   core: "Core",
   carry: "Carry / conditioning",
   recovery: "Recovery",
+  shoulder_raise: "Shoulder raise",
+  chest_fly: "Chest fly",
+  arm_curl: "Curl (biceps / forearms)",
+  arm_extension: "Triceps extension",
+  knee_extension: "Leg extension",
+  calf_raise: "Calf raise",
+  cardio: "Cardio",
 };
 
 export const NO_EQUIPMENT_FILTER = "no_equipment";
@@ -33,9 +40,9 @@ export type BodyArea = "full" | "upper" | "lower" | "core";
 /** The library's body-area cards, each a set of movement patterns. */
 export const BODY_AREAS: Array<{ id: BodyArea; label: string; patterns: MovementPattern[] | null }> = [
   { id: "full", label: "Full body", patterns: null },
-  { id: "upper", label: "Upper body", patterns: ["horizontal_push", "vertical_push", "horizontal_pull", "vertical_pull"] },
-  { id: "lower", label: "Lower body", patterns: ["squat", "single_leg", "hip_extension", "hamstring_curl"] },
-  { id: "core", label: "Core & stretch", patterns: ["core", "carry", "recovery"] },
+  { id: "upper", label: "Upper body", patterns: ["horizontal_push", "vertical_push", "horizontal_pull", "vertical_pull", "shoulder_raise", "chest_fly", "arm_curl", "arm_extension"] },
+  { id: "lower", label: "Lower body", patterns: ["squat", "single_leg", "hip_extension", "hamstring_curl", "knee_extension", "calf_raise"] },
+  { id: "core", label: "Core & cardio", patterns: ["core", "carry", "recovery", "cardio"] },
 ];
 
 export function exerciseInArea(exercise: Pick<ExerciseDefinition, "movementPattern">, area: string): boolean {
@@ -72,6 +79,10 @@ export function exerciseEquipmentIsAvailable(exercise: ExerciseDefinition, profi
 }
 
 export function workoutPlanMatchesProfile(plan: WorkoutPlan, profile: Profile): boolean {
+  // A plan made for a different goal (plans without a goal belong to "general") is planned again.
+  const planGoal = plan.goal ?? "general";
+  const profileGoal = profile.goal === "muscle" || profile.goal === "tone" ? profile.goal : "general";
+  if (planGoal !== profileGoal) return false;
   return plan.exercises.every((exercise) => isExerciseAllowedForProfile(exercise, profile) && exerciseEquipmentIsAvailable(exercise, profile));
 }
 

@@ -1,6 +1,7 @@
-import { EXERCISE_LIBRARY, getExerciseDefinition, getOptionalDeadliftExercise, getRecoveryExercises, getTemplateExercises, RULE_VERSION, TEMPLATE_VERSION } from "./templates.ts";
+import { EXERCISE_LIBRARY, FOCUS_SUBTITLES, GOAL_CYCLES, getExerciseDefinition, getOptionalDeadliftExercise, getRecoveryExercises, getTemplateExercises, RULE_VERSION, TEMPLATE_VERSION, type TemplateFocus } from "./templates.ts";
+import { goalOf, isRecoveryWeek, recoveryWeekSets, setCap, stageLabel, trainingWeek } from "./program.ts";
 import { exerciseEquipmentIsAvailable, isDeadliftVariation, isExerciseAllowedForProfile } from "./exercise-library.ts";
-import type { CheckIn, ExerciseDefinition, Profile, TrainerRuleSettings, TrainingPhase, WorkoutFocus, WorkoutPlan, WorkoutSession } from "./types";
+import type { CheckIn, ExerciseDefinition, Profile, TrainerRuleSettings, TrainingGoal, TrainingPhase, WorkoutFocus, WorkoutPlan, WorkoutSession } from "./types";
 import { DEFAULT_TRAINER_RULE_SETTINGS, normalizeTrainerRuleSettings, profileWithTrainerEquipment } from "./trainer-rules.ts";
 
 export interface PlanInput {
@@ -55,6 +56,21 @@ function chooseFocus(completed: WorkoutSession[], isReturnSession: boolean): Wor
   return CYCLE[completed.length % CYCLE.length];
 }
 
+/** Next session in a goal's rotation. Only sessions from that rotation count, so a new goal starts at its first workout. */
+function chooseProgramFocus(goal: Exclude<TrainingGoal, "general">, attempts: WorkoutSession[], date: string, week: number): TemplateFocus {
+  const cycle = GOAL_CYCLES[goal];
+  if (goal === "muscle" && isRecoveryWeek(goal, week)) {
+    // Conditioning week: circuit days alternate with abs + easy cardio.
+    const thisWeek = attempts.filter((session) => daysBetween(date, session.date) < 7 && ["Conditioning circuit", "Core and cardio"].includes(session.plan.focus));
+    return thisWeek.length % 2 === 0 ? "Conditioning circuit" : "Core and cardio";
+  }
+  const done = attempts.filter((session) => (cycle as string[]).includes(session.plan.focus)).length;
+  return cycle[done % cycle.length];
+}
+
+/** Stand-in for a deadlift variation in a template when the trainer has not approved deadlifts. */
+const DEADLIFT_STAND_IN = "hip_thrust";
+
 function recoveryDecision(date: string, checkIn: CheckIn | undefined, prior: WorkoutSession[], sessionsPerWeek: number, settings: TrainerRuleSettings): RecoveryDecision {
   const reasons: string[] = [];
   const recent = [...prior].reverse().filter((session) => daysBetween(date, session.date) <= 7);
@@ -63,7 +79,7 @@ function recoveryDecision(date: string, checkIn: CheckIn | undefined, prior: Wor
   if (checkIn?.pain) reasons.push("Your check-in reports pain or discomfort, so this plan avoids loaded training.");
   // A pain or discomfort report from the previous logged session lightens only the next session.
   // Today's own check-in is the hard stop: reporting pain today always switches to recovery.
-  const lastLogged = [...prior].reverse().find((session) => session.status !== "planned");
+  const lastLogged = [...prior].reverse().find((session) => session.status !== "planned" && !session.missedReason);
   const lastSessionPain = Boolean(lastLogged && (lastLogged.checkIn?.pain || lastLogged.review?.discomfort));
   if (completedThisWeek >= 4 && completedThisWeek > sessionsPerWeek) reasons.push("Training frequency exceeded the selected weekly schedule; allow more recovery instead of adding another hard session.");
   if ((checkIn?.energy ?? 5) <= settings.recovery.stopEnergyThreshold
@@ -101,7 +117,8 @@ function equipmentAvailable(exercise: ExerciseDefinition, profile: Profile): boo
 }
 
 function mostRecentLoggedSession(sessions: WorkoutSession[]): WorkoutSession | undefined {
-  return [...sessions].filter((session) => session.status !== "planned").sort((a, b) => b.date.localeCompare(a.date))[0];
+  // Missed days (skipped with a reason) were never trained, so they say nothing about recent movements.
+  return [...sessions].filter((session) => session.status !== "planned" && !session.missedReason).sort((a, b) => b.date.localeCompare(a.date))[0];
 }
 
 function patternOf(exercise: ExerciseDefinition | undefined): string | undefined {
@@ -111,8 +128,12 @@ function patternOf(exercise: ExerciseDefinition | undefined): string | undefined
 function adaptEquipment(exercise: ExerciseDefinition, profile: Profile): ExerciseDefinition | null {
   if (equipmentAvailable(exercise, profile)) return { ...exercise, cues: [...exercise.cues] };
   if (!exercise.fallbackId) return null;
-  const alternative = getExerciseDefinition(exercise.fallbackId);
-  if (!alternative || !equipmentAvailable(alternative, profile)) return null;
+  // Follow the fallback chain (for example barbell squat → Smith squat → goblet squat → bodyweight squat).
+  let alternative = getExerciseDefinition(exercise.fallbackId);
+  for (let step = 0; alternative && !equipmentAvailable(alternative, profile) && step < 4; step++) {
+    alternative = alternative.fallbackId ? getExerciseDefinition(alternative.fallbackId) : undefined;
+  }
+  if (!alternative || !equipmentAvailable(alternative, profile) || isDeadliftVariation(alternative)) return null;
   const missing = profile.equipmentAvailability === "unknown"
     ? "available equipment has not been confirmed"
     : `required equipment (${exercise.equipment}) is not listed as available`;
@@ -276,12 +297,20 @@ export function generateWorkout({ date, profile, sessions, checkIn, trainerRuleS
   const lastTrainingAttempt = trainingAttempts.at(-1);
   const gapDays = lastTrainingAttempt ? daysBetween(date, lastTrainingAttempt.date) : null;
   const isReturnSession = gapDays !== null && gapDays >= 14;
-  const focus = chooseFocus(trainingAttempts, isReturnSession);
+  const goal = goalOf(profile);
+  const week = trainingWeek(profile.trainingStartDate, date);
+  const program = goal !== "general";
+  const recoveryWeek = isRecoveryWeek(goal, week);
+  const stage = stageLabel(goal, week);
+  const focus: WorkoutFocus = program ? chooseProgramFocus(goal, trainingAttempts, date, week) : chooseFocus(trainingAttempts, isReturnSession);
   const phase = phaseFor(date, profile, completed, isReturnSession);
   const feedback = recoveryDecision(date, checkIn, prior, profile.sessionsPerWeek, settings);
-  if (feedback.recover) return recoveryPlan(date, trainingAttempts, phase, feedback.reasons, checkIn?.pain === true, settings, trainerRuleRevision);
+  if (feedback.recover) {
+    const plan = recoveryPlan(date, trainingAttempts, phase, feedback.reasons, checkIn?.pain === true, settings, trainerRuleRevision);
+    return program ? { ...plan, goal, weekNumber: week, stage, recoveryWeek } : plan;
+  }
 
-  const baseFocus = focus === "Return to training" || focus === "Recovery" ? CYCLE[0] : focus;
+  const baseFocus: TemplateFocus = focus === "Return to training" || focus === "Recovery" ? CYCLE[0] : focus;
   const originalTemplateExercises = getTemplateExercises(baseFocus);
   const sourceExercises = originalTemplateExercises.map((exercise) => {
     const override = settings.exerciseTemplates.find((item) => item.exerciseId === exercise.id);
@@ -293,6 +322,17 @@ export function generateWorkout({ date, profile, sessions, checkIn, trainerRuleS
       selectionReason: `A trainer-approved template change sets ${override.sets} sets of ${override.minReps}–${override.maxReps} reps with ${override.restSeconds} seconds of rest.`,
     } : exercise;
   });
+  // Program templates list deadlift variations; without trainer approval a hip thrust takes their place.
+  for (const [index, exercise] of sourceExercises.entries()) {
+    if (!isDeadliftVariation(exercise) || deadliftAllowedForPlan(profile)) continue;
+    const standIn = getExerciseDefinition(DEADLIFT_STAND_IN);
+    if (standIn) sourceExercises[index] = { ...standIn, sets: exercise.sets, reps: exercise.reps, substitutedFor: exercise.id, selectionReason: `${standIn.name} replaces ${exercise.name} until your trainer approves deadlift variations.` };
+  }
+  // Get fit & toned: from week 13, a trainer-approved light hinge replaces the dumbbell glute bridge on Lower B.
+  if (goal === "tone" && baseFocus === "Lower B" && deadliftAllowedForPlan(profile) && week >= 13 && !recoveryWeek) {
+    const index = sourceExercises.findIndex((exercise) => exercise.id === "db_glute_bridge");
+    if (index >= 0) sourceExercises.splice(index, 1, { ...getOptionalDeadliftExercise(), sets: 2, reps: "8", substitutedFor: "db_glute_bridge", selectionReason: "Light hinge practice, added after week 12 under the explicit trainer approval rule." });
+  }
   if (deadliftAllowedForPlan(profile) && baseFocus === "Foundation B") {
     sourceExercises.splice(3, 1, {
       ...getOptionalDeadliftExercise(),
@@ -304,13 +344,16 @@ export function generateWorkout({ date, profile, sessions, checkIn, trainerRuleS
   const volumeAdjustment = feedback.reduceVolume || isReturnSession;
   const latestSession = mostRecentLoggedSession(prior);
   const latestGap = latestSession ? daysBetween(date, latestSession.date) : null;
-  const avoidRecentPatterns = latestGap !== null && latestGap < 2;
+  // Program splits are built so neighbouring days train different muscles; only the general plan checks patterns.
+  const avoidRecentPatterns = !program && latestGap !== null && latestGap < 2;
   const recentPatterns = new Set((latestSession?.plan.exercises ?? []).map((exercise) => patternOf(exercise)).filter((pattern): pattern is string => Boolean(pattern)));
   const recentlySkipped = new Set((latestSession?.exerciseLogs ?? []).filter((log) => log.status === "skipped").map((log) => log.exerciseId));
   const selectedIds = new Set<string>();
   const selectedPatterns = new Set<string>();
   const generationReasons = [
-    `Selected ${baseFocus} from the approved ${profile.sessionsPerWeek}-day schedule using completed-session rotation; missed days are not added to today.`,
+    program
+      ? `Selected ${baseFocus} for the "${goal === "muscle" ? "Build muscle" : "Get fit & toned"}" goal, week ${week} of 52${stage ? ` (${stage})` : ""}; workouts rotate in order and missed days are not added to today.`
+      : `Selected ${baseFocus} from the approved ${profile.sessionsPerWeek}-day schedule using completed-session rotation; missed days are not added to today.`,
     `Trainer rules revision ${trainerRuleRevision} is snapshotted with this plan; pain always triggers recovery and deadlift approval remains a separate explicit trainer rule.`,
     phase === "foundation_2"
       ? "The trainee has completed the foundation consistency threshold; conservative beginner movement choices and trainer restrictions still apply."
@@ -322,6 +365,9 @@ export function generateWorkout({ date, profile, sessions, checkIn, trainerRuleS
       ? `Only confirmed equipment is used: ${profile.availableEquipment.length ? profile.availableEquipment.join(", ") : "bodyweight only"}.`
       : "Equipment availability is unconfirmed, so the plan uses alternatives that do not require listed gym equipment.",
   ];
+  if (recoveryWeek) generationReasons.push(goal === "muscle"
+    ? "Every fourth week is a conditioning week: no heavy lifting, a 20-minute circuit and easy cardio so you recover and move well."
+    : "Every fourth week is a recovery week: the same workouts with about a third fewer sets and comfortable loads.");
   if (avoidRecentPatterns) generationReasons.push("The last completed workout was within one day; repeated movement patterns are replaced or omitted where a safe alternative is available.");
   if (profile.deadliftEnabled && baseFocus === "Foundation B") generationReasons.push("A trainer-approved rule permits the hinge variation for this client; time in training alone never enables it.");
 
@@ -353,7 +399,7 @@ export function generateWorkout({ date, profile, sessions, checkIn, trainerRuleS
       generationReasons.push(`${candidate.name} was omitted to prevent a duplicate exercise in this session.`);
       continue;
     }
-    if (selectedPatterns.has(pattern)) {
+    if (!program && selectedPatterns.has(pattern)) {
       const alternative = alternativeForPattern(candidate, profile, selectedPatterns, selectedIds);
       if (!alternative) {
         generationReasons.push(`${candidate.name} was omitted because its movement pattern is already represented in this session.`);
@@ -382,9 +428,10 @@ export function generateWorkout({ date, profile, sessions, checkIn, trainerRuleS
     }
     const baseReason = candidate.selectionReason ?? (candidate.substitutedFor
       ? `Substituted for ${source.name} while preserving the saved source plan.`
-      : `Selected from the ${baseFocus} template as part of the approved beginner rotation.`);
+      : program ? `Part of the ${baseFocus} session.` : `Selected from the ${baseFocus} template as part of the approved beginner rotation.`);
     const progression = progressionFor(candidate, prior, settings);
-    const plannedSets = Math.min(candidate.sets, isEarlyFoundation ? 2 : 3);
+    const cappedSets = Math.min(candidate.sets, setCap(goal, week, isEarlyFoundation, isReturnSession));
+    const plannedSets = recoveryWeek && goal === "tone" ? recoveryWeekSets(cappedSets) : cappedSets;
     exercises.push({
       ...candidate,
       sets: volumeAdjustment ? Math.max(1, plannedSets - settings.recovery.volumeReductionSets) : plannedSets,
@@ -401,12 +448,18 @@ export function generateWorkout({ date, profile, sessions, checkIn, trainerRuleS
   if (!exercises.length) {
     return recoveryPlan(date, trainingAttempts, phase, [...generationReasons, "No safe exercises matched the verified equipment and movement-pattern constraints."], false, settings, trainerRuleRevision);
   }
-  const title = isReturnSession ? "Easy return session" : `${baseFocus} · Full body`;
+  const title = isReturnSession ? "Easy return session" : `${baseFocus} · ${FOCUS_SUBTITLES[baseFocus] ?? "Full body"}`;
   const description = isReturnSession
     ? "A lighter first session back. Keep every rep comfortable and leave plenty in reserve."
-    : volumeAdjustment
+    : baseFocus === "Conditioning circuit"
+      ? "Repeat the three moves as a circuit for 20 minutes at a controlled pace, resting when needed. Keep 2–3 reps in reserve; this is not a race."
+      : recoveryWeek
+        ? "Recovery week: same workout, fewer sets and comfortable weights. Focus on smooth, clean reps."
+        : volumeAdjustment
       ? "Today’s plan uses fewer sets based on recovery feedback and recent training."
-      : "Build comfortable, repeatable strength with simple movements and a calm pace.";
+      : program
+        ? "Warm up for 5–7 minutes first. Finish most sets with 1–3 reps in reserve; add reps before adding weight."
+        : "Build comfortable, repeatable strength with simple movements and a calm pace.";
   return {
     id: `${date}-${baseFocus.toLowerCase().replaceAll(" ", "-")}`,
     date,
@@ -426,6 +479,7 @@ export function generateWorkout({ date, profile, sessions, checkIn, trainerRuleS
     generationReasons,
     trainerRuleRevision,
     trainerRuleSettings: settings,
+    ...(program ? { goal, weekNumber: week, stage, recoveryWeek } : {}),
   };
 }
 

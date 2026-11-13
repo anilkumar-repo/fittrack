@@ -6,7 +6,9 @@ import { createDemoState, readDemoState, todayInTimeZone, writeDemoState } from 
 import { isDeadliftVariation } from "@/lib/exercise-library";
 import { clearPendingSession, readPendingSessions, writePendingSession } from "@/lib/pending-sessions";
 import { getSupabaseBrowserClient } from "@/lib/supabase-browser";
-import { loadCloudState, saveCloudProfile, saveCloudSession } from "@/lib/supabase-repository";
+import { computeFriendStats } from "@/lib/friends";
+import { publishFriendStats } from "@/lib/friends-repository";
+import { loadCloudState, saveCloudMissedDay, saveCloudProfile, saveCloudSession } from "@/lib/supabase-repository";
 import { DEFAULT_TRAINER_RULE_SETTINGS, profileWithTrainerEquipment } from "@/lib/trainer-rules";
 import { isFigureChoice, type FigureChoice } from "@/lib/figure";
 import type { WeightUnit } from "@/lib/logging";
@@ -51,6 +53,8 @@ interface FitTrackContextValue {
   savingSession: boolean;
   retryPendingSessions: () => void;
   upsertSession: (session: WorkoutSession, options?: { debounce?: boolean }) => Promise<boolean>;
+  /** Saves skipped sessions with a reason for missed days. Resolves false if the account could not be updated. */
+  recordMissedDays: (sessions: WorkoutSession[]) => Promise<boolean>;
   updateProfile: (patch: Partial<Profile>) => void;
   /** Saves the answers from the welcome steps and opens the app. */
   completeOnboarding: (patch: Partial<Profile>) => void;
@@ -371,11 +375,47 @@ export function FitTrackProvider({ children }: { children: React.ReactNode }) {
     return () => window.removeEventListener("online", retryPendingSessions);
   }, [retryPendingSessions]);
 
+  // Share a small summary (streak, workouts this week, recent workout dates) with friends. Signed-in accounts only.
+  const publishedStats = useRef("");
+  useEffect(() => {
+    if (!ready || state.mode !== "supabase" || !browserClient || !state.profile.id) return;
+    const stats = computeFriendStats(state.profile, recordedSessions, currentDate);
+    const key = JSON.stringify(stats);
+    if (key === publishedStats.current) return;
+    const timer = window.setTimeout(() => {
+      publishFriendStats(browserClient, stats).then(() => { publishedStats.current = key; }).catch(() => undefined);
+    }, 1500);
+    return () => window.clearTimeout(timer);
+  }, [ready, state.mode, state.profile, recordedSessions, currentDate, browserClient]);
+
+  const recordMissedDays = useCallback(async (missed: WorkoutSession[]): Promise<boolean> => {
+    const current = stateRef.current;
+    let saved = missed;
+    if (current.mode === "supabase" && browserClient) {
+      try {
+        const ids = await Promise.all(missed.map((session) => saveCloudMissedDay(browserClient, session)));
+        // A null id means a workout was logged for that day elsewhere; keep the local copy out of the way.
+        saved = missed.flatMap((session, index) => ids[index] ? [{ ...session, id: ids[index] as string }] : []);
+      } catch (error) {
+        // If the database function is not deployed yet, keep the answer on this device so the client is never stuck.
+        const code = (error as { code?: string })?.code;
+        if (code !== "PGRST202" && code !== "42883") {
+          setSaveError(error instanceof Error ? error.message : "RozFit could not save the reason. Try again when you’re back online.");
+          return false;
+        }
+      }
+    }
+    const latest = stateRef.current;
+    const dates = new Set(saved.map((session) => session.date));
+    updateState({ ...latest, sessions: [...latest.sessions.filter((session) => !dates.has(session.date)), ...saved].sort((a, b) => a.date.localeCompare(b.date)) });
+    return true;
+  }, [browserClient, updateState]);
+
   const value = useMemo<FitTrackContextValue>(() => ({
     state, getState, updateState, ready, isDemo: state.mode === "demo", accountLoading, authChecked, browserClient, currentDate,
     trainerRuleSettings, planningProfile, recordedSessions, notice, setNotice, saveError, savingSession,
-    retryPendingSessions, upsertSession, updateProfile, completeOnboarding, signOut, refreshTrainerClients, weightUnit, setWeightUnit, theme, setTheme, figure, setFigure,
-  }), [state, getState, updateState, ready, accountLoading, authChecked, browserClient, currentDate, trainerRuleSettings, planningProfile,
+    retryPendingSessions, upsertSession, recordMissedDays, updateProfile, completeOnboarding, signOut, refreshTrainerClients, weightUnit, setWeightUnit, theme, setTheme, figure, setFigure,
+  }), [recordMissedDays, state, getState, updateState, ready, accountLoading, authChecked, browserClient, currentDate, trainerRuleSettings, planningProfile,
     recordedSessions, notice, saveError, savingSession, retryPendingSessions, upsertSession, updateProfile, completeOnboarding, signOut, refreshTrainerClients, weightUnit, setWeightUnit, theme, setTheme, figure, setFigure]);
 
   return <FitTrackContext.Provider value={value}>{children}</FitTrackContext.Provider>;

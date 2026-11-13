@@ -1,5 +1,7 @@
 "use client";
 
+import { MissedDaysList } from "@/components/app/missed-days-card";
+
 import { useEffect, useMemo, useState } from "react";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { generateWorkout } from "@/lib/planner";
@@ -273,6 +275,10 @@ export function TrainerControls({ client, trainerId, trainerRole, clients, refre
           {settingsErrors.length > 0 && <p className="field-hint">Correct the rule values before saving: {settingsErrors.join(" ")}</p>}
           <button type="button" className="button button-primary full-width" disabled={!canEdit || !dirty || saving || historyLoading || Boolean(historyError) || settingsErrors.length > 0} onClick={() => void saveSettings()}>{saving ? "Saving trainer rules…" : historyLoading ? "Loading client history…" : dirty ? "Save previewed rule changes" : "Rules match the saved version"}</button>
 
+          <div className="trainer-audit">
+            <h4>Missed days and reasons</h4>
+            {historyLoading ? <p className="loading-inline" role="status">Loading…</p> : <MissedDaysList sessions={sessions} />}
+          </div>
           <div className="trainer-audit">
             <h4>Recent audit history</h4>
             {selectedClient.audit.length ? <ul>{selectedClient.audit.slice(0, 8).map((entry) => <li key={entry.id}><span>{new Date(entry.changedAt).toLocaleString()}</span><small>{entry.trainerId === trainerId ? "You" : "Another linked trainer"} changed {entry.oldDeadliftEnabled !== entry.newDeadliftEnabled ? `deadlift approval (${entry.newDeadliftEnabled ? "approved" : "restricted"})` : "workout rules"}.</small></li>)}</ul> : <p className="field-hint">No trainer rule changes are recorded yet.</p>}

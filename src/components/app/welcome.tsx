@@ -4,17 +4,18 @@ import { useState } from "react";
 import { ArrowLeft, ArrowRight, Check } from "lucide-react";
 import { MAX_TRAINING_DAYS, MIN_TRAINING_DAYS, trainingDaysHint, trainingDaysValid, WEEKDAY_LABELS } from "@/lib/dates";
 import { FIGURE_OPTIONS, type FigureChoice } from "@/lib/figure";
+import { GOAL_OPTIONS, goalOf } from "@/lib/program";
 import { hasSupabaseConfig } from "@/lib/supabase-browser";
 import { EQUIPMENT_OPTIONS } from "@/lib/templates";
-import type { EquipmentKey } from "@/lib/types";
+import type { EquipmentKey, TrainingGoal } from "@/lib/types";
 import { MusclePicture } from "./muscle-picture";
 import { Rozi } from "./rozi";
 import { BrandMark } from "./brand-mark";
 import { useFitTrack } from "./fit-track-provider";
 import { SignInForm } from "./sign-in-form";
 
-type Step = "hero" | "name" | "figure" | "days" | "length" | "equipment";
-const QUESTIONS: Step[] = ["name", "figure", "days", "length", "equipment"];
+type Step = "hero" | "name" | "goal" | "figure" | "days" | "length" | "equipment";
+const QUESTIONS: Step[] = ["name", "goal", "figure", "days", "length", "equipment"];
 const LENGTHS = [
   { minutes: 30, title: "About 30 minutes", note: "Short and focused" },
   { minutes: 40, title: "About 40 minutes", note: "A steady, unhurried session" },
@@ -28,6 +29,7 @@ export function Welcome() {
   const [showSignIn, setShowSignIn] = useState(false);
   const [name, setName] = useState(isDemo ? "" : state.profile.displayName);
   const [days, setDays] = useState<number[]>(state.profile.trainingDays);
+  const [goal, setGoal] = useState<TrainingGoal>(goalOf(state.profile));
   const [minutes, setMinutes] = useState(state.profile.preferredSessionMinutes);
   const [knowsEquipment, setKnowsEquipment] = useState(state.profile.equipmentAvailability === "verified");
   const [equipment, setEquipment] = useState<EquipmentKey[]>(state.profile.availableEquipment);
@@ -39,6 +41,7 @@ export function Welcome() {
   function finish() {
     completeOnboarding({
       displayName: name.trim() || state.profile.displayName,
+      goal,
       trainingDays: days,
       sessionsPerWeek: days.length,
       preferredSessionMinutes: minutes,
@@ -88,6 +91,12 @@ export function Welcome() {
           <h1 id="onb-title">What should we call you?</h1>
           <p className="onb-lead">Your first name is enough.</p>
           <input className="onb-input" type="text" autoComplete="given-name" autoFocus maxLength={80} value={name} onChange={(event) => setName(event.target.value)} placeholder="Your first name" aria-label="Your first name" />
+        </>}
+
+        {step === "goal" && <>
+          <h1 id="onb-title">What’s your main goal?</h1>
+          <p className="onb-lead">Your plan, weekly split and progress steps follow this. You can change it later in Settings.</p>
+          <div className="onb-options" role="radiogroup" aria-label="Goal">{GOAL_OPTIONS.map((option) => <button key={option.id} type="button" role="radio" aria-checked={goal === option.id} className={`onb-option ${goal === option.id ? "selected" : ""}`} onClick={() => { setGoal(option.id); setDays(option.days); }}><span><strong>{option.title}</strong><small>{option.note}</small></span><span className="onb-check">{goal === option.id && <Check aria-hidden="true" />}</span></button>)}</div>
         </>}
 
         {step === "figure" && <>

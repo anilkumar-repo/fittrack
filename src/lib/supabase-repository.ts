@@ -1,9 +1,10 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { createDemoState, defaultDisplayName, localTimeZone, todayInTimeZone } from "./demo-data";
 import { canAccessOwnerProgress } from "./progress";
-import type { BodyWeightEntry, EquipmentKey, ExerciseLog, FitTrackState, Profile, TrainerClient, TrainerRuleAudit, TrainerRuleSettings, WorkoutReview, WorkoutSession } from "./types";
+import type { BodyWeightEntry, EquipmentKey, ExerciseLog, FitTrackState, MissedReason, Profile, TrainerClient, TrainerRuleAudit, TrainerRuleSettings, WorkoutReview, WorkoutSession } from "./types";
 import { createExerciseLog, normalizeWorkoutSession, persistWorkoutSession, type WorkoutPersistencePort } from "./workout-tracking";
 import { DEFAULT_TRAINER_RULE_SETTINGS, normalizeTrainerRuleSettings, validateTrainerRuleSettings } from "./trainer-rules";
+import { EQUIPMENT_OPTIONS } from "./templates";
 
 type AuthUser = { id: string; email?: string; app_metadata?: Record<string, unknown> };
 type DbRow = Record<string, unknown>;
@@ -26,6 +27,7 @@ export function newAccountProfileDefaults(user: AuthUser, seed?: NewAccountSeed)
     preferredSessionMinutes: local?.preferredSessionMinutes ?? base.preferredSessionMinutes,
     equipmentAvailability: local?.equipmentAvailability ?? base.equipmentAvailability,
     availableEquipment: local?.availableEquipment ?? base.availableEquipment,
+    goal: local?.goal ?? base.goal,
     deadliftEnabled: false,
     trainerRole: false,
   };
@@ -41,7 +43,7 @@ export interface NewAccountSeed {
 }
 
 function mapProfile(row: DbRow, id: string, trainerRole: boolean, deadliftEnabled: boolean, defaults: Profile = createDemoState().profile): Profile {
-  const validEquipment = new Set<EquipmentKey>(["dumbbells", "bench", "cable_machine", "leg_press", "leg_curl_machine", "rack", "mat", "chair"]);
+  const validEquipment = new Set<EquipmentKey>(EQUIPMENT_OPTIONS.map((item) => item.id));
   return {
     id,
     displayName: typeof row.display_name === "string" ? row.display_name : defaults.displayName,
@@ -55,6 +57,7 @@ function mapProfile(row: DbRow, id: string, trainerRole: boolean, deadliftEnable
     preferredSessionMinutes: Number(row.preferred_session_minutes ?? defaults.preferredSessionMinutes),
     equipmentAvailability: row.equipment_availability === undefined ? defaults.equipmentAvailability : row.equipment_availability === "verified" ? "verified" : "unknown",
     availableEquipment: Array.isArray(row.available_equipment) ? row.available_equipment.filter((item): item is EquipmentKey => typeof item === "string" && validEquipment.has(item as EquipmentKey)) : row.available_equipment === undefined ? defaults.availableEquipment : [],
+    goal: row.goal === "muscle" || row.goal === "tone" ? row.goal : "general",
   };
 }
 
@@ -226,6 +229,9 @@ function createSupabaseWorkoutPort(client: SupabaseClient): WorkoutPersistencePo
             discomfort: reviewRow.discomfort === true, discomfortNote: String(reviewRow.discomfort_note ?? ""), note: String(reviewRow.note ?? ""),
           } } : {}),
           ...(typeof row.completed_at === "string" ? { completedAt: row.completed_at } : {}),
+          ...(row.status === "skipped" && typeof row.missed_reason === "string"
+            ? { missedReason: { reason: row.missed_reason as MissedReason, note: String(row.missed_note ?? "") } }
+            : {}),
         };
         return normalizeWorkoutSession(session);
       }).filter((session): session is WorkoutSession => session !== null);
@@ -354,9 +360,26 @@ export async function saveCloudProfile(client: SupabaseClient, profile: Profile)
     preferred_session_minutes: profile.preferredSessionMinutes,
     equipment_availability: profile.equipmentAvailability,
     available_equipment: profile.availableEquipment,
+    goal: profile.goal ?? "general",
     updated_at: new Date().toISOString(),
   }, { onConflict: "id" });
   if (error) throw error;
+}
+
+/** Saves the reason for a missed day. Returns the session id, or null if a logged workout already exists for that day. */
+export async function saveCloudMissedDay(client: SupabaseClient, session: WorkoutSession): Promise<string | null> {
+  if (!session.missedReason) throw new Error("A missed day needs a reason.");
+  const { data, error } = await client.rpc("record_missed_workout", {
+    p_date: session.date,
+    p_reason: session.missedReason.reason,
+    p_note: session.missedReason.note,
+    p_plan: session.plan,
+    p_template_key: session.plan.focus.toLowerCase().replaceAll(" ", "_"),
+    p_template_version: session.plan.templateVersion,
+    p_rule_version: session.plan.ruleVersion,
+  });
+  if (error) throw error;
+  return typeof data === "string" ? data : null;
 }
 
 export async function saveCloudSession(client: SupabaseClient, userId: string, session: WorkoutSession): Promise<WorkoutSession> {
