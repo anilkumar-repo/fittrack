@@ -197,7 +197,7 @@ function WorkoutDayView({ date }: { date: string }) {
               <li key={region} className="muscle-card"><MusclePicture figure={figure} region={region} priority={index < 2} /><strong>{REGION_LABELS[region]}</strong></li>
             ))}</ul>
           </article> : <article className="panel target-card">
-            <div className="target-figure">{plan.sessionType === "recovery" ? <Rozi mood="care" size={180} /> : <BodyFigure figure={figure} highlight={regions} view="both" />}</div>
+            <div className="target-figure">{plan.sessionType === "recovery" ? <Rozi mood={checkIn.pain ? "care" : "stretch"} size={180} /> : <BodyFigure figure={figure} highlight={regions} view="both" />}</div>
             <div className="target-copy">
               <h3>{plan.sessionType === "recovery" ? "Recovery session" : "Today’s targets"}</h3>
               {regions.length > 0

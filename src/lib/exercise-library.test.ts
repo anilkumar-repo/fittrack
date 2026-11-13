@@ -5,6 +5,7 @@ import {
   getExerciseDefinition,
 } from "./templates.ts";
 import {
+  BODY_AREAS,
   filterExerciseLibrary,
   getExerciseLibraryFilterOptions,
   getExerciseReferenceInstructions,
@@ -105,4 +106,13 @@ test("deadlift variations stay out of search and alternatives until the restrict
 
   const trainerApproved = { ...profile, deadliftEnabled: true, equipmentAvailability: "verified" as const, availableEquipment: ["dumbbells", "bench"] as Profile["availableEquipment"] };
   assert.ok(filterExerciseLibrary(EXERCISE_LIBRARY, trainerApproved, { query: "Romanian" }).some((item) => item.id === "dumbbell_rdl"));
+});
+
+test("body-area cards split the library into upper, lower and core without overlap", () => {
+  const all = filterExerciseLibrary(EXERCISE_LIBRARY, profile, {});
+  const counts = Object.fromEntries(BODY_AREAS.map((area) => [area.id, filterExerciseLibrary(EXERCISE_LIBRARY, profile, { area: area.id }).length]));
+  assert.equal(counts.full, all.length);
+  assert.equal(counts.upper + counts.lower + counts.core, all.length);
+  assert.ok(filterExerciseLibrary(EXERCISE_LIBRARY, profile, { area: "lower" }).some((item) => item.id === "bodyweight_squat"));
+  assert.ok(filterExerciseLibrary(EXERCISE_LIBRARY, profile, { area: "upper" }).every((item) => !["squat", "core"].includes(item.movementPattern ?? "")));
 });

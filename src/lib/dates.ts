@@ -2,6 +2,22 @@ import type { Profile } from "./types";
 
 export const WEEKDAY_LABELS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
+/** Training days a week a client may choose. Keep in step with the profiles table checks. */
+export const MIN_TRAINING_DAYS = 3;
+export const MAX_TRAINING_DAYS = 6;
+
+export function trainingDaysValid(days: number[]): boolean {
+  return days.length >= MIN_TRAINING_DAYS && days.length <= MAX_TRAINING_DAYS;
+}
+
+/** A short note for the chosen number of days, shown under the day picker. */
+export function trainingDaysHint(count: number): string {
+  if (count < MIN_TRAINING_DAYS) return `choose at least ${MIN_TRAINING_DAYS}`;
+  if (count > MAX_TRAINING_DAYS) return `choose at most ${MAX_TRAINING_DAYS} — keep one rest day`;
+  if (count >= 5) return "keep back-to-back days easy";
+  return "";
+}
+
 export function isIsoDate(value: string | null | undefined): value is string {
   if (!value || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
   const parsed = new Date(`${value}T12:00:00Z`);

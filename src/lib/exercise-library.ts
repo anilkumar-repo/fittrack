@@ -24,6 +24,24 @@ export interface ExerciseLibraryFilters {
   movementPattern?: string;
   equipment?: string;
   difficulty?: string;
+  /** A body area from BODY_AREAS; "full" or empty shows everything. */
+  area?: string;
+}
+
+export type BodyArea = "full" | "upper" | "lower" | "core";
+
+/** The library's body-area cards, each a set of movement patterns. */
+export const BODY_AREAS: Array<{ id: BodyArea; label: string; patterns: MovementPattern[] | null }> = [
+  { id: "full", label: "Full body", patterns: null },
+  { id: "upper", label: "Upper body", patterns: ["horizontal_push", "vertical_push", "horizontal_pull", "vertical_pull"] },
+  { id: "lower", label: "Lower body", patterns: ["squat", "single_leg", "hip_extension", "hamstring_curl"] },
+  { id: "core", label: "Core & stretch", patterns: ["core", "carry", "recovery"] },
+];
+
+export function exerciseInArea(exercise: Pick<ExerciseDefinition, "movementPattern">, area: string): boolean {
+  const patterns = BODY_AREAS.find((item) => item.id === area)?.patterns;
+  if (!patterns) return true;
+  return Boolean(exercise.movementPattern && patterns.includes(exercise.movementPattern));
 }
 
 export interface ExerciseLibraryFilterOptions {
@@ -109,6 +127,7 @@ export function filterExerciseLibrary(
     if (equipment === NO_EQUIPMENT_FILTER && (exercise.requiredEquipment ?? []).length > 0) return false;
     if (equipment && equipment !== NO_EQUIPMENT_FILTER && !(exercise.requiredEquipment ?? []).includes(equipment as EquipmentKey)) return false;
     if (difficulty && exercise.difficulty !== difficulty) return false;
+    if (filters.area && !exerciseInArea(exercise, filters.area)) return false;
     if (!query) return true;
     const searchable = normalize([
       exercise.name,

@@ -2,12 +2,13 @@
 
 import { useState } from "react";
 import { ArrowLeft, ArrowRight, Check } from "lucide-react";
-import { WEEKDAY_LABELS } from "@/lib/dates";
+import { MAX_TRAINING_DAYS, MIN_TRAINING_DAYS, trainingDaysHint, trainingDaysValid, WEEKDAY_LABELS } from "@/lib/dates";
 import { FIGURE_OPTIONS, type FigureChoice } from "@/lib/figure";
 import { hasSupabaseConfig } from "@/lib/supabase-browser";
 import { EQUIPMENT_OPTIONS } from "@/lib/templates";
 import type { EquipmentKey } from "@/lib/types";
 import { MusclePicture } from "./muscle-picture";
+import { Rozi } from "./rozi";
 import { BrandMark } from "./brand-mark";
 import { useFitTrack } from "./fit-track-provider";
 import { SignInForm } from "./sign-in-form";
@@ -31,7 +32,8 @@ export function Welcome() {
   const [knowsEquipment, setKnowsEquipment] = useState(state.profile.equipmentAvailability === "verified");
   const [equipment, setEquipment] = useState<EquipmentKey[]>(state.profile.availableEquipment);
   const position = QUESTIONS.indexOf(step);
-  const daysValid = days.length >= 2 && days.length <= 4;
+  const daysValid = trainingDaysValid(days);
+  const daysHint = trainingDaysHint(days.length);
   const canContinue = step === "name" ? Boolean(name.trim()) : step === "days" ? daysValid : true;
 
   function finish() {
@@ -56,9 +58,14 @@ export function Welcome() {
       <main className="onb">
         <section className="onb-frame onb-hero" aria-labelledby="onb-title">
           <div className="onb-brand"><BrandMark /><strong>RozFit</strong></div>
-          <div className="onb-hero-art"><MusclePicture figure={figure} priority /></div>
+          <div className="onb-hero-art">
+            <div className="onb-rozi">
+              <span className="onb-rozi-hello" aria-hidden="true">Hi, I’m Rozi!</span>
+              <Rozi mood="hello" size={240} priority className="onb-rozi-img" />
+            </div>
+          </div>
           <h1 id="onb-title">Small steps.<br />Every day.</h1>
-          <p className="onb-lead">A simple strength plan that fits your week, shows you each movement, and adjusts to how you feel.</p>
+          <p className="onb-lead">I’m your workout buddy. A simple strength plan that fits your week, shows you each movement, and adjusts to how you feel.</p>
           <button className="button button-primary onb-cta" onClick={() => setStep("name")}>Get started <ArrowRight aria-hidden="true" /></button>
           {isDemo && hasSupabaseConfig() && (showSignIn
             ? <div className="onb-sign-in"><SignInForm /></div>
@@ -96,9 +103,9 @@ export function Welcome() {
 
         {step === "days" && <>
           <h1 id="onb-title">Which days suit you{name.trim() ? `, ${name.trim()}` : ""}?</h1>
-          <p className="onb-lead">Pick 2 to 4 days. A rest day between sessions helps you recover.</p>
+          <p className="onb-lead">Pick {MIN_TRAINING_DAYS} to {MAX_TRAINING_DAYS} days. Rest days help your muscles recover.</p>
           <div className="onb-days">{WEEKDAY_LABELS.map((label, day) => <button key={label} type="button" className={days.includes(day) ? "selected" : ""} aria-pressed={days.includes(day)} onClick={() => setDays((current) => current.includes(day) ? current.filter((value) => value !== day) : [...current, day].sort((a, b) => a - b))}>{label}</button>)}</div>
-          <p className={`onb-hint ${daysValid ? "" : "warn"}`} role="status">{days.length} {days.length === 1 ? "day" : "days"} chosen{daysValid ? "" : " · choose between 2 and 4"}</p>
+          <p className={`onb-hint ${daysValid ? "" : "warn"}`} role="status">{days.length} {days.length === 1 ? "day" : "days"} chosen{daysHint ? ` · ${daysHint}` : ""}</p>
         </>}
 
         {step === "length" && <>

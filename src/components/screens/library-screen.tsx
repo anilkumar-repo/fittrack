@@ -6,15 +6,20 @@ import { ExerciseGuideModal, toGuideExercise } from "@/components/app/exercise-g
 import { MuscleThumb } from "@/components/app/muscle-thumb";
 import { useFitTrack } from "@/components/app/fit-track-provider";
 import { DEFAULT_CHECK_IN, useWorkoutDay } from "@/components/app/use-workout-day";
-import { exerciseEquipmentIsAvailable, filterExerciseLibrary, getExerciseLibraryFilterOptions } from "@/lib/exercise-library";
+import { Rozi } from "@/components/app/rozi";
+import { BODY_AREAS, type BodyArea, exerciseEquipmentIsAvailable, filterExerciseLibrary, getExerciseLibraryFilterOptions } from "@/lib/exercise-library";
+import type { RoziMood } from "@/lib/rozi";
 import { EXERCISE_LIBRARY } from "@/lib/templates";
 import type { ExerciseDefinition } from "@/lib/types";
+
+const AREA_MOODS: Record<BodyArea, RoziMood> = { full: "full-body", upper: "upper-body", lower: "lower-body", core: "stretch" };
 
 export function LibraryScreen() {
   const { currentDate, planningProfile } = useFitTrack();
   const { session: todaySession, plan } = useWorkoutDay(currentDate, DEFAULT_CHECK_IN);
   const [guideExercise, setGuideExercise] = useState<ExerciseDefinition | null>(null);
   const [libraryFilter, setLibraryFilter] = useState("All");
+  const [libraryArea, setLibraryArea] = useState<BodyArea>("full");
   const [librarySearch, setLibrarySearch] = useState("");
   const [libraryMuscleFilter, setLibraryMuscleFilter] = useState("");
   const [libraryPatternFilter, setLibraryPatternFilter] = useState("");
@@ -28,16 +33,26 @@ export function LibraryScreen() {
     movementPattern: libraryPatternFilter,
     equipment: libraryEquipmentFilter,
     difficulty: libraryDifficultyFilter,
+    area: libraryArea,
   });
 
   const extraFilters = [libraryMuscleFilter, libraryPatternFilter, libraryEquipmentFilter, libraryDifficultyFilter].filter(Boolean).length;
-  const anyFilter = Boolean(librarySearch) || libraryFilter !== "All" || extraFilters > 0;
-  const clearFilters = () => { setLibrarySearch(""); setLibraryFilter("All"); setLibraryMuscleFilter(""); setLibraryPatternFilter(""); setLibraryEquipmentFilter(""); setLibraryDifficultyFilter(""); };
+  const anyFilter = Boolean(librarySearch) || libraryFilter !== "All" || libraryArea !== "full" || extraFilters > 0;
+  const clearFilters = () => { setLibrarySearch(""); setLibraryFilter("All"); setLibraryArea("full"); setLibraryMuscleFilter(""); setLibraryPatternFilter(""); setLibraryEquipmentFilter(""); setLibraryDifficultyFilter(""); };
 
   return (
     <>
       <section className="library">
         <label className="library-find"><Search aria-hidden="true" /><input type="search" value={librarySearch} onChange={(event) => setLibrarySearch(event.target.value)} placeholder="Search exercises or muscles" aria-label="Search exercises, muscles, or equipment" />{librarySearch && <button type="button" onClick={() => setLibrarySearch("")} aria-label="Clear search"><X aria-hidden="true" /></button>}</label>
+        <div className="area-cards" role="group" aria-label="Body area">{BODY_AREAS.map((area) => {
+          const count = filterExerciseLibrary(EXERCISE_LIBRARY, planningProfile, { area: area.id }).length;
+          return (
+            <button key={area.id} type="button" className={`area-card area-${area.id} ${libraryArea === area.id ? "selected" : ""}`} aria-pressed={libraryArea === area.id} onClick={() => setLibraryArea(area.id)}>
+              <span className="area-text"><strong>{area.label}</strong><small>{count} {count === 1 ? "move" : "moves"}</small></span>
+              <Rozi mood={AREA_MOODS[area.id]} size={96} className="area-rozi" />
+            </button>
+          );
+        })}</div>
         <div className="library-chips" role="group" aria-label="Category">{["All", "Strength", "Core", "Conditioning"].map((filter) => <button key={filter} type="button" className={libraryFilter === filter ? "selected" : ""} aria-pressed={libraryFilter === filter} onClick={() => setLibraryFilter(filter)}>{filter}</button>)}</div>
         <details className="library-more">
           <summary><SlidersHorizontal aria-hidden="true" /> More filters{extraFilters > 0 ? ` (${extraFilters})` : ""}</summary>

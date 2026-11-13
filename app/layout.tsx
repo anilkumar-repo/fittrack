@@ -7,7 +7,11 @@ export const metadata: Metadata = {
   description: "A simple, rule-based workout planner for steady beginner progress.",
   applicationName: "RozFit",
   appleWebApp: { capable: true, title: "RozFit", statusBarStyle: "default" },
-  icons: { icon: "/icons/icon-192.png", apple: "/icons/apple-touch-icon.png" },
+  // The browser tab shows the simple "R" logo (Rozi's fur is lost at 16–32 px); home screens get Rozi's face.
+  icons: {
+    icon: [{ url: "/icons/favicon-32.png", sizes: "32x32", type: "image/png" }, { url: "/icons/logo-r-180.png", sizes: "180x180", type: "image/png" }],
+    apple: "/icons/apple-touch-icon.png",
+  },
 };
 
 export const viewport: Viewport = {

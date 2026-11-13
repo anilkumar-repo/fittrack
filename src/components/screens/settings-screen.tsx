@@ -4,7 +4,7 @@ import { AccountCard, DataCard, TrainerInviteCard, TrainerLinkCard } from "@/com
 import { useFitTrack } from "@/components/app/fit-track-provider";
 import { TrainerControls } from "@/components/trainer-controls";
 import { CalendarDays, Palette, ShieldCheck, Sparkles, Sun } from "lucide-react";
-import { shortDate, WEEKDAY_LABELS } from "@/lib/dates";
+import { MAX_TRAINING_DAYS, MIN_TRAINING_DAYS, shortDate, trainingDaysValid, WEEKDAY_LABELS } from "@/lib/dates";
 import { FIGURE_OPTIONS } from "@/lib/figure";
 import { EQUIPMENT_OPTIONS, RULE_VERSION, TEMPLATE_VERSION } from "@/lib/templates";
 import type { Profile } from "@/lib/types";
@@ -57,9 +57,9 @@ export function SettingsScreen() {
             <div className="settings-field"><span>Training days</span>
               <div className="onb-days">{WEEKDAY_LABELS.map((label, day) => <button key={label} type="button" className={profile.trainingDays.includes(day) ? "selected" : ""} aria-pressed={profile.trainingDays.includes(day)} onClick={() => {
                 const next = profile.trainingDays.includes(day) ? profile.trainingDays.filter((value) => value !== day) : [...profile.trainingDays, day];
-                if (next.length >= 2 && next.length <= 4) void updateProfile({ trainingDays: next, sessionsPerWeek: next.length });
+                if (trainingDaysValid(next)) void updateProfile({ trainingDays: next.sort((a, b) => a - b), sessionsPerWeek: next.length });
               }}>{label}</button>)}</div>
-              <small>Between 2 and 4 days. Missed sessions are never crammed into the next day.</small>
+              <small>Between {MIN_TRAINING_DAYS} and {MAX_TRAINING_DAYS} days{profile.trainingDays.length >= 5 ? "; keep back-to-back days easy" : ""}. Missed sessions are never crammed into the next day.</small>
             </div>
             <div className="settings-field"><span>Session length</span>
               <div className="segmented">{[30, 40, 50].map((minutes) => <button key={minutes} type="button" className={profile.preferredSessionMinutes === minutes ? "selected" : ""} aria-pressed={profile.preferredSessionMinutes === minutes} onClick={() => updateProfile({ preferredSessionMinutes: minutes })}>{minutes} min</button>)}</div>
