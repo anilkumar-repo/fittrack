@@ -100,6 +100,12 @@ export function FitTrackProvider({ children }: { children: React.ReactNode }) {
   const [accountLoading, setAccountLoading] = useState(false);
   const [authChecked, setAuthChecked] = useState(() => getSupabaseBrowserClient() === null);
   const [notice, setNotice] = useState("");
+  // Information messages close by themselves after 12 seconds; errors (saveError) stay until handled.
+  useEffect(() => {
+    if (!notice) return;
+    const timer = window.setTimeout(() => setNotice(""), 12_000);
+    return () => window.clearTimeout(timer);
+  }, [notice]);
   const [saveError, setSaveError] = useState("");
   const [savingSession, setSavingSession] = useState(false);
   const [pendingSessions, setPendingSessions] = useState<WorkoutSession[]>([]);

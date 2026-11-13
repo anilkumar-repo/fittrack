@@ -1638,3 +1638,14 @@ body { touch-action: manipulation; }
 .avatar-sheet-backdrop { z-index: 1000; }
 .avatar-grid.colors button { padding: 4px; }
 .avatar-grid button { min-width: 0; }
+
+/* Trainer controls: even spacing between every field, button and link in each section. */
+.trainer-rule-editor { display: grid; gap: 12px; padding-top: 16px; }
+.trainer-rule-editor h4 { margin: 0; }
+.trainer-rule-editor .field-label { display: grid; gap: 6px; margin: 0; }
+.trainer-rule-editor .field-label small { color: var(--muted); font-size: 12.5px; }
+.trainer-rule-editor .onb-days { margin-top: 2px; }
+.trainer-rule-editor .button { margin-top: 4px; }
+.trainer-rule-editor .trainer-number-grid { margin-top: 0; gap: 10px 12px; }
+.trainer-rule-editor .text-button { justify-self: start; padding: 4px 0; }
+.trainer-controls-panel { gap: 18px; }
