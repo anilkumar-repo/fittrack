@@ -302,7 +302,7 @@ Shown once after sign-up (7 cards with Rozi, highlighting each menu button). Set
 | 12 | Phone notifications (morning, evening, nudges) |
 | Sign-up | Email code sign-in as the last Get started step; code-based sign-in everywhere |
 | Fix (2026-11-13) | Step 7 jumped to Home when "Email me a code" was pressed (the email form's submit also triggered "finish setup"). Fixed so the code screen shows; tested with the send stubbed. |
-| Email setup | Gmail SMTP connected (sender name RozFit). Templates still to paste (section 6). |
+| Email setup | Gmail SMTP connected (sender name RozFit). Both templates (Confirm signup, Magic link or OTP) pasted. Codes delivered; first emails landed in Spam. |
 | Polish round (2026-11-13) | iPhone app feel (no zoom / sideways wobble), "Lose weight" goal, trainer can edit a client's goal/days/length and sets/reps for every program exercise, first-time tour (replay in Settings), profile picture (photo / Rozi / initials), "demo" wording removed, sync status moved to Settings, compact data buttons, body-weight form fixed, faster images (lazy loading, 30-day caching, `next.config.ts`). Migration `20261113160000_avatars_fatloss_trainer_plan.sql` applied (SQL Editor). Trainer role set on the owner's account. |
 
 Tests: `npm test` (112 at the last update), `npm run lint`, `npx tsc --noEmit`, `npm run build`.
@@ -329,6 +329,8 @@ Tests: `npm test` (112 at the last update), `npm run lint`, `npx tsc --noEmit`, 
 | No code email | Supabase → Logs → Auth for SMTP errors; Gmail app password and 2-Step Verification; Spam folder |
 | Email has a link but no code (subject "Confirm your email address" / "Your sign-in link") | Supabase default templates are still in use: paste both templates from section 6 (new people get **Confirm signup**, returning people get **Magic link or OTP**) |
 | Step 7 opens Home without asking for the code | Fixed on 2026-11-13; make sure the latest code is deployed |
+| Trainer account shows "Something went wrong" (Settings) | Fixed on 2026-11-13: Trainer controls crashed when the trainer had no linked clients yet |
+| Only some emails get the code / codes land in Spam | Gmail SMTP from a new Gmail account is often filtered. Ask users to mark "Not spam" or add a filter; the real fix is your own domain + Resend (section 5) |
 | Sign-in link goes to an old address | Vercel `NEXT_PUBLIC_SITE_URL` and Supabase Site URL must be `https://rozfit-a.vercel.app` |
 | Notifications never arrive | Vercel has all four keys (2.1) and was redeployed; Supabase: `select status_code, content from net._http_response order by created desc limit 5;` (200 = working, 401 = secret mismatch, 503 = keys missing in Vercel, 404 = wrong address in vault) |
 | iPhone can't turn notifications on | Must be opened from the Home Screen app, iOS 16.4+ |

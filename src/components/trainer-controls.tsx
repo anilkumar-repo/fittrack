@@ -75,7 +75,8 @@ export function TrainerControls({ client, trainerId, trainerRole, clients, refre
   // The exercises a trainer can adjust follow the client's goal program.
   const TEMPLATE_EXERCISES = useMemo(() => trainerEditableExercisesFor(goalOf(selectedClient?.profile ?? {})), [selectedClient]);
   const exerciseId = TEMPLATE_EXERCISES.some((item) => item.id === pickedExerciseId) ? pickedExerciseId : TEMPLATE_EXERCISES[0]?.id ?? "";
-  const plan = planDraft?.clientId === selectedClient?.id ? planDraft : selectedClient
+  // With no linked clients both ids are undefined, so check that a draft and a client really exist.
+  const plan = planDraft && selectedClient && planDraft.clientId === selectedClient.id ? planDraft : selectedClient
     ? { clientId: selectedClient.id, goal: goalOf(selectedClient.profile), days: selectedClient.profile.trainingDays, minutes: selectedClient.profile.preferredSessionMinutes }
     : null;
   const planDirty = Boolean(selectedClient && plan && (plan.goal !== goalOf(selectedClient.profile) || plan.minutes !== selectedClient.profile.preferredSessionMinutes
@@ -97,7 +98,7 @@ export function TrainerControls({ client, trainerId, trainerRole, clients, refre
       setSavingPlan(false);
     }
   }
-  const draft = draftState?.clientId === selectedClient?.id ? draftState.settings : selectedClient?.ruleSettings ?? DEFAULT_TRAINER_RULE_SETTINGS;
+  const draft = draftState && selectedClient && draftState.clientId === selectedClient.id ? draftState.settings : selectedClient?.ruleSettings ?? DEFAULT_TRAINER_RULE_SETTINGS;
   const clientIdToLoad = selectedClient?.id;
   const historyForSelected = historyState?.clientId === clientIdToLoad ? historyState : null;
   const sessions = historyForSelected?.sessions ?? EMPTY_SESSIONS;

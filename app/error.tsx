@@ -6,7 +6,8 @@ export default function AppError({ error, retry }: { error: unknown; retry: () =
   useEffect(() => { console.error(error); }, [error]);
   return (
     <main className="app-message">
-      <div className="brand-mark">F</div>
+      {/* eslint-disable-next-line @next/next/no-img-element -- plain image so the error page never depends on anything that might have failed */}
+      <img src="/icons/logo-r.webp" width={56} height={56} alt="RozFit" className="brand-mark brand-logo" />
       <h1>Something went wrong on this page.</h1>
       <p>Your saved workouts are not affected. Anything you were logging is kept on this device and will sync when the page loads again.</p>
       <div className="app-message-actions">
