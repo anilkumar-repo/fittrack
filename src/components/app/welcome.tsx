@@ -7,7 +7,7 @@ import { FIGURE_OPTIONS, type FigureChoice } from "@/lib/figure";
 import { hasSupabaseConfig } from "@/lib/supabase-browser";
 import { EQUIPMENT_OPTIONS } from "@/lib/templates";
 import type { EquipmentKey } from "@/lib/types";
-import { BodyFigure } from "./body-figure";
+import { MusclePicture } from "./muscle-picture";
 import { BrandMark } from "./brand-mark";
 import { useFitTrack } from "./fit-track-provider";
 import { SignInForm } from "./sign-in-form";
@@ -56,7 +56,7 @@ export function Welcome() {
       <main className="onb">
         <section className="onb-frame onb-hero" aria-labelledby="onb-title">
           <div className="onb-brand"><BrandMark /><strong>RozFit</strong></div>
-          <div className="onb-hero-art"><BodyFigure figure={figure} highlight={["shoulders", "core", "thighs"]} /></div>
+          <div className="onb-hero-art"><MusclePicture figure={figure} priority /></div>
           <h1 id="onb-title">Small steps.<br />Every day.</h1>
           <p className="onb-lead">A simple strength plan that fits your week, shows you each movement, and adjusts to how you feel.</p>
           <button className="button button-primary onb-cta" onClick={() => setStep("name")}>Get started <ArrowRight aria-hidden="true" /></button>
@@ -88,7 +88,7 @@ export function Welcome() {
           <p className="onb-lead">Used for the exercise pictures and muscle maps. It does not change your plan.</p>
           <div className="onb-figures" role="radiogroup" aria-label="Figure">
             {FIGURE_OPTIONS.map((option) => <button key={option.id} type="button" role="radio" aria-checked={figure === option.id} className={`onb-figure ${figure === option.id ? "selected" : ""}`} onClick={() => setFigure(option.id as FigureChoice)}>
-              <BodyFigure figure={option.id} highlight={figure === option.id ? ["shoulders", "chest", "core", "thighs"] : []} />
+              <MusclePicture figure={option.id} />
               <span>{option.label}</span>
             </button>)}
           </div>

@@ -9,7 +9,7 @@ import { useEffect } from "react";
 import { Clock, Dumbbell, Play, Repeat, ShieldCheck, X } from "lucide-react";
 import { getDemoVideoLink, getExerciseIllustration } from "@/lib/exercise-media";
 import { regionsForExercises } from "@/lib/figure";
-import { BodyFigure } from "./body-figure";
+import { MusclePicture } from "./muscle-picture";
 import { ExerciseIllustration } from "./exercise-illustration";
 import { sessionForDate, useFitTrack } from "./fit-track-provider";
 
@@ -118,7 +118,7 @@ export function ExerciseGuideModal({ exercise, workout, onOpen, onClose }: Exerc
           <div className="guide-visual">
             {hasIllustration && <div className="guide-pose"><ExerciseIllustration exerciseId={exercise.id} name={exercise.name} /></div>}
             <div className="guide-muscles">
-              <BodyFigure figure={figure} highlight={regions} view="both" />
+              <MusclePicture figure={figure} region={regions[0]} highlight={regions} />
               <div><small>Works</small><strong>{exercise.targetMuscles.join(" · ")}</strong></div>
             </div>
           </div>

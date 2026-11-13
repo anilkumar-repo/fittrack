@@ -1334,3 +1334,24 @@ svg.brand-mark { display: block; width: 40px; height: 40px; padding: 0; border-r
 @media (max-width: 700px) {
   .mobile-nav a.active { color: var(--nav-active-ink); background: var(--nav-active-bg); box-shadow: none; }
 }
+
+/* ---------- Anatomy pictures ---------- */
+img.muscle-picture { display: block; width: auto; max-width: 100%; height: 100%; object-fit: contain; }
+.hero-figure { display: grid; place-items: center; height: 250px; }
+.hero-figure img.muscle-picture { height: 100%; }
+.target-card.pictures { display: grid; gap: 14px; }
+.target-card.pictures h3 { color: var(--muted); font-size: 13px; letter-spacing: 1px; text-transform: uppercase; }
+.muscle-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; margin: 0; padding: 0; list-style: none; }
+.muscle-card { display: grid; justify-items: center; gap: 8px; padding: 14px 10px 12px; border-radius: 22px; background: rgba(255, 255, 255, .72); }
+:root[data-theme="light"] .muscle-card { background: var(--surface-2); }
+.muscle-card img.muscle-picture { height: 190px; }
+.muscle-card strong { color: var(--ink); font-size: 15px; font-weight: 800; }
+.guide-muscles img.muscle-picture { height: 200px; }
+.onb-hero-art img.muscle-picture { height: min(320px, 40dvh); }
+.onb-figure img.muscle-picture { height: 170px; }
+.onb-figures { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+@media (max-width: 700px) {
+  .muscle-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .muscle-card img.muscle-picture { height: 160px; }
+  .hero-figure { height: 210px; }
+}

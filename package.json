@@ -9,7 +9,7 @@
     "start": "next start",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
-    "test": "node --experimental-strip-types --test src/lib/planner.test.ts src/lib/workout-tracking.test.ts src/lib/exercise-library.test.ts src/lib/progress.test.ts src/lib/demo-data.test.ts src/lib/trainer-rules.test.ts src/lib/dates.test.ts src/lib/account-data.test.ts src/lib/logging.test.ts src/lib/exercise-media.test.ts src/lib/achievements.test.ts"
+    "test": "node --experimental-strip-types --test src/lib/planner.test.ts src/lib/workout-tracking.test.ts src/lib/exercise-library.test.ts src/lib/progress.test.ts src/lib/demo-data.test.ts src/lib/trainer-rules.test.ts src/lib/dates.test.ts src/lib/account-data.test.ts src/lib/logging.test.ts src/lib/exercise-media.test.ts src/lib/achievements.test.ts src/lib/muscle-images.test.ts"
   },
   "dependencies": {
     "@supabase/ssr": "0.10.2",

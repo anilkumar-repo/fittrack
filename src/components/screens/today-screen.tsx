@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ArrowLeft, ArrowRight, Check, ChevronRight, Clock, ListChecks, Moon, Pencil, Play, Repeat } from "lucide-react";
 import { BodyFigure } from "@/components/app/body-figure";
+import { MusclePicture } from "@/components/app/muscle-picture";
 import { ExerciseIllustration } from "@/components/app/exercise-illustration";
 import { ExerciseGuideModal, toGuideExercise } from "@/components/app/exercise-guide-modal";
 import { ExerciseLogCard } from "@/components/app/exercise-log-card";
@@ -185,7 +186,12 @@ function WorkoutDayView({ date }: { date: string }) {
         </article>}
 
         {plan && preStart && displayFlowStep === "preview" && <>
-          <article className="panel target-card">
+          {figure !== "neutral" && regions.length > 0 ? <article className="panel target-card pictures">
+            <h3>Today’s targets</h3>
+            <ul className="muscle-grid">{regions.map((region, index) => (
+              <li key={region} className="muscle-card"><MusclePicture figure={figure} region={region} priority={index < 2} /><strong>{REGION_LABELS[region]}</strong></li>
+            ))}</ul>
+          </article> : <article className="panel target-card">
             <div className="target-figure"><BodyFigure figure={figure} highlight={regions} view="both" /></div>
             <div className="target-copy">
               <h3>{plan.sessionType === "recovery" ? "Recovery session" : "Today’s targets"}</h3>
@@ -193,7 +199,7 @@ function WorkoutDayView({ date }: { date: string }) {
                 ? <ul className="target-list">{regions.map((region) => <li key={region}><span className="target-dot" />{REGION_LABELS[region]}</li>)}</ul>
                 : <p>Easy movement only. Skip anything that does not feel comfortable.</p>}
             </div>
-          </article>
+          </article>}
           <div className="chip-row">
             <span className="chip"><Clock aria-hidden="true" /> About {plan.durationMinutes} min</span>
             <span className="chip"><ListChecks aria-hidden="true" /> {plan.exercises.length} moves</span>

@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { ArrowRight, CalendarDays, Check, Clock, ListChecks, Moon, Repeat, Trophy } from "lucide-react";
-import { BodyFigure } from "@/components/app/body-figure";
+import { MusclePicture } from "@/components/app/muscle-picture";
 import { sessionForDate, useFitTrack } from "@/components/app/fit-track-provider";
 import { DEFAULT_CHECK_IN, useWorkoutDay } from "@/components/app/use-workout-day";
 import { dateLabel, greetingFor, nextTrainingDate, shortDate, todayHref, weekDates, weekdayOf } from "@/lib/dates";
@@ -62,7 +62,7 @@ export function OverviewScreen() {
               {regions.length > 0 && <p className="hero-targets"><strong>Targets</strong> {regions.map((region) => REGION_LABELS[region]).join(" · ")}</p>}
               <button className="button button-primary hero-cta" onClick={() => router.push("/today")}>{status === "completed" ? "View session" : status === "in_progress" ? "Continue workout" : "Start workout"} <ArrowRight aria-hidden="true" /></button>
             </div>
-            <div className="hero-figure"><BodyFigure figure={figure} highlight={regions} view="both" /></div>
+            <div className="hero-figure"><MusclePicture figure={figure} region={regions[0]} highlight={regions} priority /></div>
           </> : <>
             <div className="hero-copy">
               <span className="hero-tag"><Moon aria-hidden="true" /> Rest day</span>
@@ -72,7 +72,7 @@ export function OverviewScreen() {
                 ? <button className="button button-primary hero-cta" onClick={() => openDay(nextDate)}>See next session <ArrowRight aria-hidden="true" /></button>
                 : <button className="button button-primary hero-cta" onClick={() => router.push("/settings")}>Open Settings <ArrowRight aria-hidden="true" /></button>}
             </div>
-            <div className="hero-figure"><BodyFigure figure={figure} view="both" /></div>
+            <div className="hero-figure"><MusclePicture figure={figure} priority /></div>
           </>}
         </article>
 
