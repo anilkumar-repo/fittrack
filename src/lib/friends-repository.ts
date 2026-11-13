@@ -106,9 +106,11 @@ export async function removeFriend(client: SupabaseClient, userId: string, frien
   if (error) throw error;
 }
 
-export async function sendNudge(client: SupabaseClient, toUser: string, message: string): Promise<void> {
-  const { error } = await client.from("nudges").insert({ to_user: toUser, message: message.slice(0, 120) });
+/** Sends a nudge and returns its id, so it can also be pushed to the friend's phone. */
+export async function sendNudge(client: SupabaseClient, toUser: string, message: string): Promise<string> {
+  const { data, error } = await client.from("nudges").insert({ to_user: toUser, message: message.slice(0, 120) }).select("id").single();
   if (error) throw new Error(error.code === "23505" ? "You already nudged this friend today." : error.message);
+  return String((data as Row).id);
 }
 
 export async function markNudgesSeen(client: SupabaseClient, ids: string[]): Promise<void> {

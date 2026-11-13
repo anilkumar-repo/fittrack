@@ -1,7 +1,7 @@
 // RozFit offline cache. It keeps the app's own pages and files so the app still opens with a weak
 // or missing connection. It never touches requests to other sites (such as the Supabase database).
-const CACHE = "rozfit-v3";
-const PAGES = ["/", "/today", "/progress", "/library", "/settings", "/sign-in"];
+const CACHE = "rozfit-v4";
+const PAGES = ["/", "/today", "/progress", "/friends", "/library", "/settings", "/sign-in"];
 
 self.addEventListener("install", (event) => {
   event.waitUntil(
@@ -67,4 +67,35 @@ self.addEventListener("fetch", (event) => {
     return;
   }
   event.respondWith(networkFirst(request));
+});
+
+// Notifications sent by the RozFit server: morning motivation, evening log reminder, friend nudges.
+self.addEventListener("push", (event) => {
+  let data = {};
+  try { data = event.data ? event.data.json() : {}; } catch { data = { body: event.data ? event.data.text() : "" }; }
+  const title = data.title || "RozFit";
+  event.waitUntil(self.registration.showNotification(title, {
+    body: data.body || "",
+    icon: "/icons/icon-192.png",
+    badge: "/icons/favicon-32.png",
+    tag: data.tag || "rozfit",
+    data: { url: typeof data.url === "string" && data.url.startsWith("/") ? data.url : "/" },
+  }));
+});
+
+// Tapping a notification opens (or focuses) the app on the right page.
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+  const target = new URL(event.notification.data?.url || "/", self.location.origin).href;
+  event.waitUntil((async () => {
+    const windows = await self.clients.matchAll({ type: "window", includeUncontrolled: true });
+    for (const client of windows) {
+      if (new URL(client.url).origin === self.location.origin) {
+        await client.focus();
+        if ("navigate" in client) await client.navigate(target).catch(() => undefined);
+        return;
+      }
+    }
+    await self.clients.openWindow(target);
+  })());
 });

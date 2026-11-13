@@ -2,6 +2,7 @@
 
 import { AccountCard, DataCard, TrainerInviteCard, TrainerLinkCard } from "@/components/app/account-cards";
 import { useFitTrack } from "@/components/app/fit-track-provider";
+import { NotificationsCard } from "@/components/app/notifications-card";
 import { TrainerControls } from "@/components/trainer-controls";
 import { CalendarDays, Palette, ShieldCheck, Sparkles, Sun } from "lucide-react";
 import { GOAL_OPTIONS, goalOf } from "@/lib/program";
@@ -75,6 +76,8 @@ export function SettingsScreen() {
               <small>{profile.equipmentAvailability === "verified" ? (profile.availableEquipment.length ? "Your plan uses only what is ticked." : "Nothing ticked yet, so your plan uses bodyweight movements.") : "Your plan uses bodyweight movements only."}</small>
             </div>
           </article>
+
+          <NotificationsCard />
 
           <article className="panel settings-group">
             <h3><Palette aria-hidden="true" /> Appearance</h3>

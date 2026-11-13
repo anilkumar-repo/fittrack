@@ -14,6 +14,7 @@ import {
   acceptFriendInvite, createChallenge, createFriendInvite, leaveChallenge, loadFriendsData, removeFriend, sendNudge, type FriendsData,
 } from "@/lib/friends-repository";
 import { goalTitle } from "@/lib/program";
+import { pushNudge } from "@/lib/push-client";
 import { shortDate } from "@/lib/dates";
 
 export function FriendsScreen() {
@@ -139,7 +140,8 @@ export function FriendsScreen() {
                 <span className="friend-streak"><Flame aria-hidden="true" /> {friend.currentStreak}</span>
                 <div className="friend-actions">
                   <button type="button" className="button button-subtle small" disabled={nudged || busy === `nudge-${friend.userId}`} onClick={() => void run(`nudge-${friend.userId}`, async () => {
-                    await sendNudge(client!, friend.userId, NUDGE_MESSAGES[Math.floor(Math.random() * NUDGE_MESSAGES.length)]);
+                    const nudgeId = await sendNudge(client!, friend.userId, NUDGE_MESSAGES[Math.floor(Math.random() * NUDGE_MESSAGES.length)]);
+                    void pushNudge(client!, nudgeId);
                     return `Nudge sent to ${friend.displayName}.`;
                   })}>{nudged ? <><Check aria-hidden="true" /> Nudged</> : <><Bell aria-hidden="true" /> Nudge</>}</button>
                   <button type="button" className="icon-button" aria-label={`Remove ${friend.displayName}`} onClick={() => {
