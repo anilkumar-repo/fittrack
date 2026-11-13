@@ -5,9 +5,11 @@ import { BrandMark } from "./brand-mark";
 import { MissedDayPrompt } from "./missed-day-prompt";
 import { TourGuide } from "./tour-guide";
 import { LevelChangePopup } from "./level-change";
+import { GlassGlider } from "./glass-glider";
 import { Avatar } from "./avatar";
 import { unexplainedMissedDays } from "@/lib/missed-days";
-import { BookOpen, ChartColumn, Dumbbell, House, Settings, Users, type LucideIcon } from "lucide-react";
+import { AlertCircle, BookOpen, ChartColumn, Check, CloudOff, Dumbbell, House, Settings, Users, X, type LucideIcon } from "lucide-react";
+import { noticeDuration, noticeIsProblem } from "@/lib/notice";
 import { usePathname } from "next/navigation";
 import { dateLabel, weekdayOf } from "@/lib/dates";
 import { RULE_VERSION } from "@/lib/templates";
@@ -49,6 +51,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       {missedDays.length > 0 && <MissedDayPrompt dates={missedDays} />}
       <TourGuide blocked={missedDays.length > 0} />
       <LevelChangePopup />
+      <GlassGlider />
       <aside className="sidebar">
         <Link className="brand" href="/">
           <BrandMark /><span><strong>RozFit</strong><small>Small steps, every day</small></span>
@@ -78,8 +81,20 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <div className="topbar-actions">{!isDemo && (savingSession || saveError) && <span className={`save-state ${saveError ? "sync-error" : "connected"}`}><span className="save-dot" />{saveLabel}</span>}{isDemo && hasSupabaseConfig() && pathname !== "/sign-in" && <Link className="button button-subtle topbar-sign-in" href="/sign-in">Sign in</Link>}<Link className="round-avatar has-picture" aria-label="Open settings" href="/settings"><Avatar value={state.profile.avatar} name={state.profile.displayName} size={36} /></Link></div>
         </header>}
 
-        {notice && <div role="status" className="notice"><span>{notice}</span><button aria-label="Dismiss message" onClick={() => setNotice("")}>×</button></div>}
-        {saveError && <div role="alert" className="notice notice-error"><span>{saveError}</span><button className="retry-button" disabled={savingSession} onClick={retryPendingSessions}>{savingSession ? "Retrying…" : "Retry sync"}</button></div>}
+        {/* Messages float at the top as small glass toasts; information closes by itself, sync errors stay. */}
+        {(notice || saveError) && <div className="toasts">
+          {notice && <div key={notice} role="status" className={`notice toast ${noticeIsProblem(notice) ? "warn" : "ok"}`} style={{ "--toast-time": `${noticeDuration(notice)}ms` } as React.CSSProperties}>
+            <span className="toast-icon" aria-hidden="true">{noticeIsProblem(notice) ? <AlertCircle /> : <Check />}</span>
+            <span className="toast-text">{notice}</span>
+            <button type="button" className="toast-close" aria-label="Dismiss message" onClick={() => setNotice("")}><X aria-hidden="true" /></button>
+            <span className="toast-timer" aria-hidden="true" />
+          </div>}
+          {saveError && <div role="alert" className="notice toast notice-error">
+            <span className="toast-icon" aria-hidden="true"><CloudOff /></span>
+            <span className="toast-text">{saveError}</span>
+            <button type="button" className="retry-button" disabled={savingSession} onClick={retryPendingSessions}>{savingSession ? "Retrying…" : "Retry"}</button>
+          </div>}
+        </div>}
 
         {children}
 

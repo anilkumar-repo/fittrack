@@ -1,5 +1,6 @@
 "use client";
 
+import { noticeDuration } from "@/lib/notice";
 import { checkLevelChange, type LevelChange } from "@/lib/levels";
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import type { SupabaseClient, User } from "@supabase/supabase-js";
@@ -108,10 +109,10 @@ export function FitTrackProvider({ children }: { children: React.ReactNode }) {
   const [accountLoading, setAccountLoading] = useState(false);
   const [authChecked, setAuthChecked] = useState(() => getSupabaseBrowserClient() === null);
   const [notice, setNotice] = useState("");
-  // Information messages close by themselves after 12 seconds; errors (saveError) stay until handled.
+  // Information messages close by themselves (about 4–10 s, longer for longer text); errors (saveError) stay until handled.
   useEffect(() => {
     if (!notice) return;
-    const timer = window.setTimeout(() => setNotice(""), 12_000);
+    const timer = window.setTimeout(() => setNotice(""), noticeDuration(notice));
     return () => window.clearTimeout(timer);
   }, [notice]);
   const [saveError, setSaveError] = useState("");

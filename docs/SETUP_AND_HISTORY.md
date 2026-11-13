@@ -272,6 +272,9 @@ automatically.
   - Home has no top bar: the hero's first row shows the profile picture (opens Settings), the date, "Hi, name", a Sign in pill (only when not signed in) and a round flame button (streak calendar).
   - Home hero: a big glass "Day N" (N = current streak, or the streak a repair can win back) with Rozi in front (`overview-screen.tsx`, `.day-hero`).
   - Phone menu: a floating glass pill (Home, Train, Progress, Friends, Library) and a round glass Settings button (`app-shell.tsx`, `.dock-pill`, `.dock-round`).
+  - Messages are small floating glass toasts at the top (`.toasts` in `app-shell.tsx`, timing in `src/lib/notice.ts`). A teal tick means it worked, a coral icon means a problem. They close by themselves after 4–10 s (longer text stays longer) with a thin countdown line, or with ×. Sync errors stay until "Retry".
+  - Sliding highlight (`glass-glider.tsx`, mounted in `app-shell.tsx`): every tab bar, segmented control, filter row, the phone menu pill and the desktop sidebar get one glass highlight that glides to the chosen item, swelling a little on the way and settling down; the new label gives a small bounce. New screens using those classes get it automatically. Off when the phone asks for reduced motion.
+  - Settings → Your plan (name, goal, level, days, length, equipment) is a draft: a floating "Unsaved changes · Discard · Save" bar appears after any change (`save-bar.tsx`). Undoing a change hides it. Leaving the page or tapping a link with unsaved changes asks first. Appearance, figure and units still apply at once (they are device preferences).
   - If the phone asks for less see-through surfaces (Reduce Transparency), cards become solid.
 - Daily motivation lines: `src/lib/motivation.ts` (written for RozFit, no copyright issues).
 
