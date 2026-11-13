@@ -7,6 +7,8 @@ import { motivationFor } from "@/lib/motivation";
 import { NudgeBanner } from "@/components/app/nudge-banner";
 import { MusclePicture } from "@/components/app/muscle-picture";
 import { Rozi } from "@/components/app/rozi";
+import { Avatar } from "@/components/app/avatar";
+import { hasSupabaseConfig } from "@/lib/supabase-browser";
 import { calculateStreak, roziMoment, winsForWorkout } from "@/lib/rozi";
 import { sessionForDate, useFitTrack } from "@/components/app/fit-track-provider";
 import { DEFAULT_CHECK_IN, useWorkoutDay } from "@/components/app/use-workout-day";
@@ -32,7 +34,7 @@ function GoalRing({ done, goal }: { done: number; goal: number }) {
 
 export function OverviewScreen() {
   const router = useRouter();
-  const { state, currentDate, recordedSessions, figure } = useFitTrack();
+  const { state, currentDate, recordedSessions, figure, isDemo } = useFitTrack();
   const { session: todaySession, generatedPlan } = useWorkoutDay(currentDate, DEFAULT_CHECK_IN);
   const plan = todaySession?.plan ?? generatedPlan;
   const status = todaySession?.status;
@@ -60,8 +62,14 @@ export function OverviewScreen() {
       {/* The day hero: a big glass "Day N" (the streak) with Rozi standing in front of it. */}
       <header className={`day-hero ${streak.repair ? "on-hold" : ""}`}>
         <div className="day-hero-top">
-          <span>{dateLabel(currentDate)}</span>
-          <Link className="glass-round" href="/streak" aria-label="Open your streak calendar"><Flame aria-hidden="true" /></Link>
+          <Link className="hero-me" href="/settings" aria-label="Open settings">
+            <Avatar value={state.profile.avatar} name={state.profile.displayName} size={44} />
+            <span><small>{dateLabel(currentDate)}</small><strong>Hi, {state.profile.displayName}</strong></span>
+          </Link>
+          <div className="hero-actions">
+            {isDemo && hasSupabaseConfig() && <Link className="glass-pill" href="/sign-in">Sign in</Link>}
+            <Link className="glass-round" href="/streak" aria-label="Open your streak calendar"><Flame aria-hidden="true" /></Link>
+          </div>
         </div>
         <div className="day-stage">
           <span className="glass-word" aria-hidden="true">Day {dayNumber}</span>

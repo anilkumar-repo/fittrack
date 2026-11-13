@@ -1932,3 +1932,16 @@ img.day-rozi { position: absolute; bottom: -6px; width: 200px; height: 200px; fi
 .streak-count small, .repairs small { color: var(--muted); }
 .repairs svg.used { color: var(--surface-3); }
 :root[data-theme="dark"] .repairs svg.used { color: rgba(255, 255, 255, .22); }
+
+/* Home: no top bar; the hero's first row is the person (picture, greeting, date) and round glass buttons. */
+.home { padding-top: calc(14px + env(safe-area-inset-top)); }
+.day-hero { margin-top: 0; }
+.hero-me { display: flex; min-width: 0; align-items: center; gap: 10px; color: #ffffff; text-decoration: none; }
+.hero-me .avatar, .hero-me > img, .hero-me > span:first-child { flex: none; border: 2px solid rgba(255, 255, 255, .85); border-radius: 50%; box-shadow: 0 4px 12px rgba(20, 50, 80, .2); }
+.hero-me > span:last-child { display: grid; min-width: 0; gap: 1px; }
+.day-hero-top .hero-me small { color: rgba(255, 255, 255, .85); font-size: 12px; font-weight: 700; text-shadow: 0 1px 2px rgba(20, 50, 80, .25); }
+.day-hero-top .hero-me strong { overflow: hidden; color: #ffffff; font: 800 19px/1.2 Manrope, ui-sans-serif, sans-serif; letter-spacing: -.3px; text-overflow: ellipsis; white-space: nowrap; text-shadow: 0 1px 3px rgba(20, 50, 80, .3); }
+.hero-actions { display: flex; flex: none; align-items: center; gap: 8px; }
+.glass-pill { display: inline-flex; height: 40px; align-items: center; padding: 0 16px; border: 1px solid rgba(255, 255, 255, .7); border-radius: 999px; color: #ffffff; background: linear-gradient(160deg, rgba(255, 255, 255, .45), rgba(255, 255, 255, .12)); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .8), 0 6px 16px rgba(20, 50, 80, .18); font-size: 14px; font-weight: 800; text-decoration: none; -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px); }
+@media (min-width: 701px) { .home { padding-top: 28px; } }
+.day-hero .day-stage { margin-top: 10px; }

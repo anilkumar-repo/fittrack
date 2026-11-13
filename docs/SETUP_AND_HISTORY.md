@@ -269,6 +269,7 @@ automatically.
   - Colours are tokens at the top of `app/globals.css`: `:root` = light glass (off-white with mint and blush light), `:root[data-theme="dark"]` = dark glass (slate).
   - The component layer is the "LIQUID GLASS" block at the end of `app/globals.css`: frosted cards (`--glass-fill`, `--glass-edge`, `--glass-shadow`), dark glossy primary buttons, sunken segmented tracks with a raised teal key for the chosen option, glass switches, and glass pop-ups.
   - Coral = Rozi, flames and links. Teal (`--tint`) = selected options and switches that are on.
+  - Home has no top bar: the hero's first row shows the profile picture (opens Settings), the date, "Hi, name", a Sign in pill (only when not signed in) and a round flame button (streak calendar).
   - Home hero: a big glass "Day N" (N = current streak, or the streak a repair can win back) with Rozi in front (`overview-screen.tsx`, `.day-hero`).
   - Phone menu: a floating glass pill (Home, Train, Progress, Friends, Library) and a round glass Settings button (`app-shell.tsx`, `.dock-pill`, `.dock-round`).
   - If the phone asks for less see-through surfaces (Reduce Transparency), cards become solid.

@@ -70,10 +70,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       </aside>
 
       <main className="main-area">
-        <header className="topbar">
-          {pathname === "/" ? <h1 className="sr-only">Home</h1> : <div><span className="eyebrow">{dateLabel(currentDate, { month: "long", day: "numeric", year: "numeric" })}</span><h1>{pageTitle}</h1></div>}
+        {/* Home has no top bar: its hero carries the picture, greeting and date. */}
+        {pathname === "/" ? <h1 className="sr-only">Home</h1> : <header className="topbar">
+          <div><span className="eyebrow">{dateLabel(currentDate, { month: "long", day: "numeric", year: "numeric" })}</span><h1>{pageTitle}</h1></div>
           <div className="topbar-actions">{!isDemo && (savingSession || saveError) && <span className={`save-state ${saveError ? "sync-error" : "connected"}`}><span className="save-dot" />{saveLabel}</span>}{isDemo && hasSupabaseConfig() && pathname !== "/sign-in" && <Link className="button button-subtle topbar-sign-in" href="/sign-in">Sign in</Link>}<Link className="round-avatar has-picture" aria-label="Open settings" href="/settings"><Avatar value={state.profile.avatar} name={state.profile.displayName} size={36} /></Link></div>
-        </header>
+        </header>}
 
         {notice && <div role="status" className="notice"><span>{notice}</span><button aria-label="Dismiss message" onClick={() => setNotice("")}>×</button></div>}
         {saveError && <div role="alert" className="notice notice-error"><span>{saveError}</span><button className="retry-button" disabled={savingSession} onClick={retryPendingSessions}>{savingSession ? "Retrying…" : "Retry sync"}</button></div>}
