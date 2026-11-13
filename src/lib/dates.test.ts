@@ -37,6 +37,6 @@ test("greets by the time of day in the person's time zone", () => {
 });
 
 test("maps a workout's movements to the body regions to highlight, most-used first", () => {
-  assert.deepEqual(regionsForExercises([{ movementPattern: "squat" }, { movementPattern: "hip_extension" }, { movementPattern: "core" }]), ["thighs", "hips", "core"]);
+  assert.deepEqual(regionsForExercises([{ movementPattern: "squat" }, { movementPattern: "hip_extension" }, { movementPattern: "core" }]), ["hips", "thighs", "hamstrings", "core"]);
   assert.deepEqual(regionsForExercises([{ movementPattern: "recovery" }, {}]), []);
 });

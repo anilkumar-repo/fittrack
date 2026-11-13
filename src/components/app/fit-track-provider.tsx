@@ -17,14 +17,15 @@ const SESSION_SAVE_DELAY_MS = 800;
 const WEIGHT_UNIT_KEY = "fittrack-weight-unit";
 const THEME_KEY = "fittrack-theme";
 const FIGURE_KEY = "fittrack-figure";
-export type Theme = "dark" | "light" | "auto";
+/** "pastel" is the default Soft pastel look; "light" is Liquid glass. */
+export type Theme = "pastel" | "light";
 
-/** Puts the chosen look on the page. "auto" follows the phone or computer's light/dark setting. */
+/** Puts the chosen look on the page. */
 function applyTheme(theme: Theme) {
-  const light = theme === "light" || (theme === "auto" && window.matchMedia("(prefers-color-scheme: light)").matches);
-  if (light) document.documentElement.dataset.theme = "light";
+  const glass = theme === "light";
+  if (glass) document.documentElement.dataset.theme = "light";
   else delete document.documentElement.dataset.theme;
-  document.querySelector('meta[name="theme-color"]')?.setAttribute("content", light ? "#ece9f8" : "#0e1614");
+  document.querySelector('meta[name="theme-color"]')?.setAttribute("content", glass ? "#ece9f8" : "#eceae6");
 }
 
 interface FitTrackContextValue {
@@ -97,7 +98,7 @@ export function FitTrackProvider({ children }: { children: React.ReactNode }) {
   const [savingSession, setSavingSession] = useState(false);
   const [pendingSessions, setPendingSessions] = useState<WorkoutSession[]>([]);
   const [weightUnit, setWeightUnitState] = useState<WeightUnit>("kg");
-  const [theme, setThemeState] = useState<Theme>("dark");
+  const [theme, setThemeState] = useState<Theme>("pastel");
   const [figure, setFigureState] = useState<FigureChoice>("neutral");
   const stateRef = useRef(state);
   const sessionSaveQueue = useRef<Promise<void>>(Promise.resolve());
@@ -128,10 +129,11 @@ export function FitTrackProvider({ children }: { children: React.ReactNode }) {
       // The page already shows the saved theme (set before first paint in app/layout.tsx).
       try {
         const saved = window.localStorage.getItem(THEME_KEY);
-        if (saved === "light" || saved === "auto") setThemeState(saved);
+        // Earlier choices ("dark", "auto") now fall back to the default Soft pastel look.
+        if (saved === "light") setThemeState("light");
         const savedFigure = window.localStorage.getItem(FIGURE_KEY);
         if (isFigureChoice(savedFigure)) setFigureState(savedFigure);
-      } catch { /* Midnight green remains the default. */ }
+      } catch { /* Soft pastel remains the default. */ }
       writeDemoState(localState);
       setReady(true);
     }, 0);
@@ -362,15 +364,6 @@ export function FitTrackProvider({ children }: { children: React.ReactNode }) {
     setFigureState(next);
     try { window.localStorage.setItem(FIGURE_KEY, next); } catch { /* The choice still applies until the page closes. */ }
   }, []);
-
-  // In automatic mode, switch as soon as the device changes between light and dark.
-  useEffect(() => {
-    if (theme !== "auto") return;
-    const media = window.matchMedia("(prefers-color-scheme: light)");
-    const onChange = () => applyTheme("auto");
-    media.addEventListener("change", onChange);
-    return () => media.removeEventListener("change", onChange);
-  }, [theme]);
 
   // Sessions that could not sync while offline are sent again as soon as the connection returns.
   useEffect(() => {

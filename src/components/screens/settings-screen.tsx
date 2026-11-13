@@ -3,7 +3,7 @@
 import { AccountCard, DataCard, TrainerInviteCard, TrainerLinkCard } from "@/components/app/account-cards";
 import { useFitTrack } from "@/components/app/fit-track-provider";
 import { TrainerControls } from "@/components/trainer-controls";
-import { CalendarDays, Moon, Palette, ShieldCheck, Sun, SunMoon } from "lucide-react";
+import { CalendarDays, Palette, ShieldCheck, Sparkles, Sun } from "lucide-react";
 import { shortDate, WEEKDAY_LABELS } from "@/lib/dates";
 import { FIGURE_OPTIONS } from "@/lib/figure";
 import { EQUIPMENT_OPTIONS, RULE_VERSION, TEMPLATE_VERSION } from "@/lib/templates";
@@ -74,8 +74,7 @@ export function SettingsScreen() {
           <article className="panel settings-group">
             <h3><Palette aria-hidden="true" /> Appearance</h3>
             <div className="settings-field"><span>Theme</span>
-              <div className="theme-switch"><button type="button" className={theme === "dark" ? "selected" : ""} aria-pressed={theme === "dark"} onClick={() => setTheme("dark")}><Moon aria-hidden="true" /> Midnight green</button><button type="button" className={theme === "light" ? "selected" : ""} aria-pressed={theme === "light"} onClick={() => setTheme("light")}><Sun aria-hidden="true" /> Liquid glass</button><button type="button" className={theme === "auto" ? "selected" : ""} aria-pressed={theme === "auto"} onClick={() => setTheme("auto")}><SunMoon aria-hidden="true" /> Automatic</button></div>
-              <small>Automatic follows your phone’s light or dark setting.</small>
+              <div className="theme-switch"><button type="button" className={theme === "pastel" ? "selected" : ""} aria-pressed={theme === "pastel"} onClick={() => setTheme("pastel")}><Sun aria-hidden="true" /> Soft pastel</button><button type="button" className={theme === "light" ? "selected" : ""} aria-pressed={theme === "light"} onClick={() => setTheme("light")}><Sparkles aria-hidden="true" /> Liquid glass</button></div>
             </div>
             <div className="settings-field"><span>Figure</span>
               <div className="segmented">{FIGURE_OPTIONS.map((option) => <button key={option.id} type="button" className={figure === option.id ? "selected" : ""} aria-pressed={figure === option.id} onClick={() => setFigure(option.id)}>{option.label}</button>)}</div>

@@ -186,7 +186,7 @@ function WorkoutDayView({ date }: { date: string }) {
 
         {plan && preStart && displayFlowStep === "preview" && <>
           <article className="panel target-card">
-            <div className="target-figure"><BodyFigure figure={figure} highlight={regions} /></div>
+            <div className="target-figure"><BodyFigure figure={figure} highlight={regions} view="both" /></div>
             <div className="target-copy">
               <h3>{plan.sessionType === "recovery" ? "Recovery session" : "Today’s targets"}</h3>
               {regions.length > 0

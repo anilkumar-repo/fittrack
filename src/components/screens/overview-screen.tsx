@@ -62,7 +62,7 @@ export function OverviewScreen() {
               {regions.length > 0 && <p className="hero-targets"><strong>Targets</strong> {regions.map((region) => REGION_LABELS[region]).join(" · ")}</p>}
               <button className="button button-primary hero-cta" onClick={() => router.push("/today")}>{status === "completed" ? "View session" : status === "in_progress" ? "Continue workout" : "Start workout"} <ArrowRight aria-hidden="true" /></button>
             </div>
-            <div className="hero-figure"><BodyFigure figure={figure} highlight={regions} /></div>
+            <div className="hero-figure"><BodyFigure figure={figure} highlight={regions} view="both" /></div>
           </> : <>
             <div className="hero-copy">
               <span className="hero-tag"><Moon aria-hidden="true" /> Rest day</span>
@@ -72,7 +72,7 @@ export function OverviewScreen() {
                 ? <button className="button button-primary hero-cta" onClick={() => openDay(nextDate)}>See next session <ArrowRight aria-hidden="true" /></button>
                 : <button className="button button-primary hero-cta" onClick={() => router.push("/settings")}>Open Settings <ArrowRight aria-hidden="true" /></button>}
             </div>
-            <div className="hero-figure"><BodyFigure figure={figure} /></div>
+            <div className="hero-figure"><BodyFigure figure={figure} view="both" /></div>
           </>}
         </article>
 

@@ -118,7 +118,7 @@ export function ExerciseGuideModal({ exercise, workout, onOpen, onClose }: Exerc
           <div className="guide-visual">
             {hasIllustration && <div className="guide-pose"><ExerciseIllustration exerciseId={exercise.id} name={exercise.name} /></div>}
             <div className="guide-muscles">
-              <BodyFigure figure={figure} highlight={regions} />
+              <BodyFigure figure={figure} highlight={regions} view="both" />
               <div><small>Works</small><strong>{exercise.targetMuscles.join(" · ")}</strong></div>
             </div>
           </div>
