@@ -1372,3 +1372,37 @@ img.muscle-thumb, svg.muscle-thumb { display: block; width: auto; height: 64px; 
 .exercise-visual-text { display: grid; gap: 2px; min-width: 0; }
 .exercise-visual-text strong { font-size: 15px; }
 .exercise-visual-text small { color: var(--muted); font-size: 13px; font-weight: 400; }
+
+/* ---------- Rozi ---------- */
+img.rozi { display: block; width: auto; height: auto; max-width: 100%; user-select: none; -webkit-user-drag: none; }
+.rozi-greet { display: flex; align-items: center; gap: 14px; }
+.rozi-greet img.rozi { flex: none; width: 132px; height: 132px; filter: drop-shadow(0 10px 18px rgba(239, 125, 92, .25)); animation: rozi-bob 3.2s ease-in-out infinite; }
+.rozi-say { display: grid; justify-items: start; gap: 6px; min-width: 0; }
+.rozi-say h2 { margin: 0 !important; }
+.rozi-bubble { position: relative; padding: 9px 13px; border-radius: 16px 16px 16px 4px; color: var(--ink-2); background: var(--surface); box-shadow: var(--glass-shadow); font-size: 14px; line-height: 1.45; }
+.streak-chip { display: inline-flex; align-items: center; gap: 6px; padding: 5px 11px; border-radius: 999px; color: #8a3a1f; background: var(--tint-coral, var(--accent-soft)); font-size: 13px; font-weight: 800; }
+.streak-chip svg { width: 15px; height: 15px; color: #e2694a; }
+.done-card img.rozi { width: 170px; height: 170px; animation: rozi-pop .6s cubic-bezier(.2, 1.4, .4, 1) both; }
+.train-rest img.rozi { width: 150px; height: 150px; }
+.target-figure img.rozi { width: 180px; height: 180px; margin: 0 auto; }
+.rozi-energy { display: grid; justify-items: center; gap: 6px; }
+.rozi-energy .scale-label { justify-self: start; }
+.rozi-energy-face { position: relative; display: grid; width: 150px; height: 150px; }
+.rozi-energy-face img.rozi { grid-area: 1 / 1; width: 150px; height: 150px; transition: opacity .18s ease, transform .25s ease; }
+.rozi-energy-face img.rozi.hidden { opacity: 0; transform: scale(.92); }
+.rozi-energy-face img.rozi.shown { opacity: 1; transform: scale(1); }
+.rozi-energy-label { color: var(--ink); font-size: 18px; font-weight: 800; }
+.rozi-energy .scale-ends { width: 100%; }
+.rozi-energy-range { width: 100%; height: 40px; margin: 0; background: transparent; -webkit-appearance: none; appearance: none; cursor: pointer; }
+.rozi-energy-range::-webkit-slider-runnable-track { height: 14px; border-radius: 999px; background: linear-gradient(90deg, #ef7d5c 0 var(--fill), var(--surface-3) var(--fill) 100%); }
+.rozi-energy-range::-moz-range-track { height: 14px; border-radius: 999px; background: linear-gradient(90deg, #ef7d5c 0 var(--fill), var(--surface-3) var(--fill) 100%); }
+.rozi-energy-range::-webkit-slider-thumb { width: 32px; height: 32px; margin-top: -9px; border: 0; border-radius: 50%; background: #ffffff; box-shadow: 0 2px 8px rgba(22, 24, 26, .25); -webkit-appearance: none; appearance: none; }
+.rozi-energy-range::-moz-range-thumb { width: 32px; height: 32px; border: 0; border-radius: 50%; background: #ffffff; box-shadow: 0 2px 8px rgba(22, 24, 26, .25); }
+@keyframes rozi-bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-5px); } }
+@keyframes rozi-pop { from { transform: scale(.6); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .rozi-greet img.rozi, .done-card img.rozi { animation: none; } }
+@media (max-width: 700px) {
+  .rozi-greet { align-items: flex-start; }
+  .rozi-greet img.rozi { width: 104px; height: 104px; }
+  .rozi-say h2 { font-size: 22px !important; }
+}

@@ -1,11 +1,13 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { ArrowRight, CalendarDays, Check, Clock, ListChecks, Moon, Repeat, Trophy } from "lucide-react";
+import { ArrowRight, CalendarDays, Check, Clock, Flame, ListChecks, Moon, Repeat, Trophy } from "lucide-react";
 import { MusclePicture } from "@/components/app/muscle-picture";
+import { Rozi } from "@/components/app/rozi";
+import { calculateStreak, roziMoment, winsForWorkout } from "@/lib/rozi";
 import { sessionForDate, useFitTrack } from "@/components/app/fit-track-provider";
 import { DEFAULT_CHECK_IN, useWorkoutDay } from "@/components/app/use-workout-day";
-import { dateLabel, greetingFor, nextTrainingDate, shortDate, todayHref, weekDates, weekdayOf } from "@/lib/dates";
+import { dateLabel, hourIn, nextTrainingDate, shortDate, todayHref, weekDates, weekdayOf } from "@/lib/dates";
 import { REGION_LABELS, regionsForExercises } from "@/lib/figure";
 
 const DAY_INITIALS = ["S", "M", "T", "W", "T", "F", "S"];
@@ -40,12 +42,22 @@ export function OverviewScreen() {
   const totalSets = plan?.exercises.reduce((sum, exercise) => sum + exercise.sets, 0) ?? 0;
   const recent = completed.slice(-3).reverse();
   const openDay = (date: string) => router.push(todayHref(date, currentDate));
+  const streak = calculateStreak(state.profile, recordedSessions, currentDate);
+  const moment = roziMoment({
+    streak, todaySession, hour: hourIn(state.profile.timeZone), name: state.profile.displayName,
+    wins: todaySession?.status === "completed" ? winsForWorkout(recordedSessions, currentDate, state.profile.sessionsPerWeek) : undefined,
+  });
 
   return (
     <section className="home">
-      <header className="home-greet">
-        <p>{dateLabel(currentDate)}</p>
-        <h2>{greetingFor(state.profile.timeZone)}, {state.profile.displayName}</h2>
+      <header className="home-greet rozi-greet">
+        <Rozi mood={moment.mood} size={132} priority />
+        <div className="rozi-say">
+          <p>{dateLabel(currentDate)}</p>
+          <h2>{moment.title}</h2>
+          <span className="rozi-bubble">{moment.message}</span>
+          {streak.started && <span className="streak-chip"><Flame aria-hidden="true" /> {streak.current} in a row{streak.best > streak.current ? ` · best ${streak.best}` : ""}</span>}
+        </div>
       </header>
 
       <div className="home-grid">

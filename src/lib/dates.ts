@@ -52,8 +52,12 @@ export function weekDates(date: string): string[] {
 }
 
 /** A greeting for the current time of day in the given time zone. */
+/** The hour (0–23) right now in the given time zone. */
+export function hourIn(timeZone: string, now: Date = new Date()): number {
+  try { return Number(new Intl.DateTimeFormat("en-GB", { timeZone, hour: "2-digit", hourCycle: "h23" }).format(now)); } catch { return now.getHours(); }
+}
+
 export function greetingFor(timeZone: string, now: Date = new Date()): string {
-  let hour = now.getHours();
-  try { hour = Number(new Intl.DateTimeFormat("en-GB", { timeZone, hour: "2-digit", hourCycle: "h23" }).format(now)); } catch { /* Use the device clock. */ }
+  const hour = hourIn(timeZone, now);
   return hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
 }

@@ -2,18 +2,20 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { ArrowLeft, ArrowRight, Check, ChevronRight, Clock, ListChecks, Moon, Pencil, Play, Repeat } from "lucide-react";
+import { ArrowLeft, ArrowRight, Check, ChevronRight, Clock, ListChecks, Pencil, Play, Repeat } from "lucide-react";
 import { BodyFigure } from "@/components/app/body-figure";
+import { Rozi, RoziEnergy } from "@/components/app/rozi";
 import { MusclePicture } from "@/components/app/muscle-picture";
 import { MuscleThumb } from "@/components/app/muscle-thumb";
 import { ExerciseGuideModal, toGuideExercise } from "@/components/app/exercise-guide-modal";
 import { ExerciseLogCard } from "@/components/app/exercise-log-card";
 import { RestTimer } from "@/components/app/rest-timer";
 import { REGION_LABELS, regionsForExercises } from "@/lib/figure";
+import { calculateStreak, roziMoment, winsForWorkout } from "@/lib/rozi";
 import { lastPerformance } from "@/lib/logging";
 import { sessionForDate, useFitTrack } from "@/components/app/fit-track-provider";
 import { emptyCheckIn, useWorkoutDay } from "@/components/app/use-workout-day";
-import { dateLabel, describeNextDay, isIsoDate, nextTrainingDate, todayHref } from "@/lib/dates";
+import { dateLabel, describeNextDay, isIsoDate, nextTrainingDate, todayHref, hourIn } from "@/lib/dates";
 import { generateWorkout, preserveManualExerciseChoices } from "@/lib/planner";
 import { createInitialExerciseLogs } from "@/lib/supabase-repository";
 import type { CheckIn, ExerciseDefinition, ExerciseLog, WorkoutReview, WorkoutSession } from "@/lib/types";
@@ -168,6 +170,9 @@ function WorkoutDayView({ date }: { date: string }) {
   const totalSets = plan?.exercises.reduce((sum, exercise) => sum + exercise.sets, 0) ?? 0;
   const setsPlanned = todaySession?.exerciseLogs.reduce((sum, log) => sum + (log.status === "skipped" ? 0 : log.sets.length), 0) ?? 0;
   const setsDone = todaySession?.exerciseLogs.reduce((sum, log) => sum + log.sets.filter((set) => set.completed).length, 0) ?? 0;
+  const doneMoment = todaySession?.status === "completed"
+    ? roziMoment({ streak: calculateStreak(state.profile, recordedSessions, date), todaySession, hour: 12, name: state.profile.displayName, wins: winsForWorkout(recordedSessions, date, state.profile.sessionsPerWeek) })
+    : null;
   const saveNote = savingSession ? "Saving…" : saveError ? "Saved on this device; sync needs attention" : "Saved as you go";
 
   return (
@@ -179,7 +184,7 @@ function WorkoutDayView({ date }: { date: string }) {
         </header>
 
         {!plan && <article className="panel train-rest">
-          <span className="train-rest-icon"><Moon aria-hidden="true" /></span>
+          <Rozi mood={hourIn(state.profile.timeZone) >= 21 ? "night" : "rest"} size={150} />
           <h3>Rest is part of getting stronger</h3>
           <p>No workout is planned for this day. Your next session is {describeNextDay(state.profile, date)}.</p>
           <button className="button button-primary" onClick={openNextWorkout}>See next session <ArrowRight aria-hidden="true" /></button>
@@ -192,7 +197,7 @@ function WorkoutDayView({ date }: { date: string }) {
               <li key={region} className="muscle-card"><MusclePicture figure={figure} region={region} priority={index < 2} /><strong>{REGION_LABELS[region]}</strong></li>
             ))}</ul>
           </article> : <article className="panel target-card">
-            <div className="target-figure"><BodyFigure figure={figure} highlight={regions} view="both" /></div>
+            <div className="target-figure">{plan.sessionType === "recovery" ? <Rozi mood="care" size={180} /> : <BodyFigure figure={figure} highlight={regions} view="both" />}</div>
             <div className="target-copy">
               <h3>{plan.sessionType === "recovery" ? "Recovery session" : "Today’s targets"}</h3>
               {regions.length > 0
@@ -235,7 +240,7 @@ function WorkoutDayView({ date }: { date: string }) {
 
         {plan && preStart && displayFlowStep === "checkin" && <article className="panel flow-card">
           <div className="flow-head"><button type="button" className="onb-back" aria-label="Back to the workout" onClick={() => setFlowStep("preview")}><ArrowLeft aria-hidden="true" /></button><div><h3>Before you begin</h3><p>Four quick taps so today’s plan fits how you feel.</p></div></div>
-          <Scale label="How is your energy?" low="Low" high="Great" value={checkIn.energy} onChange={(energy) => updateCheckIn({ energy })} />
+          <RoziEnergy value={checkIn.energy} onChange={(energy) => updateCheckIn({ energy })} />
           <Scale label="Any muscle soreness?" low="None" high="Very sore" value={checkIn.soreness} onChange={(soreness) => updateCheckIn({ soreness })} />
           <Scale label="How recovered do you feel?" low="Not at all" high="Fully" value={checkIn.recovery} onChange={(recovery) => updateCheckIn({ recovery })} />
           <label className="flow-check"><input type="checkbox" checked={checkIn.pain} onChange={(event) => updateCheckIn({ pain: event.target.checked })} /><span><strong>I have pain or an injury concern</strong><small>Today switches to gentle recovery.</small></span></label>
@@ -249,10 +254,10 @@ function WorkoutDayView({ date }: { date: string }) {
           <button className="button button-primary flow-cta" onClick={startWorkout}>Begin workout <ArrowRight aria-hidden="true" /></button>
         </article>}
 
-        {isDone && todaySession && <article className="panel done-card">
-          <span className="done-badge"><Check aria-hidden="true" /></span>
-          <h3>Session complete. Nice work.</h3>
-          <p>{todaySession.review?.note || "You showed up and put in steady work."}</p>
+        {isDone && todaySession && doneMoment && <article className="panel done-card">
+          <Rozi mood={doneMoment.mood} size={170} />
+          <h3>{doneMoment.title}</h3>
+          <p>{doneMoment.message}</p>
           <dl className="done-stats">
             <div><dd>{todaySession.exerciseLogs.filter((log) => log.status === "completed" || log.status === "partial").length}</dd><dt>moves done</dt></div>
             <div><dd>{setsDone}</dd><dt>sets done</dt></div>
