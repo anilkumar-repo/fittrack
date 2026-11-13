@@ -263,6 +263,9 @@ automatically.
 ### Rozi, images and design
 - Rozi moods in `src/lib/rozi.ts` (`ROZI_MOODS`); images `public/rozi/*.webp` (480 px, transparent).
 - Anatomy pictures `public/figures/{female|male|neutral}-*.webp`; the neutral set's red highlights were painted programmatically on the provided neutral image.
+  - Two-figure pictures (front + back side by side) stay in `public/figures/`. One-figure pictures (`*-front`, `*-back` and the one-sided muscle groups: chest, core, quads, back, glutes, hamstrings) are in `public/figures/v2/`, all 418×820.
+  - They are made by `node scripts/split-figures.mjs public/figures/v2`. It splits each two-figure picture along the gap between the hands (not a straight line), settles the spot where the male hands touch along the outline, and gives every figure the same canvas with clear space on both sides, so no finger is cut. Sources: `public/figures` (two-view groups), `design/figures-incoming` (black-background originals for one-sided groups; female core = option b) and `design/figures-incoming/neutral-sides` (neutral colour pieces).
+  - The `v2/` folder is a new address on purpose: phones and the CDN cache pictures for 30 days, so changed pictures need a new path.
 - App icon = Rozi face (`public/icons/icon-*.png`); browser tab + header logo = "R" with dumbbell (`public/icons/favicon-32.png`, `logo-r.webp`).
 - Image prompts for future art: `design/brand-prompts.md`. Originals: `design/*-incoming/`.
 - Look: **Liquid glass** everywhere (since 2026-11-13). Settings → Appearance → Light (default), Dark, or Auto (follows the phone). Older saved choices ("pastel" or the purple "light" glass) now open as Light.
@@ -349,6 +352,7 @@ Shown once after sign-up (7 cards with Rozi, highlighting each menu button). Set
 | Fixes (2026-11-13) | Trainer Settings crash fixed (null client check); trainer-controls spacing; notices close by themselves after 12 s. |
 | Streaks (2026-11-13) | Streak calendar page `/streak`, 5 repairs per streak (7-day window), pause for unwell/sore/travel, Rozi workout-done popup with the streak counting up and this week's checks. |
 | Fitness levels (2026-11-13) | Beginner / Intermediate / Advanced / Pro: picked in Get started, Settings or by the trainer; sets the starting program stage and volume; moves up by itself with steady pain-free training and down one after a 6-week break. Migration `20261113163106_fitness_levels.sql`. |
+| Body pictures fixed (2026-11-13) | One-figure pictures had fingers cut off and bits of the other figure's hand at the edge (82 of 84). All 84 were rebuilt with `scripts/split-figures.mjs` into `public/figures/v2/`. |
 | Liquid glass (2026-11-13) | Whole app restyled as liquid glass. Light, Dark and Auto themes replace Soft pastel and the purple glass. Home has a "Day N" glass hero with Rozi. The phone menu is a floating glass pill plus a round Settings button. |
 
 Tests: `npm test` (127 at the last update), `npm run lint`, `npx tsc --noEmit`, `npm run build`.
