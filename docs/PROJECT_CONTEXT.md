@@ -89,11 +89,10 @@ Trainer edits are deliberately bounded. The trainer UI previews the next schedul
 
 Exercise reference text is maintained in `src/lib/templates.ts`; query and alternative behavior is in `src/lib/exercise-library.ts`. The library uses beginner-friendly text, equipment requirements, muscles, difficulty, rep/rest guidance, and cautions.
 
-Media lives in `src/lib/exercise-media.ts`:
+Media:
 
-- **Illustrations** are original stick-figure start/finish position guides, drawn in code from pose angles for all 30 exercises and rendered by `src/components/app/exercise-illustration.tsx`. They were made for FitTrack, so there is no licence or attribution to track. They are schematic; the written steps remain the instruction. A test checks every exercise has a drawing that stays inside its frame.
-- **Videos**: "Watch a demonstration" opens a YouTube search for the exercise name in a new tab, labelled as unreviewed. To pin a specific video, the trainer adds its address to `TRAINER_DEMO_VIDEOS` after watching it. Never add a video address that has not been opened and checked.
-- There is still no bundled third-party image or video. Do not add any until source, permission, license, and required attribution have been verified and recorded.
+- **Anatomy pictures** are AI-generated front-and-back muscle images supplied by the trainer (originals in `design/figures-incoming/`). They were processed once (background removed, one-sided muscle groups cropped to the front or back view, separate front and back files made) into `public/figures/`, named `{female|male}-{group}[-front|-back].webp`. `src/lib/muscle-images.ts` maps muscle groups to files; a test checks every file exists. They are used for today's targets on Train, the Home card, the exercise guide (a figure that turns between front and back on tap or drag), every exercise thumbnail, and the welcome screens. The neutral figure has no pictures and falls back to the drawn figure in `src/components/app/body-figure.tsx`. Check the image tool's terms allow commercial use before a public release.
+- **Videos**: "Watch a demonstration" (`src/lib/exercise-media.ts`) opens a YouTube search for the exercise name in a new tab, labelled as unreviewed. To pin a specific video, the trainer adds its address to `TRAINER_DEMO_VIDEOS` after watching it. Never add a video address that has not been opened and checked.
 
 Progress charts use `src/components/app/line-chart.tsx` (one measure per chart, hover or tap to read a session, table of exact values beside it).
 

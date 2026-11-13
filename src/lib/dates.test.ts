@@ -40,3 +40,8 @@ test("maps a workout's movements to the body regions to highlight, most-used fir
   assert.deepEqual(regionsForExercises([{ movementPattern: "squat" }, { movementPattern: "hip_extension" }, { movementPattern: "core" }]), ["hips", "thighs", "hamstrings", "core"]);
   assert.deepEqual(regionsForExercises([{ movementPattern: "recovery" }, {}]), []);
 });
+
+test("walking and marching show the legs, not the back", () => {
+  assert.deepEqual(regionsForExercises([{ id: "march_in_place", movementPattern: "carry" }]), ["thighs", "calves"]);
+  assert.equal(regionsForExercises([{ id: "farmer_carry", movementPattern: "carry" }])[0], "forearms");
+});

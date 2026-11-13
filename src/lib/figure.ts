@@ -35,13 +35,22 @@ const PATTERN_REGIONS: Record<MovementPattern, BodyRegion[]> = {
   recovery: [],
 };
 
-const REGION_ORDER: BodyRegion[] = ["thighs", "hips", "hamstrings", "chest", "back", "shoulders", "arms", "forearms", "core", "calves"];
 
-/** Body regions a set of exercises works, most-used first. */
-export function regionsForExercises(exercises: Array<{ movementPattern?: MovementPattern }>): BodyRegion[] {
+/** Exercises whose movement pattern does not describe the muscles they mainly use. */
+const EXERCISE_REGIONS: Record<string, BodyRegion[]> = {
+  march_in_place: ["thighs", "calves"],
+  comfortable_walk: ["thighs", "calves"],
+  relaxed_breathing: ["core"],
+  farmer_carry: ["forearms", "core", "back"],
+};
+
+/** Body regions a set of exercises works, most-used first; ties keep the order they first appear. */
+export function regionsForExercises(exercises: Array<{ id?: string; movementPattern?: MovementPattern }>): BodyRegion[] {
   const counts = new Map<BodyRegion, number>();
   for (const exercise of exercises) {
-    for (const region of exercise.movementPattern ? PATTERN_REGIONS[exercise.movementPattern] : []) counts.set(region, (counts.get(region) ?? 0) + 1);
+    const regions = (exercise.id && EXERCISE_REGIONS[exercise.id]) || (exercise.movementPattern ? PATTERN_REGIONS[exercise.movementPattern] : []);
+    for (const region of regions) counts.set(region, (counts.get(region) ?? 0) + 1);
   }
-  return [...counts.keys()].sort((a, b) => (counts.get(b) ?? 0) - (counts.get(a) ?? 0) || REGION_ORDER.indexOf(a) - REGION_ORDER.indexOf(b));
+  const firstSeen = [...counts.keys()];
+  return firstSeen.sort((a, b) => (counts.get(b) ?? 0) - (counts.get(a) ?? 0) || firstSeen.indexOf(a) - firstSeen.indexOf(b));
 }

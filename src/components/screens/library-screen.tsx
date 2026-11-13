@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { ChevronRight, Search, SlidersHorizontal, X } from "lucide-react";
 import { ExerciseGuideModal, toGuideExercise } from "@/components/app/exercise-guide-modal";
-import { ExerciseIllustration } from "@/components/app/exercise-illustration";
+import { MuscleThumb } from "@/components/app/muscle-thumb";
 import { useFitTrack } from "@/components/app/fit-track-provider";
 import { DEFAULT_CHECK_IN, useWorkoutDay } from "@/components/app/use-workout-day";
 import { exerciseEquipmentIsAvailable, filterExerciseLibrary, getExerciseLibraryFilterOptions } from "@/lib/exercise-library";
@@ -55,7 +55,7 @@ export function LibraryScreen() {
           return (
             <li key={exercise.id}>
               <button className="exercise-row" onClick={() => setGuideExercise(toGuideExercise(exercise))}>
-                <span className="exercise-thumb"><ExerciseIllustration exerciseId={exercise.id} name={exercise.name} thumb /></span>
+                <span className="exercise-thumb"><MuscleThumb exercise={exercise} /></span>
                 <span className="exercise-text"><strong>{exercise.name}</strong><small>{exercise.targetMuscles.slice(0, 2).join(" · ")}</small><small className={`library-ready ${equipmentReady ? "ok" : "warn"}`}>{equipmentReady ? (exercise.requiredEquipment?.length ? "You have the equipment" : "No equipment needed") : `Needs ${exercise.equipment.toLowerCase()}`}</small></span>
                 <ChevronRight aria-hidden="true" />
               </button>

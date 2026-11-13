@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { ArrowLeft, ArrowRight, Check, ChevronRight, Clock, ListChecks, Moon, Pencil, Play, Repeat } from "lucide-react";
 import { BodyFigure } from "@/components/app/body-figure";
 import { MusclePicture } from "@/components/app/muscle-picture";
-import { ExerciseIllustration } from "@/components/app/exercise-illustration";
+import { MuscleThumb } from "@/components/app/muscle-thumb";
 import { ExerciseGuideModal, toGuideExercise } from "@/components/app/exercise-guide-modal";
 import { ExerciseLogCard } from "@/components/app/exercise-log-card";
 import { RestTimer } from "@/components/app/rest-timer";
@@ -215,7 +215,7 @@ function WorkoutDayView({ date }: { date: string }) {
                 <li key={exercise.id}>
                   <button className="exercise-row" onClick={() => setGuideExercise(toGuideExercise(exercise))} aria-label={`${exercise.name}, ${exercise.sets} sets of ${exercise.reps}. Open guide`}>
                     <span className="exercise-num">{index + 1}</span>
-                    <span className="exercise-thumb"><ExerciseIllustration exerciseId={exercise.id} name={exercise.name} thumb /></span>
+                    <span className="exercise-thumb"><MuscleThumb exercise={exercise} /></span>
                     <span className="exercise-text"><strong>{exercise.name}</strong><small>{exercise.sets} × {exercise.reps}{area ? ` · ${REGION_LABELS[area]}` : ""}</small></span>
                     <ChevronRight aria-hidden="true" />
                   </button>

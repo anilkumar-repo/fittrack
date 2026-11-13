@@ -5,12 +5,12 @@ import { deadliftAllowedForPlan, preserveOriginalPlan } from "@/lib/planner";
 import { getExerciseDefinition } from "@/lib/templates";
 import { DEFAULT_TRAINER_RULE_SETTINGS, profileWithTrainerEquipment } from "@/lib/trainer-rules";
 import type { ExerciseDefinition, WorkoutPlan, WorkoutSession } from "@/lib/types";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Clock, Dumbbell, Play, Repeat, ShieldCheck, X } from "lucide-react";
-import { getDemoVideoLink, getExerciseIllustration } from "@/lib/exercise-media";
-import { regionsForExercises } from "@/lib/figure";
-import { MusclePicture } from "./muscle-picture";
-import { ExerciseIllustration } from "./exercise-illustration";
+import { getDemoVideoLink } from "@/lib/exercise-media";
+import { REGION_LABELS, regionsForExercises } from "@/lib/figure";
+import { TurnableFigure } from "./turnable-figure";
+import { MuscleThumb } from "./muscle-thumb";
 import { sessionForDate, useFitTrack } from "./fit-track-provider";
 
 /** The library guide for an exercise, keeping the sets, reps, and reasons from the plan it was opened from. */
@@ -53,7 +53,6 @@ export function ExerciseGuideModal({ exercise, workout, onOpen, onClose }: Exerc
     : [];
   const instructions = getExerciseReferenceInstructions(exercise);
   const demoVideo = getDemoVideoLink(exercise);
-  const hasIllustration = Boolean(getExerciseIllustration(exercise.id));
 
   function applyAlternative(alternativeId: string) {
     if (!workout || !plan) return;
@@ -93,6 +92,7 @@ export function ExerciseGuideModal({ exercise, workout, onOpen, onClose }: Exerc
 
   const ready = exerciseEquipmentIsAvailable(exercise, state.profile);
   const regions = regionsForExercises([exercise]);
+  const [shownRegion, setShownRegion] = useState(regions[0]);
 
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => { if (event.key === "Escape") onClose(); };
@@ -115,14 +115,16 @@ export function ExerciseGuideModal({ exercise, workout, onOpen, onClose }: Exerc
         {!ready && !restricted && <p className="guide-note warn">This needs equipment that is not ticked in your Settings. Confirm you have it before using this movement.</p>}
 
         {restricted ? <div className="locked-note">This movement is restricted until your trainer approves it, so its instructions are not shown.</div> : <>
-          <div className="guide-visual">
-            {hasIllustration && <div className="guide-pose"><ExerciseIllustration exerciseId={exercise.id} name={exercise.name} /></div>}
-            <div className="guide-muscles">
-              <MusclePicture figure={figure} region={regions[0]} highlight={regions} />
-              <div><small>Works</small><strong>{exercise.targetMuscles.join(" · ")}</strong></div>
+          <div className="guide-body">
+            <TurnableFigure key={`${figure}-${shownRegion ?? "base"}`} figure={figure} region={shownRegion} />
+            <div className="guide-works">
+              <small>Works</small>
+              <strong>{exercise.targetMuscles.join(" · ")}</strong>
+              {regions.length > 1 && <div className="guide-regions" role="group" aria-label="Show muscle group">{regions.map((region) => (
+                <button key={region} type="button" className={shownRegion === region ? "selected" : ""} aria-pressed={shownRegion === region} onClick={() => setShownRegion(region)}>{REGION_LABELS[region]}</button>
+              ))}</div>}
             </div>
           </div>
-          {hasIllustration && <p className="illustration-note">Simple position guide. Follow the written steps for detail.</p>}
 
           <div className="guide-video">
             <a className="button button-subtle" href={demoVideo.url} target="_blank" rel="noopener noreferrer"><Play aria-hidden="true" /> Watch a demonstration</a>
@@ -141,7 +143,7 @@ export function ExerciseGuideModal({ exercise, workout, onOpen, onClose }: Exerc
             <p className="guide-sub">Movements that fit your equipment and work the same area.</p>
             <div className="guide-alternatives">{alternatives.map((alternative) => (
               <article key={alternative.id} className="guide-alternative">
-                <span className="exercise-thumb"><ExerciseIllustration exerciseId={alternative.id} name={alternative.name} thumb /></span>
+                <span className="exercise-thumb"><MuscleThumb exercise={alternative} /></span>
                 <div><strong>{alternative.name}</strong><small>{alternative.equipment} · {alternative.sets} × {alternative.reps}</small></div>
                 {inPlannedSession
                   ? <button type="button" className="button button-subtle" onClick={() => applyAlternative(alternative.id)}>Use instead</button>

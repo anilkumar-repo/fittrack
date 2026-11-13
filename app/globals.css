@@ -794,22 +794,8 @@ a.profile-mini { color: inherit; }
 }
 
 /* Exercise position drawings. */
-.exercise-illustration { display: block; width: 100%; max-width: 380px; height: auto; margin: 4px auto 0; color: var(--purple-dark); }
-.exercise-illustration.compact { max-width: 150px; margin: 0; }
-.illo-limb { fill: none; stroke: currentColor; stroke-width: 4.2; stroke-linecap: round; stroke-linejoin: round; }
-.illo-far { opacity: .38; }
-.illo-head { fill: currentColor; }
-.illo-floor { stroke: var(--accent-line); stroke-width: 1.5; stroke-linecap: round; }
-.illo-prop-fill { fill: var(--accent-soft-2); }
-.illo-prop-line { stroke: var(--accent-line); stroke-width: 3.5; stroke-linecap: round; }
-.illo-cable { stroke: var(--accent); stroke-width: 1.2; stroke-dasharray: 2.5 2; }
-.illo-weight { fill: var(--accent-strong); }
-.illo-arrow { fill: none; stroke: var(--accent); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
-.illo-label { fill: var(--muted); font-size: 7px; font-weight: 700; text-anchor: middle; letter-spacing: .4px; }
-.illustration-note { margin: 4px 0 0; color: var(--muted); font-size: 13px; text-align: center; }
 .demo-video { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-top: 12px; }
 .demo-video small { color: var(--muted); font-size: 13px; line-height: 1.5; flex: 1 1 180px; }
-.library-card .exercise-illustration.compact { margin: 16px 0 6px; }
 
 /* Line charts on the progress page. */
 .line-chart { max-width: 520px; margin: 8px 0 14px; }
@@ -846,7 +832,6 @@ body { background: var(--page-bg); background-attachment: fixed; }
 /* Dark blocks keep light text in both themes. */
 .rest-timer { --on-accent: #ffffff; border: 1px solid var(--line-strong); color: #ffffff; }
 .rest-timer.finished { --on-accent: var(--accent-contrast); border-color: transparent; color: var(--accent-contrast); }
-.illo-weight { fill: var(--ink); }
 .line-chart-dot { stroke: var(--surface-solid); }
 input, select, textarea { color: var(--ink); }
 select option { color: #143229; background: #ffffff; }
@@ -1035,7 +1020,6 @@ select option { color: #143229; background: #ffffff; }
 .exercise-row > svg { width: 18px; height: 18px; }
 .exercise-num { width: 18px; flex: none; color: var(--faint); font-size: 14px; font-weight: 700; text-align: center; }
 .exercise-thumb { display: grid; width: 56px; height: 56px; flex: none; place-items: center; border-radius: 16px; background: var(--accent-soft); }
-.exercise-illustration.thumb { width: 46px; max-width: none; height: 46px; margin: 0; }
 .exercise-text { flex: 1; min-width: 0; }
 .exercise-text strong { display: block; color: var(--ink); font-size: 17px; font-weight: 700; line-height: 1.25; }
 .exercise-text small { display: block; margin-top: 3px; font-size: 14px; }
@@ -1105,7 +1089,6 @@ select option { color: #143229; background: #ffffff; }
 .logger .exercise-log-card { padding: 18px; border: var(--glass-edge); border-radius: 26px; background: var(--surface); box-shadow: var(--glass-shadow); -webkit-backdrop-filter: var(--glass-blur); backdrop-filter: var(--glass-blur); }
 .logger .exercise-log-card .plain-link { font-size: 20px; font-weight: 800; }
 .exercise-visual { display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%; margin-top: 12px; padding: 8px 16px 8px 10px; border: 1px solid var(--line); border-radius: 18px; color: var(--accent-ink); background: var(--accent-soft); font-size: 14px; font-weight: 700; cursor: pointer; }
-.exercise-visual .exercise-illustration.compact { max-width: 170px; }
 .logger .logger-nav { margin-top: 0; }
 .logger .logger-nav .button { flex: 1; min-height: 54px; font-size: 16px; }
 .logger-finish-early { justify-self: center; min-height: 40px; font-size: 14px; }
@@ -1135,7 +1118,6 @@ select option { color: #143229; background: #ffffff; }
 .guide h3 { margin: 6px 0 0; color: var(--ink); font-size: 18px; font-weight: 800; }
 .guide-visual { display: grid; grid-template-columns: minmax(0, 1.7fr) minmax(0, 1fr); gap: 10px; }
 .guide-pose, .guide-muscles { display: grid; place-items: center; padding: 14px; border: 1px solid var(--line); border-radius: 22px; background: var(--surface-2); }
-.guide-pose .exercise-illustration { max-width: none; margin: 0; }
 .guide-muscles { gap: 8px; text-align: center; }
 .guide-muscles .body-figure { height: 150px; }
 .guide-muscles small { display: block; color: var(--muted); font-size: 12px; font-weight: 700; letter-spacing: .8px; text-transform: uppercase; }
@@ -1355,3 +1337,38 @@ img.muscle-picture { display: block; width: auto; max-width: 100%; height: 100%;
   .muscle-card img.muscle-picture { height: 160px; }
   .hero-figure { height: 210px; }
 }
+
+/* ---------- Exercise guide: turnable anatomy figure ---------- */
+.guide-body { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: center; gap: 16px; padding: 16px; border: 1px solid var(--line); border-radius: 24px; background: var(--tint-blue, var(--surface-2)); }
+.turn { display: grid; justify-items: center; gap: 8px; }
+.turn-stage { display: block; width: 100%; max-width: 220px; height: 340px; padding: 0; border: 0; background: transparent; cursor: grab; perspective: 900px; touch-action: pan-y; -webkit-tap-highlight-color: transparent; }
+.turn-stage:active { cursor: grabbing; }
+.turn-body { position: relative; display: block; width: 100%; height: 100%; transform-style: preserve-3d; transition: transform .6s cubic-bezier(.2, .8, .2, 1); }
+.turn-body.dragging { transition: none; }
+.turn-face { position: absolute; inset: 0; display: grid; place-items: center; -webkit-backface-visibility: hidden; backface-visibility: hidden; }
+.turn-face img { width: auto; height: 100%; object-fit: contain; pointer-events: none; user-select: none; -webkit-user-drag: none; }
+.turn-back { transform: rotateY(180deg); }
+.turn-hint { display: flex; align-items: center; gap: 6px; margin: 0; color: var(--muted); font-size: 12px; font-weight: 700; }
+.turn-hint svg { width: 14px; height: 14px; }
+.guide-works small { display: block; color: var(--muted); font-size: 12px; font-weight: 700; letter-spacing: .8px; text-transform: uppercase; }
+.guide-works strong { display: block; margin-top: 4px; color: var(--ink); font-size: 16px; line-height: 1.4; }
+.guide-regions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
+.guide-regions button { min-height: 38px; padding: 0 14px; border: 1px solid var(--line-strong); border-radius: 999px; color: var(--ink-2); background: var(--surface); font-size: 13px; font-weight: 700; cursor: pointer; }
+.guide-regions button.selected { border-color: transparent; color: var(--accent-contrast); background: var(--button-primary-bg); }
+@media (prefers-reduced-motion: reduce) { .turn-body { transition: none; } }
+@media (max-width: 520px) {
+  .guide-body { grid-template-columns: minmax(0, 1fr); }
+  .turn-stage { height: 320px; }
+  .guide-works { text-align: center; }
+  .guide-regions { justify-content: center; }
+}
+
+/* ---------- Anatomy thumbnails ---------- */
+.exercise-thumb { width: 56px; height: 72px; overflow: hidden; border-radius: 16px; }
+img.muscle-thumb, svg.muscle-thumb { display: block; width: auto; height: 64px; object-fit: contain; }
+.exercise-visual { justify-content: flex-start; gap: 14px; padding: 8px 14px 8px 8px; text-align: left; }
+.exercise-visual-thumb { display: grid; width: 60px; height: 80px; flex: none; place-items: center; border-radius: 14px; background: rgba(255, 255, 255, .7); }
+.exercise-visual-thumb img.muscle-thumb { height: 72px; }
+.exercise-visual-text { display: grid; gap: 2px; min-width: 0; }
+.exercise-visual-text strong { font-size: 15px; }
+.exercise-visual-text small { color: var(--muted); font-size: 13px; font-weight: 400; }

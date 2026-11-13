@@ -30,3 +30,23 @@ export function musclePicture(figure: FigureChoice, region?: BodyRegion): Muscle
 export function pictureFileNames(): string[] {
   return [...PICTURED].flatMap((figure) => ["base", ...Object.values(REGION_FILES)].map((name) => `${figure}-${name}.webp`));
 }
+
+export type Side = "front" | "back";
+
+/** Muscle groups seen mainly from behind start the turnable figure on its back view. */
+const BACK_FIRST = new Set<BodyRegion>(["back", "hips", "hamstrings", "calves"]);
+
+export function startingSide(region?: BodyRegion): Side {
+  return region && BACK_FIRST.has(region) ? "back" : "front";
+}
+
+/** One side of the body, for the figure that turns around in the exercise guide. */
+export function sidePicture(figure: FigureChoice, side: Side, region?: BodyRegion): MusclePicture | null {
+  if (!PICTURED.has(figure)) return null;
+  const name = region ? REGION_FILES[region] : "base";
+  return { src: `/figures/${figure}-${name}-${side}.webp`, width: 380, height: 820 };
+}
+
+export function sidePictureFileNames(): string[] {
+  return pictureFileNames().flatMap((file) => ["front", "back"].map((side) => file.replace(".webp", `-${side}.webp`)));
+}

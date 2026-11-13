@@ -1,7 +1,7 @@
 "use client";
 
 import { shortDate } from "@/lib/dates";
-import { ExerciseIllustration } from "./exercise-illustration";
+import { MuscleThumb } from "./muscle-thumb";
 import { describeLastPerformance, displayToKg, kgToDisplay, lastLoadKg, type LastPerformance, type WeightUnit } from "@/lib/logging";
 import type { ExerciseDefinition, ExerciseLog } from "@/lib/types";
 import { statusForSets } from "@/lib/workout-tracking";
@@ -46,7 +46,7 @@ export function ExerciseLogCard({ exercise, index, log, substitutedForName, last
       <p className="last-time">{last
         ? <><strong>Last time</strong> ({shortDate(last.date)}): {describeLastPerformance(last, unit)}</>
         : <><strong>First time</strong> logging this movement. Start light and comfortable.</>}</p>
-      <button type="button" className="exercise-visual" onClick={onOpenGuide} aria-label={`Open the guide for ${exercise.name}`}><ExerciseIllustration exerciseId={exercise.id} name={exercise.name} compact /><span>How to do it</span></button>
+      <button type="button" className="exercise-visual" onClick={onOpenGuide} aria-label={`Open the guide for ${exercise.name}`}><span className="exercise-visual-thumb"><MuscleThumb exercise={exercise} /></span><span className="exercise-visual-text"><strong>How to do it</strong><small>{exercise.targetMuscles.join(" · ")}</small></span></button>
       {exercise.progressionAdvice && <div className="progression-note"><strong>{exercise.progressionAction === "consider_small_load_step" ? "Progression check" : exercise.progressionAction === "hold_load_add_reps" ? "Rep target" : "Load guidance"}</strong><p>{exercise.progressionAdvice} {exercise.loadGuidance}</p></div>}
 
       <div className="set-grid set-grid-phase2">
