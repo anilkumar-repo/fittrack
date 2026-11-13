@@ -83,7 +83,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <footer className="app-footer"><span>RozFit · Small steps, every day</span><span>Rules {RULE_VERSION}</span></footer>
       </main>
 
-      <nav className="mobile-nav" aria-label="Mobile navigation">{navItems.map((item) => <Link key={item.href} href={item.href} className={active?.href === item.href ? "active" : ""} aria-label={item.label} aria-current={active?.href === item.href ? "page" : undefined}><Icon><item.icon aria-hidden="true" strokeWidth={2} /></Icon><small>{item.shortLabel}</small></Link>)}</nav>
+      {/* Phone navigation: a floating glass pill for the main pages, and a round glass button for Settings. */}
+      <nav className="mobile-nav" aria-label="Mobile navigation">
+        <div className="dock-pill">{navItems.filter((item) => item.href !== "/settings").map((item) => <Link key={item.href} href={item.href} className={active?.href === item.href ? "active" : ""} aria-label={item.label} aria-current={active?.href === item.href ? "page" : undefined}><Icon><item.icon aria-hidden="true" strokeWidth={1.8} /></Icon><small>{item.shortLabel}</small>{item.href === "/today" && dueToday && active?.href !== "/today" && <span className="dock-dot" aria-hidden="true" />}</Link>)}</div>
+        <Link href="/settings" className={`dock-round ${active?.href === "/settings" ? "active" : ""}`} aria-label="Settings" aria-current={active?.href === "/settings" ? "page" : undefined}><Icon><Settings aria-hidden="true" strokeWidth={1.8} /></Icon></Link>
+      </nav>
     </div>
   );
 }

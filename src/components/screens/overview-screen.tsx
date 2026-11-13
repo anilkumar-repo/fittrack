@@ -51,14 +51,26 @@ export function OverviewScreen() {
     wins: todaySession?.status === "completed" ? winsForWorkout(recordedSessions, currentDate, state.profile.sessionsPerWeek) : undefined,
   });
 
+  // "Day N" is the streak; a streak on hold shows the number a workout can win back.
+  const dayNumber = streak.repair ? streak.repair.lostStreak : Math.max(1, streak.current);
+  const dayCaption = streak.repair ? `Streak on hold at ${dayNumber}` : streak.current > 0 ? `Day ${dayNumber} of your streak` : "Day 1: your next workout starts a streak";
+
   return (
     <section className="home">
-      <header className="home-greet rozi-greet">
-        <Rozi mood={moment.mood} size={132} priority />
-        <div className="rozi-say">
-          <p>{dateLabel(currentDate)}</p>
-          <h2>{moment.title}</h2>
-          <span className="rozi-bubble">{moment.message}</span>
+      {/* The day hero: a big glass "Day N" (the streak) with Rozi standing in front of it. */}
+      <header className={`day-hero ${streak.repair ? "on-hold" : ""}`}>
+        <div className="day-hero-top">
+          <span>{dateLabel(currentDate)}</span>
+          <Link className="glass-round" href="/streak" aria-label="Open your streak calendar"><Flame aria-hidden="true" /></Link>
+        </div>
+        <div className="day-stage">
+          <span className="glass-word" aria-hidden="true">Day {dayNumber}</span>
+          <Rozi mood={moment.mood} size={220} priority className="day-rozi" />
+        </div>
+        <h2 className="sr-only">{dayCaption}</h2>
+        <div className="day-say">
+          <strong>{moment.title}</strong>
+          <span>{moment.message}</span>
           {streak.started && <Link className="streak-chip" href="/streak"><Flame aria-hidden="true" /> {streak.repair ? `Repair your ${streak.repair.lostStreak} streak` : `${streak.current} in a row${streak.best > streak.current ? ` · best ${streak.best}` : ""}`} <ChevronRight aria-hidden="true" /></Link>}
         </div>
       </header>

@@ -6,12 +6,19 @@ import { NotificationsCard } from "@/components/app/notifications-card";
 import { AvatarPicker } from "@/components/app/avatar";
 import { replayTour } from "@/components/app/tour-guide";
 import { TrainerControls } from "@/components/trainer-controls";
-import { CalendarDays, Palette, ShieldCheck, Sparkles, Sun } from "lucide-react";
+import { CalendarDays, Moon, Palette, ShieldCheck, Smartphone, Sun } from "lucide-react";
 import { GOAL_OPTIONS, goalOf } from "@/lib/program";
 import { MAX_TRAINING_DAYS, MIN_TRAINING_DAYS, shortDate, trainingDaysValid, WEEKDAY_LABELS } from "@/lib/dates";
 import { FIGURE_OPTIONS } from "@/lib/figure";
 import { EQUIPMENT_OPTIONS, RULE_VERSION, TEMPLATE_VERSION } from "@/lib/templates";
 import type { Profile } from "@/lib/types";
+import type { Theme } from "@/components/app/fit-track-provider";
+
+const THEME_OPTIONS: Array<{ id: Theme; label: string; icon: typeof Sun }> = [
+  { id: "light", label: "Light", icon: Sun },
+  { id: "dark", label: "Dark", icon: Moon },
+  { id: "auto", label: "Auto", icon: Smartphone },
+];
 
 export function SettingsScreen() {
   const { state, recordedSessions, updateState, isDemo, browserClient, updateProfile, refreshTrainerClients, setNotice, weightUnit, setWeightUnit, theme, setTheme, figure, setFigure, saveError, savingSession } = useFitTrack();
@@ -85,7 +92,7 @@ export function SettingsScreen() {
           <article className="panel settings-group">
             <h3><Palette aria-hidden="true" /> Appearance</h3>
             <div className="settings-field"><span>Theme</span>
-              <div className="theme-switch"><button type="button" className={theme === "pastel" ? "selected" : ""} aria-pressed={theme === "pastel"} onClick={() => setTheme("pastel")}><Sun aria-hidden="true" /> Soft pastel</button><button type="button" className={theme === "light" ? "selected" : ""} aria-pressed={theme === "light"} onClick={() => setTheme("light")}><Sparkles aria-hidden="true" /> Liquid glass</button></div>
+              <div className="segmented theme-switch">{THEME_OPTIONS.map((option) => <button key={option.id} type="button" className={theme === option.id ? "selected" : ""} aria-pressed={theme === option.id} onClick={() => setTheme(option.id)}><option.icon aria-hidden="true" /> {option.label}</button>)}</div>
             </div>
             <div className="settings-field"><span>Figure</span>
               <div className="segmented">{FIGURE_OPTIONS.map((option) => <button key={option.id} type="button" className={figure === option.id ? "selected" : ""} aria-pressed={figure === option.id} onClick={() => setFigure(option.id)}>{option.label}</button>)}</div>
