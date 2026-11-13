@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { BrandMark } from "./brand-mark";
 import { MissedDayPrompt } from "./missed-day-prompt";
+import { TourGuide } from "./tour-guide";
+import { Avatar } from "./avatar";
 import { unexplainedMissedDays } from "@/lib/missed-days";
 import { BookOpen, ChartColumn, Dumbbell, House, Settings, Users, type LucideIcon } from "lucide-react";
 import { usePathname } from "next/navigation";
@@ -37,7 +39,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const active = navItems.find((item) => item.href === pathname);
   const pageTitle = active?.title ?? (pathname === "/sign-in" ? "Sign in" : "RozFit");
   const dueToday = state.profile.trainingDays.includes(weekdayOf(currentDate)) || Boolean(sessionForDate(state, currentDate));
-  const initial = state.profile.displayName.slice(0, 1).toUpperCase();
   const saveLabel = isDemo
     ? accountLoading ? "Loading your account…" : "Saved on this device"
     : savingSession ? "Saving workout…" : saveError ? "Sync needs attention" : "Synced to your account";
@@ -45,6 +46,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   return (
     <div className="app-shell">
       {missedDays.length > 0 && <MissedDayPrompt dates={missedDays} />}
+      <TourGuide blocked={missedDays.length > 0} />
       <aside className="sidebar">
         <Link className="brand" href="/">
           <BrandMark /><span><strong>RozFit</strong><small>Small steps, every day</small></span>
@@ -60,8 +62,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <div className="sidebar-bottom">
           <div className="support-card"><span className="support-icon">✦</span><strong>Small steps count</strong><p>Your plan adapts as you build a steady routine.</p></div>
           <Link className="profile-mini" href="/settings">
-            <span className="avatar">{initial}</span>
-            <span className="profile-mini-text"><strong>{state.profile.displayName}</strong><small>{isDemo ? "Demo profile" : state.userEmail ?? "Connected"}</small></span>
+            <Avatar value={state.profile.avatar} name={state.profile.displayName} size={36} className="avatar" />
+            <span className="profile-mini-text"><strong>{state.profile.displayName}</strong><small>{isDemo ? "Saved on this device" : state.userEmail ?? "Signed in"}</small></span>
             <span className="mini-dots">···</span>
           </Link>
         </div>
@@ -70,7 +72,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <main className="main-area">
         <header className="topbar">
           {pathname === "/" ? <h1 className="sr-only">Home</h1> : <div><span className="eyebrow">{dateLabel(currentDate, { month: "long", day: "numeric", year: "numeric" })}</span><h1>{pageTitle}</h1></div>}
-          <div className="topbar-actions"><span className={`save-state ${isDemo ? "demo" : saveError ? "sync-error" : "connected"}`}><span className="save-dot" />{saveLabel}</span>{isDemo && hasSupabaseConfig() && pathname !== "/sign-in" && <Link className="button button-subtle topbar-sign-in" href="/sign-in">Sign in</Link>}<Link className="round-avatar" aria-label="Open settings" href="/settings">{initial}</Link></div>
+          <div className="topbar-actions">{!isDemo && (savingSession || saveError) && <span className={`save-state ${saveError ? "sync-error" : "connected"}`}><span className="save-dot" />{saveLabel}</span>}{isDemo && hasSupabaseConfig() && pathname !== "/sign-in" && <Link className="button button-subtle topbar-sign-in" href="/sign-in">Sign in</Link>}<Link className="round-avatar has-picture" aria-label="Open settings" href="/settings"><Avatar value={state.profile.avatar} name={state.profile.displayName} size={36} /></Link></div>
         </header>
 
         {notice && <div role="status" className="notice"><span>{notice}</span><button aria-label="Dismiss message" onClick={() => setNotice("")}>×</button></div>}
@@ -78,7 +80,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
         {children}
 
-        <footer className="app-footer"><span>RozFit · Small steps, every day</span><span>Rules {RULE_VERSION} <i>·</i> {isDemo ? "Demo mode" : "Supabase connected"}</span></footer>
+        <footer className="app-footer"><span>RozFit · Small steps, every day</span><span>Rules {RULE_VERSION}</span></footer>
       </main>
 
       <nav className="mobile-nav" aria-label="Mobile navigation">{navItems.map((item) => <Link key={item.href} href={item.href} className={active?.href === item.href ? "active" : ""} aria-label={item.label} aria-current={active?.href === item.href ? "page" : undefined}><Icon><item.icon aria-hidden="true" strokeWidth={2} /></Icon><small>{item.shortLabel}</small></Link>)}</nav>

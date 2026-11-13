@@ -28,6 +28,7 @@ export function newAccountProfileDefaults(user: AuthUser, seed?: NewAccountSeed)
     equipmentAvailability: local?.equipmentAvailability ?? base.equipmentAvailability,
     availableEquipment: local?.availableEquipment ?? base.availableEquipment,
     goal: local?.goal ?? base.goal,
+    ...(local?.avatar && !local.avatar.startsWith("photo:data:") ? { avatar: local.avatar } : {}),
     deadliftEnabled: false,
     trainerRole: false,
   };
@@ -57,7 +58,8 @@ function mapProfile(row: DbRow, id: string, trainerRole: boolean, deadliftEnable
     preferredSessionMinutes: Number(row.preferred_session_minutes ?? defaults.preferredSessionMinutes),
     equipmentAvailability: row.equipment_availability === undefined ? defaults.equipmentAvailability : row.equipment_availability === "verified" ? "verified" : "unknown",
     availableEquipment: Array.isArray(row.available_equipment) ? row.available_equipment.filter((item): item is EquipmentKey => typeof item === "string" && validEquipment.has(item as EquipmentKey)) : row.available_equipment === undefined ? defaults.availableEquipment : [],
-    goal: row.goal === "muscle" || row.goal === "tone" ? row.goal : "general",
+    goal: row.goal === "muscle" || row.goal === "tone" || row.goal === "fatloss" ? row.goal : "general",
+    ...(typeof row.avatar === "string" && row.avatar ? { avatar: row.avatar } : {}),
   };
 }
 
@@ -361,9 +363,17 @@ export async function saveCloudProfile(client: SupabaseClient, profile: Profile)
     equipment_availability: profile.equipmentAvailability,
     available_equipment: profile.availableEquipment,
     goal: profile.goal ?? "general",
+    // A device-only photo (data URL) is never sent to the account; cloud photos are stored as links.
+    avatar: profile.avatar && !profile.avatar.startsWith("photo:data:") ? profile.avatar : "",
     updated_at: new Date().toISOString(),
   }, { onConflict: "id" });
   if (error) throw error;
+}
+
+/** A linked trainer changes a client's goal, training days and session length (checked on the server). */
+export async function saveCloudClientPlan(client: SupabaseClient, clientId: string, goal: string, trainingDays: number[], minutes: number): Promise<void> {
+  const { error } = await client.rpc("trainer_update_client_plan", { p_client: clientId, p_goal: goal, p_training_days: trainingDays, p_minutes: minutes });
+  if (error) throw new Error(error.message);
 }
 
 /** Saves the reason for a missed day. Returns the session id, or null if a logged workout already exists for that day. */

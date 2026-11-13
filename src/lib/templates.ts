@@ -348,6 +348,12 @@ const sessionTemplates: Record<TemplateFocus, Slot[]> = {
   "Lower B": [["smith_squat", 3, "8–12"], ["reverse_lunge", 3, "8–10 each leg"], ["db_glute_bridge", 3, "12–15"], ["leg_extension", 2, "12–15"], ["calf_raise", 3, "12–15"], ["step_up", 2, "8–10 each leg"], ["side_plank", 2, "15–20 sec each side"]],
   "Upper B": [["incline_db_press", 3, "8–12"], ["lat_pulldown", 3, "8–12"], ["chest_row", 3, "10–12"], ["face_pull", 2, "12–15"], ["lateral_raise", 2, "12–15"], ["hammer_curl", 2, "10–12"], ["triceps_pushdown", 2, "10–12"], ["dead_bug", 3, "8–10 each side"], ["floor_plank", 3, "15–30 sec"]],
 
+  // Lose weight: full-body strength to keep muscle, plus steady cardio and intervals to burn fat.
+  "Burn A": [["goblet_squat", 3, "10–12"], ["dumbbell_bench", 3, "10–12"], ["lat_pulldown", 3, "10–12"], ["dumbbell_rdl", 3, "10–12"], ["reverse_lunge", 2, "10 each leg"], ["floor_plank", 3, "30–45 sec"], ["easy_cardio", 1, "10 min brisk walk"]],
+  "Cardio and core": [["easy_cardio", 1, "30–40 min (walk, bike or elliptical)"], ["dead_bug", 3, "10 each side"], ["side_plank", 2, "20–30 sec each side"], ["bird_dog", 2, "10 each side"]],
+  "Burn B": [["smith_squat", 3, "10–12"], ["incline_db_press", 3, "10–12"], ["seated_row", 3, "10–12"], ["step_up", 2, "10 each leg"], ["db_glute_bridge", 3, "12–15"], ["lateral_raise", 2, "12–15"], ["pallof_press", 2, "10 each side"], ["easy_cardio", 1, "10 min"]],
+  "Intervals and core": [["interval_cardio", 1, "8 rounds: 30 sec fast, 90 sec easy"], ["reverse_crunch", 3, "12–15"], ["floor_plank", 3, "30 sec"], ["farmer_carry", 3, "30–40 sec"]],
+
   // Every fourth week for Build muscle: the 20-minute circuit (5 pull-ups, 10 push-ups, 15 squats) and easy days.
   "Conditioning circuit": [["assisted_pullup", 4, "5"], ["pushup", 4, "10"], ["bodyweight_squat", 4, "15"]],
   "Core and cardio": [["cable_crunch", 2, "12–15"], ["reverse_crunch", 2, "10–15"], ["side_plank", 2, "20–30 sec each side"], ["easy_cardio", 1, "20–25 min"]],
@@ -358,6 +364,7 @@ export const GOAL_CYCLES: Record<TrainingGoal, TemplateFocus[]> = {
   general: ["Foundation A", "Foundation B", "Foundation C"],
   muscle: ["Push A", "Pull A", "Legs A", "Push B", "Pull B", "Legs B"],
   tone: ["Lower A", "Upper A", "Lower B", "Upper B"],
+  fatloss: ["Burn A", "Cardio and core", "Burn B", "Intervals and core"],
 };
 
 /** Short name of what each session trains, used in the plan title. */
@@ -367,6 +374,7 @@ export const FOCUS_SUBTITLES: Partial<Record<TemplateFocus, string>> = {
   "Legs A": "Quads, hamstrings, glutes, calves", "Legs B": "Legs + abs",
   "Lower A": "Lower body", "Lower B": "Lower body", "Upper A": "Upper body", "Upper B": "Upper body + core",
   "Conditioning circuit": "20-minute circuit", "Core and cardio": "Abs + easy cardio",
+  "Burn A": "Full-body strength", "Burn B": "Full-body strength", "Cardio and core": "Steady cardio + core", "Intervals and core": "Intervals + core",
 };
 
 export function getExerciseDefinition(id: string): ExerciseDefinition | undefined {

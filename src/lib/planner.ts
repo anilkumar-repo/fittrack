@@ -1,5 +1,5 @@
 import { EXERCISE_LIBRARY, FOCUS_SUBTITLES, GOAL_CYCLES, getExerciseDefinition, getOptionalDeadliftExercise, getRecoveryExercises, getTemplateExercises, RULE_VERSION, TEMPLATE_VERSION, type TemplateFocus } from "./templates.ts";
-import { goalOf, isRecoveryWeek, recoveryWeekSets, setCap, stageLabel, trainingWeek } from "./program.ts";
+import { goalOf, goalTitle, isRecoveryWeek, recoveryWeekSets, setCap, stageLabel, trainingWeek } from "./program.ts";
 import { exerciseEquipmentIsAvailable, isDeadliftVariation, isExerciseAllowedForProfile } from "./exercise-library.ts";
 import type { CheckIn, ExerciseDefinition, Profile, TrainerRuleSettings, TrainingGoal, TrainingPhase, WorkoutFocus, WorkoutPlan, WorkoutSession } from "./types";
 import { DEFAULT_TRAINER_RULE_SETTINGS, normalizeTrainerRuleSettings, profileWithTrainerEquipment } from "./trainer-rules.ts";
@@ -352,7 +352,7 @@ export function generateWorkout({ date, profile, sessions, checkIn, trainerRuleS
   const selectedPatterns = new Set<string>();
   const generationReasons = [
     program
-      ? `Selected ${baseFocus} for the "${goal === "muscle" ? "Build muscle" : "Get fit & toned"}" goal, week ${week} of 52${stage ? ` (${stage})` : ""}; workouts rotate in order and missed days are not added to today.`
+      ? `Selected ${baseFocus} for the "${goalTitle(goal)}" goal, week ${week} of 52${stage ? ` (${stage})` : ""}; workouts rotate in order and missed days are not added to today.`
       : `Selected ${baseFocus} from the approved ${profile.sessionsPerWeek}-day schedule using completed-session rotation; missed days are not added to today.`,
     `Trainer rules revision ${trainerRuleRevision} is snapshotted with this plan; pain always triggers recovery and deadlift approval remains a separate explicit trainer rule.`,
     phase === "foundation_2"
@@ -431,7 +431,7 @@ export function generateWorkout({ date, profile, sessions, checkIn, trainerRuleS
       : program ? `Part of the ${baseFocus} session.` : `Selected from the ${baseFocus} template as part of the approved beginner rotation.`);
     const progression = progressionFor(candidate, prior, settings);
     const cappedSets = Math.min(candidate.sets, setCap(goal, week, isEarlyFoundation, isReturnSession));
-    const plannedSets = recoveryWeek && goal === "tone" ? recoveryWeekSets(cappedSets) : cappedSets;
+    const plannedSets = recoveryWeek && goal !== "muscle" ? recoveryWeekSets(cappedSets) : cappedSets;
     exercises.push({
       ...candidate,
       sets: volumeAdjustment ? Math.max(1, plannedSets - settings.recovery.volumeReductionSets) : plannedSets,
@@ -457,7 +457,9 @@ export function generateWorkout({ date, profile, sessions, checkIn, trainerRuleS
         ? "Recovery week: same workout, fewer sets and comfortable weights. Focus on smooth, clean reps."
         : volumeAdjustment
       ? "Today’s plan uses fewer sets based on recovery feedback and recent training."
-      : program
+      : goal === "fatloss"
+        ? "Warm up first and keep rests short. Pair training with a modest calorie deficit, plenty of protein and 7–10k steps a day — slow, steady loss keeps your muscle."
+        : program
         ? "Warm up for 5–7 minutes first. Finish most sets with 1–3 reps in reserve; add reps before adding weight."
         : "Build comfortable, repeatable strength with simple movements and a calm pace.";
   return {

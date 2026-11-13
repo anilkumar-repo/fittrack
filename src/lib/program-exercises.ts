@@ -354,6 +354,13 @@ export const PROGRAM_EXERCISES: ProgramExercise[] = [
   },
   // Cardio
   {
+    id: "interval_cardio", name: "Cardio intervals", equipment: "Bike, rower, treadmill or a brisk walk", category: "conditioning", sets: 1, reps: "8 rounds: 30 sec fast, 90 sec easy", restSeconds: 0,
+    pattern: "cardio", targetMuscles: ["Heart and lungs", "Legs"], difficulty: "beginner",
+    cues: ["Warm up for 5 minutes first.", "Fast means breathing hard, not all-out.", "Easy means you could chat again."],
+    instructions: ["Warm up for 5 minutes at an easy pace.", "Go fast for 30 seconds: you should be breathing hard but in control.", "Slow right down for 90 seconds until your breathing settles.", "Repeat for 8 rounds, then cool down for 3–5 minutes."],
+    cautions: ["Beginners can use a brisk walk uphill as the fast part.", "Stop for chest pain, dizziness or unusual shortness of breath."],
+  },
+  {
     id: "easy_cardio", name: "Easy cardio", equipment: "Treadmill, bike, elliptical or rower", category: "conditioning", sets: 1, reps: "20 min", restSeconds: 0,
     pattern: "cardio", targetMuscles: ["Heart and lungs", "Legs"], difficulty: "beginner",
     cues: ["Easy, chatty pace.", "Any machine or a brisk walk.", "Finish feeling fresh."],

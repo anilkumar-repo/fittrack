@@ -1,4 +1,4 @@
-import { EXERCISE_LIBRARY } from "./templates.ts";
+import { EQUIPMENT_OPTIONS, EXERCISE_LIBRARY, GOAL_CYCLES, getTemplateExercises } from "./templates.ts";
 import { isDeadliftVariation } from "./exercise-library.ts";
 import type { EquipmentKey, Profile, TrainerRuleSettings } from "./types";
 
@@ -17,9 +17,17 @@ export const DEFAULT_TRAINER_RULE_SETTINGS: TrainerRuleSettings = {
   equipment: { mode: "inherit", availableEquipment: [] },
 };
 
-const equipmentKeys: EquipmentKey[] = ["dumbbells", "bench", "cable_machine", "leg_press", "leg_curl_machine", "rack", "mat", "chair"];
+const equipmentKeys: EquipmentKey[] = EQUIPMENT_OPTIONS.map((item) => item.id);
 const exercisesById = new Map(EXERCISE_LIBRARY.map((exercise) => [exercise.id, exercise]));
-const editableTemplateIds = new Set(["goblet_squat", "dumbbell_bench", "lat_pulldown", "glute_bridge", "leg_press", "seated_row", "shoulder_press", "hamstring_curl", "incline_pushup", "chest_row", "hip_thrust"]);
+// Every exercise used by any goal's sessions can have trainer-set sets, reps and rest.
+const editableTemplateIds = new Set(Object.values(GOAL_CYCLES).flat().flatMap((focus) => getTemplateExercises(focus).map((exercise) => exercise.id)).concat("hip_thrust"));
+
+/** Rep-based exercises a trainer can adjust for a goal, in session order, without repeats. */
+export function trainerEditableExercisesFor(goal: keyof typeof GOAL_CYCLES) {
+  return GOAL_CYCLES[goal].flatMap((focus) => getTemplateExercises(focus))
+    .filter((exercise, index, all) => isTrainerEditableTemplateExercise(exercise.id) && all.findIndex((item) => item.id === exercise.id) === index)
+    .map((exercise) => ({ ...exercise, ...exercisesById.get(exercise.id), sets: exercise.sets, reps: exercise.reps }));
+}
 
 export function isTrainerEditableTemplateExercise(exerciseId: string): boolean {
   const exercise = exercisesById.get(exerciseId);
@@ -45,8 +53,8 @@ export function validateTrainerRuleSettings(value: unknown): string[] {
   }
 
   const templates = value.exerciseTemplates;
-  if (!Array.isArray(templates) || templates.length > 20) {
-    errors.push("Template changes must be a list of at most 20 exercise entries.");
+  if (!Array.isArray(templates) || templates.length > 60) {
+    errors.push("Template changes must be a list of at most 60 exercise entries.");
   } else {
     const seen = new Set<string>();
     for (const entry of templates) {

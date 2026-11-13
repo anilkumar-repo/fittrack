@@ -8,13 +8,14 @@ function mapStats(row: Row): FriendStats {
   return {
     userId: String(row.user_id),
     displayName: String(row.display_name ?? "Friend"),
-    goal: (["general", "muscle", "tone"].includes(String(row.goal)) ? row.goal : "general") as TrainingGoal,
+    goal: (["general", "muscle", "tone", "fatloss"].includes(String(row.goal)) ? row.goal : "general") as TrainingGoal,
     currentStreak: Number(row.current_streak ?? 0),
     bestStreak: Number(row.best_streak ?? 0),
     weekCount: Number(row.week_count ?? 0),
     weekGoal: Number(row.week_goal ?? 3),
     lastWorkoutDate: typeof row.last_workout_date === "string" ? row.last_workout_date : null,
     recentDates: Array.isArray(row.recent_dates) ? row.recent_dates.map(String) : [],
+    ...(typeof row.avatar === "string" && row.avatar ? { avatar: row.avatar } : {}),
   };
 }
 
@@ -30,6 +31,7 @@ export async function publishFriendStats(client: SupabaseClient, stats: FriendSt
     week_goal: stats.weekGoal,
     last_workout_date: stats.lastWorkoutDate,
     recent_dates: stats.recentDates.slice(-62),
+    avatar: stats.avatar ?? "",
     updated_at: new Date().toISOString(),
   }, { onConflict: "user_id" });
   if (error) throw error;

@@ -11,11 +11,12 @@ export interface GoalOption {
 export const GOAL_OPTIONS: GoalOption[] = [
   { id: "general", title: "Stay active", note: "3 full-body days · gentle and simple", days: [2, 4, 6] },
   { id: "tone", title: "Get fit & toned", note: "4 days · upper / lower · strength, tone and cardio", days: [1, 2, 4, 5] },
+  { id: "fatloss", title: "Lose weight", note: "4 days · strength + cardio · burn fat, keep muscle", days: [1, 2, 4, 5] },
   { id: "muscle", title: "Build muscle", note: "6 days · push / pull / legs · lean muscle and definition", days: [1, 2, 3, 4, 5, 6] },
 ];
 
 export function goalOf(profile: Pick<Profile, "goal">): TrainingGoal {
-  return profile.goal === "muscle" || profile.goal === "tone" ? profile.goal : "general";
+  return profile.goal === "muscle" || profile.goal === "tone" || profile.goal === "fatloss" ? profile.goal : "general";
 }
 
 export function goalTitle(goal: TrainingGoal): string {
@@ -45,12 +46,17 @@ const TONE_STAGES: Array<[fromWeek: number, label: string]> = [
   [25, "Intermediate strength"], [37, "Advanced transition"], [49, "Consolidate your progress"],
 ];
 
+const FATLOSS_STAGES: Array<[fromWeek: number, label: string]> = [
+  [1, "Build the habit"], [5, "Burn: add reps and minutes"], [13, "Strength + conditioning"], [25, "Push the pace"],
+  [37, "Keep it off: steady routine"], [49, "Consolidate your progress"],
+];
+
 /** The stage name shown with a plan, for example "Week 6 · Build: add reps before weight". */
 export function stageLabel(goal: TrainingGoal, week: number): string | undefined {
   if (goal === "general") return undefined;
   if (week === 52) return "Recovery and yearly review";
   if (isRecoveryWeek(goal, week)) return goal === "muscle" ? "Conditioning week" : "Recovery week: lighter sets";
-  const stages = goal === "muscle" ? MUSCLE_STAGES : TONE_STAGES;
+  const stages = goal === "muscle" ? MUSCLE_STAGES : goal === "fatloss" ? FATLOSS_STAGES : TONE_STAGES;
   return [...stages].reverse().find(([from]) => week >= from)?.[1];
 }
 
@@ -58,7 +64,7 @@ export function stageLabel(goal: TrainingGoal, week: number): string | undefined
 export function setCap(goal: TrainingGoal, week: number, earlyFoundation: boolean, returning: boolean): number {
   if (returning) return 2;
   if (goal === "muscle") return 3;
-  if (goal === "tone") return week <= 4 ? 2 : 3;
+  if (goal === "tone" || goal === "fatloss") return week <= 4 ? 2 : 3;
   return earlyFoundation ? 2 : 3;
 }
 

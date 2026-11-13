@@ -1,13 +1,14 @@
 "use client";
 
-import { MissedDaysList } from "@/components/app/missed-days-card";
-
 import { useEffect, useMemo, useState } from "react";
+import { MissedDaysList } from "@/components/app/missed-days-card";
+import { GOAL_OPTIONS, goalOf } from "@/lib/program";
+import { MAX_TRAINING_DAYS, MIN_TRAINING_DAYS, trainingDaysValid, WEEKDAY_LABELS } from "@/lib/dates";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { generateWorkout } from "@/lib/planner";
-import { EQUIPMENT_OPTIONS, getTemplateExercises, TEMPLATE_VERSION } from "@/lib/templates";
-import { loadCloudSessions, saveCloudDeadliftRule, saveCloudTrainerRuleSettings } from "@/lib/supabase-repository";
-import { canManageTrainerClientRules, DEFAULT_TRAINER_RULE_SETTINGS, isTrainerEditableTemplateExercise, normalizeTrainerRuleSettings, trainerRuleChangesNeedConfirmation, validateTrainerRuleSettings } from "@/lib/trainer-rules";
+import { EQUIPMENT_OPTIONS, TEMPLATE_VERSION } from "@/lib/templates";
+import { loadCloudSessions, saveCloudClientPlan, saveCloudDeadliftRule, saveCloudTrainerRuleSettings } from "@/lib/supabase-repository";
+import { canManageTrainerClientRules, DEFAULT_TRAINER_RULE_SETTINGS, normalizeTrainerRuleSettings, trainerEditableExercisesFor, trainerRuleChangesNeedConfirmation, validateTrainerRuleSettings } from "@/lib/trainer-rules";
 import { todayInTimeZone } from "@/lib/demo-data";
 import type { TrainerClient, TrainerRuleSettings, WorkoutPlan, WorkoutSession } from "@/lib/types";
 
@@ -19,9 +20,6 @@ interface TrainerControlsProps {
   refresh: () => Promise<void>;
 }
 
-const TEMPLATE_EXERCISES = ["Foundation A", "Foundation B", "Foundation C"]
-  .flatMap((focus) => getTemplateExercises(focus as "Foundation A" | "Foundation B" | "Foundation C"))
-  .filter((exercise, index, all) => isTrainerEditableTemplateExercise(exercise.id) && all.findIndex((item) => item.id === exercise.id) === index);
 const EMPTY_SESSIONS: WorkoutSession[] = [];
 
 function nextPreviewDate(client: TrainerClient): string {
@@ -69,9 +67,36 @@ export function TrainerControls({ client, trainerId, trainerRole, clients, refre
   const [busyDeadliftId, setBusyDeadliftId] = useState("");
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
-  const [exerciseId, setExerciseId] = useState(TEMPLATE_EXERCISES[0]?.id ?? "");
+  const [pickedExerciseId, setExerciseId] = useState("");
+  const [planDraft, setPlanDraft] = useState<{ clientId: string; goal: ReturnType<typeof goalOf>; days: number[]; minutes: number } | null>(null);
+  const [savingPlan, setSavingPlan] = useState(false);
 
   const selectedClient = clients.find((item) => item.id === selectedClientId) ?? clients[0];
+  // The exercises a trainer can adjust follow the client's goal program.
+  const TEMPLATE_EXERCISES = useMemo(() => trainerEditableExercisesFor(goalOf(selectedClient?.profile ?? {})), [selectedClient]);
+  const exerciseId = TEMPLATE_EXERCISES.some((item) => item.id === pickedExerciseId) ? pickedExerciseId : TEMPLATE_EXERCISES[0]?.id ?? "";
+  const plan = planDraft?.clientId === selectedClient?.id ? planDraft : selectedClient
+    ? { clientId: selectedClient.id, goal: goalOf(selectedClient.profile), days: selectedClient.profile.trainingDays, minutes: selectedClient.profile.preferredSessionMinutes }
+    : null;
+  const planDirty = Boolean(selectedClient && plan && (plan.goal !== goalOf(selectedClient.profile) || plan.minutes !== selectedClient.profile.preferredSessionMinutes
+    || [...plan.days].sort().join() !== [...selectedClient.profile.trainingDays].sort().join()));
+
+  async function saveClientPlan() {
+    if (!client || !selectedClient || !plan || !trainingDaysValid(plan.days)) return;
+    setSavingPlan(true);
+    setError("");
+    setMessage("");
+    try {
+      await saveCloudClientPlan(client, selectedClient.id, plan.goal, [...plan.days].sort((a, b) => a - b), plan.minutes);
+      await refresh();
+      setPlanDraft(null);
+      setMessage(`${selectedClient.displayName}’s plan was updated. Their next unstarted workout uses it.`);
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "The plan could not be saved.");
+    } finally {
+      setSavingPlan(false);
+    }
+  }
   const draft = draftState?.clientId === selectedClient?.id ? draftState.settings : selectedClient?.ruleSettings ?? DEFAULT_TRAINER_RULE_SETTINGS;
   const clientIdToLoad = selectedClient?.id;
   const historyForSelected = historyState?.clientId === clientIdToLoad ? historyState : null;
@@ -220,7 +245,20 @@ export function TrainerControls({ client, trainerId, trainerRole, clients, refre
         {selectedClient && <>
           <div className="rule-setting trainer-deadlift-row"><div><strong>Deadlift variations</strong><small>{selectedClient.deadliftEnabled ? "Explicitly approved for future generated plans" : "Restricted until a trainer explicitly approves"}</small></div><button type="button" className={`button ${selectedClient.deadliftEnabled ? "button-subtle" : "button-primary"}`} disabled={!canEdit || busyDeadliftId === selectedClient.id} onClick={() => void changeDeadliftRule(selectedClient, !selectedClient.deadliftEnabled)}>{busyDeadliftId === selectedClient.id ? "Saving…" : selectedClient.deadliftEnabled ? "Lock restriction" : "Review and approve"}</button></div>
           <div className="trainer-rule-editor">
-            <h4>Exercise template</h4>
+            <h4>Client plan</h4>
+            {plan && <>
+              <label className="field-label">Goal<select value={plan.goal} disabled={!canEdit} onChange={(event) => setPlanDraft({ ...plan, goal: event.target.value as typeof plan.goal })}>{GOAL_OPTIONS.map((option) => <option key={option.id} value={option.id}>{option.title} — {option.note}</option>)}</select></label>
+              <div className="field-label">Training days
+                <div className="onb-days">{WEEKDAY_LABELS.map((label, day) => <button key={label} type="button" disabled={!canEdit} className={plan.days.includes(day) ? "selected" : ""} aria-pressed={plan.days.includes(day)} onClick={() => setPlanDraft({ ...plan, days: plan.days.includes(day) ? plan.days.filter((value) => value !== day) : [...plan.days, day] })}>{label}</button>)}</div>
+                <small>{trainingDaysValid(plan.days) ? `${plan.days.length} days a week` : `Choose ${MIN_TRAINING_DAYS} to ${MAX_TRAINING_DAYS} days`}</small>
+              </div>
+              <label className="field-label">Session length<select value={plan.minutes} disabled={!canEdit} onChange={(event) => setPlanDraft({ ...plan, minutes: Number(event.target.value) })}>{[30, 40, 50].map((minutes) => <option key={minutes} value={minutes}>{minutes} minutes</option>)}</select></label>
+              <button type="button" className="button button-primary full-width" disabled={!canEdit || !planDirty || savingPlan || !trainingDaysValid(plan.days)} onClick={() => void saveClientPlan()}>{savingPlan ? "Saving…" : planDirty ? "Save client plan" : "Plan matches the saved version"}</button>
+            </>}
+          </div>
+
+          <div className="trainer-rule-editor">
+            <h4>Exercise sets and reps</h4>
             <label className="field-label">Exercise<select value={exerciseId} onChange={(event) => setExerciseId(event.target.value)}>{TEMPLATE_EXERCISES.map((exercise) => <option key={exercise.id} value={exercise.id}>{exercise.name}</option>)}</select></label>
             {templateValues && <div className="trainer-number-grid">
               <label>Sets<input type="number" min="1" max="3" value={templateValues.sets} disabled={!canEdit} onChange={(event) => setTemplateValue({ sets: Number(event.target.value) })} /></label>

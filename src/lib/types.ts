@@ -6,9 +6,10 @@ export type WorkoutFocus =
   | "Push A" | "Pull A" | "Legs A" | "Push B" | "Pull B" | "Legs B"
   | "Lower A" | "Upper A" | "Lower B" | "Upper B"
   | "Conditioning circuit" | "Core and cardio"
+  | "Burn A" | "Cardio and core" | "Burn B" | "Intervals and core"
   | "Return to training" | "Recovery";
 /** What the client wants from training; it picks the weekly split. */
-export type TrainingGoal = "general" | "muscle" | "tone";
+export type TrainingGoal = "general" | "muscle" | "tone" | "fatloss";
 export type TrainingPhase = "foundation_1" | "foundation_2" | "return";
 export type ExerciseDifficulty = "beginner" | "intermediate";
 export type ExerciseRestriction = "trainer_deadlift_approval";
@@ -34,6 +35,8 @@ export interface Profile {
   availableEquipment: EquipmentKey[];
   /** Missing on older saved profiles; treated as "general". */
   goal?: TrainingGoal;
+  /** Profile picture: "photo:<url>", "rozi:<mood>" or "color:<hex>". */
+  avatar?: string;
 }
 
 export interface TrainerRuleSettings {

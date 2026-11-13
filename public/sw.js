@@ -1,6 +1,6 @@
 // RozFit offline cache. It keeps the app's own pages and files so the app still opens with a weak
 // or missing connection. It never touches requests to other sites (such as the Supabase database).
-const CACHE = "rozfit-v4";
+const CACHE = "rozfit-v5";
 const PAGES = ["/", "/today", "/progress", "/friends", "/library", "/settings", "/sign-in"];
 
 self.addEventListener("install", (event) => {
@@ -61,8 +61,9 @@ self.addEventListener("fetch", (event) => {
     event.respondWith(networkFirst(request, "/"));
     return;
   }
-  // Build files have unique names, so a cached copy is always the right one.
-  if (url.pathname.startsWith("/_next/static/") || url.pathname.startsWith("/icons/")) {
+  // Build files have unique names; pictures and resized images change rarely. Serve them from the phone first.
+  if (url.pathname.startsWith("/_next/static/") || url.pathname.startsWith("/_next/image") || url.pathname.startsWith("/icons/")
+    || url.pathname.startsWith("/rozi/") || url.pathname.startsWith("/figures/")) {
     event.respondWith(cacheFirst(request));
     return;
   }

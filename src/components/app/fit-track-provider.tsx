@@ -356,7 +356,7 @@ export function FitTrackProvider({ children }: { children: React.ReactNode }) {
     flushDelayedCloudWrites();
     await sessionSaveQueue.current.catch(() => undefined);
     await browserClient.auth.signOut();
-    setNotice("You’re signed out. Demo data is ready on this device.");
+    setNotice("You’re signed out. RozFit now saves on this device only.");
   }, [browserClient, flushDelayedCloudWrites]);
 
   const retryPendingSessions = useCallback(() => {

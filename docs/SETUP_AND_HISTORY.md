@@ -110,6 +110,7 @@ runs in **demo mode** (everything saved on that browser only).
 | 20261113093618 | `phase_11_friends_and_challenges.sql` | Friends, invites, shared stats, challenges, nudges |
 | 20261113105612 | `phase_12_push_notifications.sql` | Push subscriptions, hourly schedule |
 | 20261113105746 | `phase_12_move_pg_net.sql` | Move `pg_net` out of the public schema |
+| run by hand 2026-11-13 | `20261113160000_avatars_fatloss_trainer_plan.sql` | "Lose weight" goal, profile pictures + `avatars` storage bucket, `trainer_update_client_plan`, trainer edits for all program exercises. Run in the SQL Editor (the Supabase connector was down), so it is not listed under Database → Migrations; checked through the public API. |
 
 Each was applied with the owner's approval and checked afterwards (security advisor, and for Phases 11–12
 a rolled-back test with pretend users).
@@ -231,6 +232,7 @@ is checked, so the new account starts with the plan. The sign-in page uses the s
 | Stay active | 3 full-body days (Foundation A/B/C) | original plan |
 | Get fit & toned | 4 days Lower A / Upper A / Lower B / Upper B | trainer's female plan + hamstring/core additions |
 | Build muscle | 6 days Push A / Pull A / Legs A / Push B / Pull B / Legs B | trainer's male plan + 2 core finishers |
+| Lose weight | 4 days Burn A (full-body strength) / Cardio + core / Burn B / Intervals + core | added 2026-11-13; includes a food tip (modest deficit, protein, 7–10k steps) |
 
 - 52-week year counted from the training start date; stage label shown on Train ("Week 6 of 52 · Build…").
 - Every 4th week lighter: Build muscle → conditioning week (20-minute circuit: 5 pull-ups, 10 push-ups, 15 squats, alternating with abs + easy cardio); Get fit & toned → about a third fewer sets.
@@ -267,6 +269,20 @@ automatically.
 
 ---
 
+### Trainer accounts
+- A trainer account is an ordinary account with the trusted role set by an admin in Supabase (SQL editor):
+  ```sql
+  update auth.users set raw_app_meta_data = raw_app_meta_data || '{"role":"trainer"}' where email = 'TRAINER-EMAIL';
+  ```
+  The trainer then signs out and in again. Settings shows **Trainer controls** and **Create invite code**.
+- The client enters the code in Settings → "Link a trainer". The trainer then sees the client and can change: goal, training days, session length, sets/reps/rest for any program exercise, progression and recovery limits, equipment, and deadlift approval (each saved change is audited). Trainers can read but never edit the client's logs.
+
+### Profile picture
+Settings → tap your picture: upload a photo (resized to 256 px on the phone, stored in the public `avatars` bucket under the owner's folder), pick a Rozi, or use your initial on a colour. Friends see it on their cards.
+
+### First-time tour
+Shown once after sign-up (7 cards with Rozi, highlighting each menu button). Settings → "Show the app tour again".
+
 ## 8. Build history
 
 | Phase / step | What changed |
@@ -287,6 +303,7 @@ automatically.
 | Sign-up | Email code sign-in as the last Get started step; code-based sign-in everywhere |
 | Fix (2026-11-13) | Step 7 jumped to Home when "Email me a code" was pressed (the email form's submit also triggered "finish setup"). Fixed so the code screen shows; tested with the send stubbed. |
 | Email setup | Gmail SMTP connected (sender name RozFit). Templates still to paste (section 6). |
+| Polish round (2026-11-13) | iPhone app feel (no zoom / sideways wobble), "Lose weight" goal, trainer can edit a client's goal/days/length and sets/reps for every program exercise, first-time tour (replay in Settings), profile picture (photo / Rozi / initials), "demo" wording removed, sync status moved to Settings, compact data buttons, body-weight form fixed, faster images (lazy loading, 30-day caching, `next.config.ts`). Migration `20261113160000_avatars_fatloss_trainer_plan.sql` applied (SQL Editor). Trainer role set on the owner's account. |
 
 Tests: `npm test` (112 at the last update), `npm run lint`, `npx tsc --noEmit`, `npm run build`.
 

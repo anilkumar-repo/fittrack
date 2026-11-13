@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { Download, Trash2 } from "lucide-react";
 import { buildDataExport, isCompleteInviteCode, normalizeInviteCode } from "@/lib/account-data";
 import { dateLabel } from "@/lib/dates";
 import { hasSupabaseConfig } from "@/lib/supabase-browser";
@@ -158,7 +159,7 @@ export function DataCard() {
   return (
     <article className="panel">
       <div className="side-card-title"><span className="side-card-icon peach-icon">▦</span><div><h3>Your data</h3><p>{savedCount} saved {savedCount === 1 ? "workout" : "workouts"} · {state.bodyWeightEntries.length} body-weight {state.bodyWeightEntries.length === 1 ? "entry" : "entries"}</p></div></div>
-      <div className="account-card-actions"><button className="button button-subtle" onClick={download}>Download my data</button>{!confirming && <button className="button button-danger" onClick={() => setConfirming(true)}>Delete workout history…</button>}</div>
+      <div className="data-actions"><button className="button button-subtle small" onClick={download}><Download aria-hidden="true" /> Download</button>{!confirming && <button className="button button-danger small" onClick={() => setConfirming(true)}><Trash2 aria-hidden="true" /> Delete history</button>}</div>
       {confirming && <form onSubmit={deleteData} className="sign-in-form">
         <p className="card-note">This permanently deletes every saved workout, check-in, review, and body-weight entry{isDemo ? " on this device" : " in your account"}. It cannot be undone. Your profile and settings stay. Download your data first if you want a copy.</p>
         <label className="field-label">Type DELETE to confirm<input type="text" autoComplete="off" value={confirmText} onChange={(event) => setConfirmText(event.target.value)} /></label>

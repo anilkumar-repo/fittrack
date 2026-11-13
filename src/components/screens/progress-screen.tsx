@@ -166,7 +166,7 @@ export function ProgressScreen() {
           </article>
           <article className="panel progress-panel bodyweight-panel">
             <div className="section-heading"><div><h3>Body weight <span className="optional-tag">OPTIONAL</span></h3><p>Private dated measurements. Leaving this blank does not affect your plan.</p></div></div>
-            {state.mode === "supabase" && !state.bodyWeightAvailable ? <div className="empty-inline">Body-weight tracking is unavailable until the Phase 5 database migration is applied. Existing workout tracking continues to work.</div> : <>
+            {state.mode === "supabase" && !state.bodyWeightAvailable ? <div className="empty-inline">Body-weight tracking isn’t available right now. Your workouts still save normally.</div> : <>
               <form className="bodyweight-form" onSubmit={saveBodyWeight}>
                 <label className="field-label">Date<input type="date" max={currentDate} value={bodyWeightDate || currentDate} onChange={(event) => setBodyWeightDate(event.target.value)} /></label>
                 <label className="field-label">Weight ({weightUnit})<input type="number" min={weightUnit === "lb" ? 44 : 20} max={weightUnit === "lb" ? 1102 : 500} step={weightUnit === "lb" ? 0.1 : 0.01} inputMode="decimal" value={bodyWeightInput} onChange={(event) => setBodyWeightInput(event.target.value)} placeholder="Optional" /></label>

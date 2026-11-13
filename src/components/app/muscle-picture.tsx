@@ -19,7 +19,7 @@ export function MusclePicture({ figure, region, highlight, className = "", prior
   const picture = musclePicture(figure, region);
   if (!picture) return <BodyFigure figure={figure} highlight={highlight ?? (region ? [region] : [])} view="both" className={className} />;
   return (
-    <Image src={picture.src} width={picture.width} height={picture.height} priority={priority} loading={priority ? undefined : "eager"}
+    <Image src={picture.src} width={picture.width} height={picture.height} priority={priority}
       alt={region ? `${REGION_LABELS[region]} highlighted on the body` : "Body, front and back"}
       className={`muscle-picture ${className}`} sizes="(max-width: 700px) 60vw, 320px" />
   );

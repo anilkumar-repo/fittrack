@@ -3,6 +3,8 @@
 import { AccountCard, DataCard, TrainerInviteCard, TrainerLinkCard } from "@/components/app/account-cards";
 import { useFitTrack } from "@/components/app/fit-track-provider";
 import { NotificationsCard } from "@/components/app/notifications-card";
+import { AvatarPicker } from "@/components/app/avatar";
+import { replayTour } from "@/components/app/tour-guide";
 import { TrainerControls } from "@/components/trainer-controls";
 import { CalendarDays, Palette, ShieldCheck, Sparkles, Sun } from "lucide-react";
 import { GOAL_OPTIONS, goalOf } from "@/lib/program";
@@ -12,7 +14,7 @@ import { EQUIPMENT_OPTIONS, RULE_VERSION, TEMPLATE_VERSION } from "@/lib/templat
 import type { Profile } from "@/lib/types";
 
 export function SettingsScreen() {
-  const { state, recordedSessions, updateState, isDemo, browserClient, updateProfile, refreshTrainerClients, setNotice, weightUnit, setWeightUnit, theme, setTheme, figure, setFigure } = useFitTrack();
+  const { state, recordedSessions, updateState, isDemo, browserClient, updateProfile, refreshTrainerClients, setNotice, weightUnit, setWeightUnit, theme, setTheme, figure, setFigure, saveError, savingSession } = useFitTrack();
   function setEquipmentAvailability(availability: Profile["equipmentAvailability"]) {
     void updateProfile(availability === "unknown"
       ? { equipmentAvailability: "unknown", availableEquipment: [] }
@@ -29,11 +31,11 @@ export function SettingsScreen() {
   async function toggleDeadlift(enabled: boolean) {
     if (state.mode !== "demo") return;
     if (!window.confirm(enabled
-      ? "Enable the demo-only hinge variation? This does not change trainer approval in Supabase."
-      : "Lock the hinge variation in this demo?")) return;
+      ? "Allow the hinge (deadlift) variation on this device? A trainer must still approve it for a signed-in account."
+      : "Lock the hinge variation on this device?")) return;
     const nextProfile = { ...state.profile, deadliftEnabled: enabled };
     updateState({ ...state, profile: nextProfile });
-    setNotice(enabled ? "Demo-only hinge setting changed. A signed-in trainer must approve this for a client." : "Deadlift variations are locked in this demo.");
+    setNotice(enabled ? "Hinge variation allowed on this device. A trainer must approve it for a signed-in account." : "Deadlift variations are locked on this device.");
   }
 
   const profile = state.profile;
@@ -42,8 +44,9 @@ export function SettingsScreen() {
   return (
     <section className="settings">
       <article className="panel profile-card">
-        <span className="profile-avatar" aria-hidden="true">{profile.displayName.slice(0, 1).toUpperCase() || "?"}</span>
-        <div className="profile-id"><h2>{profile.displayName}</h2><p>{isDemo ? "Saved on this device" : state.userEmail ?? "Signed in"}{profile.trainerRole && !isDemo ? " · Trainer" : ""}</p></div>
+        <AvatarPicker />
+        <div className="profile-id"><h2>{profile.displayName}</h2><p>{isDemo ? "Saved on this device only" : state.userEmail ?? "Signed in"}{profile.trainerRole && !isDemo ? " · Trainer" : ""}</p>
+          <span className={`sync-pill ${isDemo ? "local" : saveError ? "error" : "ok"}`}><span className="save-dot" />{isDemo ? "Not synced — sign in to keep your data safe" : saveError ? "Sync needs attention" : savingSession ? "Saving…" : "Synced to your account"}</span></div>
         <dl className="profile-stats">
           <div><dd>{workouts}</dd><dt>workouts</dt></div>
           <div><dd>{profile.trainingDays.length}</dd><dt>days a week</dt></div>
@@ -102,7 +105,7 @@ export function SettingsScreen() {
                 <div className="settings-row">
                   <div><strong>Deadlift movements</strong><small>{profile.deadliftEnabled ? "Approved by your trainer." : "Locked until your trainer approves them. Time in training never unlocks them."}</small></div>
                   {isDemo
-                    ? <button type="button" className={`toggle ${profile.deadliftEnabled ? "on" : ""}`} role="switch" aria-checked={profile.deadliftEnabled} onClick={() => void toggleDeadlift(!profile.deadliftEnabled)} aria-label="Allow deadlift movements in this demo"><span /></button>
+                    ? <button type="button" className={`toggle ${profile.deadliftEnabled ? "on" : ""}`} role="switch" aria-checked={profile.deadliftEnabled} onClick={() => void toggleDeadlift(!profile.deadliftEnabled)} aria-label="Allow deadlift movements on this device"><span /></button>
                     : <span className={`settings-status ${profile.deadliftEnabled ? "ok" : ""}`}>{profile.deadliftEnabled ? "Approved" : "Locked"}</span>}
                 </div>
                 <div className="settings-row"><div><strong>Pain always means recovery</strong><small>If you tick pain in a check-in, that day switches to gentle recovery. This cannot be turned off.</small></div><span className="settings-status ok">On</span></div>
@@ -111,6 +114,7 @@ export function SettingsScreen() {
           <TrainerLinkCard />
           <AccountCard />
           <DataCard />
+          <button type="button" className="button button-subtle replay-tour" onClick={replayTour}>Show the app tour again</button>
           <details className="why-plan">
             <summary>About this plan</summary>
             <p>Workouts are built by fixed, written rules from your schedule, equipment, check-ins and logged results. No AI service is involved.</p>

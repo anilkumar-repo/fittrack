@@ -81,7 +81,7 @@ export function exerciseEquipmentIsAvailable(exercise: ExerciseDefinition, profi
 export function workoutPlanMatchesProfile(plan: WorkoutPlan, profile: Profile): boolean {
   // A plan made for a different goal (plans without a goal belong to "general") is planned again.
   const planGoal = plan.goal ?? "general";
-  const profileGoal = profile.goal === "muscle" || profile.goal === "tone" ? profile.goal : "general";
+  const profileGoal = profile.goal === "muscle" || profile.goal === "tone" || profile.goal === "fatloss" ? profile.goal : "general";
   if (planGoal !== profileGoal) return false;
   return plan.exercises.every((exercise) => isExerciseAllowedForProfile(exercise, profile) && exerciseEquipmentIsAvailable(exercise, profile));
 }

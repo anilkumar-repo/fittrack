@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { Bell, Check, Copy, Flame, Share2, Trophy, UserPlus, X } from "lucide-react";
 import { Rozi } from "@/components/app/rozi";
+import { Avatar } from "@/components/app/avatar";
 import { useFitTrack } from "@/components/app/fit-track-provider";
 import {
   challengeIsActive, challengeLeaderboard, challengeWindow, computeFriendStats, daysLeft, isInviteCode, lastWorkoutLabel, NUDGE_MESSAGES,
@@ -130,7 +131,7 @@ export function FriendsScreen() {
             const nudged = data?.nudgedToday.has(friend.userId) ?? false;
             return (
               <li key={friend.userId} className="friend-card">
-                <span className="friend-avatar" aria-hidden="true">{friend.displayName.slice(0, 1).toUpperCase()}</span>
+                <Avatar value={friend.avatar} name={friend.displayName} size={42} className="friend-avatar" />
                 <div className="friend-main">
                   <strong>{friend.displayName}</strong>
                   <small>{goalTitle(friend.goal)} · {lastWorkoutLabel(friend.lastWorkoutDate, currentDate)}</small>

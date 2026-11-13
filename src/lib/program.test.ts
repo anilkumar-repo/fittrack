@@ -89,3 +89,14 @@ test("the general goal keeps the original full-body rotation", () => {
   assert.equal(plan.focus, "Foundation A");
   assert.equal(plan.goal, undefined);
 });
+
+test("Lose weight mixes full-body strength, steady cardio and intervals", () => {
+  const fatloss: Profile = { ...gym, goal: "fatloss", trainingDays: [1, 2, 4, 5], sessionsPerWeek: 4 };
+  const plans = run(fatloss, ["2026-11-02", "2026-11-03", "2026-11-05", "2026-11-06"]);
+  assert.deepEqual(plans.map((plan) => plan.focus), ["Burn A", "Cardio and core", "Burn B", "Intervals and core"]);
+  assert.ok(plans[0].exercises.some((exercise) => exercise.id === "hip_thrust" && exercise.substitutedFor === "dumbbell_rdl"));
+  assert.ok(plans[1].exercises.some((exercise) => exercise.id === "easy_cardio"));
+  assert.ok(plans[3].exercises.some((exercise) => exercise.id === "interval_cardio"));
+  assert.match(plans[0].description, /calorie deficit/);
+  assert.ok(plans[0].exercises.every((exercise) => exercise.sets <= 2));
+});

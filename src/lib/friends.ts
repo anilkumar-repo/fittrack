@@ -15,6 +15,8 @@ export interface FriendStats {
   lastWorkoutDate: string | null;
   /** Completed workout dates from the last 62 days. */
   recentDates: string[];
+  /** Profile picture value, if any (see Avatar). */
+  avatar?: string;
 }
 
 export interface Challenge {
@@ -73,6 +75,7 @@ export function computeFriendStats(profile: Profile, sessions: WorkoutSession[],
     weekGoal: Math.min(7, Math.max(1, profile.sessionsPerWeek)),
     lastWorkoutDate: done.at(-1) ?? null,
     recentDates: done.filter((date) => date >= cutoff),
+    ...(profile.avatar && !profile.avatar.startsWith("photo:data:") ? { avatar: profile.avatar } : {}),
   };
 }
 
