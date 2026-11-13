@@ -1,4 +1,6 @@
-# FitTrack Workout Planner
+# RozFit
+
+A workout planner for steady beginner training (formerly FitTrack). The repository, package name and browser storage keys keep the old `fittrack` name so existing saved data keeps working.
 
 A mobile-first workout planner for a beginner training plan. Workout generation uses deterministic, versioned rules in this repository; it does not call a paid AI API.
 

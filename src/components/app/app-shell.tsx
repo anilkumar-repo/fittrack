@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { BrandMark } from "./brand-mark";
 import { BookOpen, ChartColumn, Dumbbell, House, Settings, type LucideIcon } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { dateLabel, weekdayOf } from "@/lib/dates";
@@ -26,11 +27,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const { state, ready, isDemo, accountLoading, authChecked, currentDate, notice, setNotice, saveError, savingSession, retryPendingSessions } = useFitTrack();
 
-  if (!ready || !authChecked || (accountLoading && isDemo)) return <main className="app-loading"><div className="brand-mark">F</div><span>Getting your training space ready…</span></main>;
+  if (!ready || !authChecked || (accountLoading && isDemo)) return <main className="app-loading"><BrandMark /><span>Getting your training space ready…</span></main>;
   if (!state.onboarded) return <Welcome />;
 
   const active = navItems.find((item) => item.href === pathname);
-  const pageTitle = active?.title ?? (pathname === "/sign-in" ? "Sign in" : "FitTrack");
+  const pageTitle = active?.title ?? (pathname === "/sign-in" ? "Sign in" : "RozFit");
   const dueToday = state.profile.trainingDays.includes(weekdayOf(currentDate)) || Boolean(sessionForDate(state, currentDate));
   const initial = state.profile.displayName.slice(0, 1).toUpperCase();
   const saveLabel = isDemo
@@ -41,7 +42,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     <div className="app-shell">
       <aside className="sidebar">
         <Link className="brand" href="/">
-          <span className="brand-mark">F</span><span><strong>fittrack</strong><small>steady looks good on you</small></span>
+          <BrandMark /><span><strong>RozFit</strong><small>Small steps, every day</small></span>
         </Link>
         <div className="side-caption">YOUR SPACE</div>
         <nav aria-label="Main navigation" className="side-nav">
@@ -72,7 +73,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
         {children}
 
-        <footer className="app-footer"><span>FitTrack · Build a routine that fits your life</span><span>Rules {RULE_VERSION} <i>·</i> {isDemo ? "Demo mode" : "Supabase connected"}</span></footer>
+        <footer className="app-footer"><span>RozFit · Small steps, every day</span><span>Rules {RULE_VERSION} <i>·</i> {isDemo ? "Demo mode" : "Supabase connected"}</span></footer>
       </main>
 
       <nav className="mobile-nav" aria-label="Mobile navigation">{navItems.map((item) => <Link key={item.href} href={item.href} className={active?.href === item.href ? "active" : ""} aria-label={item.label} aria-current={active?.href === item.href ? "page" : undefined}><Icon><item.icon aria-hidden="true" strokeWidth={2} /></Icon><small>{item.shortLabel}</small></Link>)}</nav>

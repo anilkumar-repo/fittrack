@@ -186,7 +186,7 @@ export function normalizeWorkoutSession(raw: WorkoutSession | Record<string, unk
     sessionType: sourcePlan.sessionType === "recovery" ? "recovery" : "training",
     sourceExerciseIds: Array.isArray(sourcePlan.sourceExerciseIds) ? sourcePlan.sourceExerciseIds : exercises.map((exercise) => exercise.id),
     originalExercises: Array.isArray(sourcePlan.originalExercises) ? sourcePlan.originalExercises : exercises.map(({ id, name, sets, reps, equipment }) => ({ id, name, sets, reps, equipment })),
-    generationReasons: Array.isArray(sourcePlan.generationReasons) ? sourcePlan.generationReasons.filter((reason): reason is string => typeof reason === "string") : ["Saved plan from an earlier FitTrack rules version."],
+    generationReasons: Array.isArray(sourcePlan.generationReasons) ? sourcePlan.generationReasons.filter((reason): reason is string => typeof reason === "string") : ["Saved plan from an earlier RozFit rules version."],
   } as WorkoutSession["plan"];
   const oldLogs = Array.isArray(value.exerciseLogs) ? value.exerciseLogs as Array<Record<string, unknown>> : [];
   const exerciseLogs: ExerciseLog[] = plan.exercises.map((exercise) => {

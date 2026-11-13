@@ -1278,3 +1278,8 @@ button.activity-day { cursor: pointer; }
 .settings-field input[type="text"] { width: 100%; }
 .segmented button { min-width: 0; }
 .settings .onb-days button { min-height: 0; font-size: 12px; }
+
+/* ---------- RozFit mark ---------- */
+svg.brand-mark { display: block; width: 40px; height: 40px; padding: 0; border-radius: 12px; background: none; box-shadow: 0 6px 16px var(--shadow-tint); }
+.onb-brand svg.brand-mark, .app-loading svg.brand-mark { width: 34px; height: 34px; }
+:root[data-theme="light"] svg.brand-mark { box-shadow: 0 6px 16px rgba(43, 33, 94, .18); }

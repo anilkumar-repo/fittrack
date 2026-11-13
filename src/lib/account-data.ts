@@ -11,14 +11,14 @@ export function isCompleteInviteCode(code: string): boolean {
   return /^[A-Z2-9]{8}$/.test(code);
 }
 
-/** Everything FitTrack holds for this person, in a readable file they can keep. */
+/** Everything RozFit holds for this person, in a readable file they can keep. */
 export function buildDataExport(state: FitTrackState, exportedAt: string) {
   const { id: _id, trainerRole: _trainerRole, ...profile } = state.profile;
   void _id; void _trainerRole;
   return {
-    app: "FitTrack",
+    app: "RozFit",
     exportedAt,
-    storedIn: state.mode === "supabase" ? "FitTrack account" : "this device only",
+    storedIn: state.mode === "supabase" ? "RozFit account" : "this device only",
     profile,
     workouts: state.sessions.filter((session) => !session.sampleData).map((session) => ({
       date: session.date,

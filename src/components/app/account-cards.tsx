@@ -117,7 +117,7 @@ export function TrainerInviteCard({ onLinked }: { onLinked: () => Promise<void> 
   );
 }
 
-/** Download everything FitTrack holds, or delete the workout history. */
+/** Download everything RozFit holds, or delete the workout history. */
 export function DataCard() {
   const { state, getState, updateState, isDemo, browserClient, currentDate, setNotice } = useFitTrack();
   const [confirming, setConfirming] = useState(false);
@@ -131,7 +131,7 @@ export function DataCard() {
     const url = URL.createObjectURL(file);
     const link = document.createElement("a");
     link.href = url;
-    link.download = `fittrack-data-${currentDate}.json`;
+    link.download = `rozfit-data-${currentDate}.json`;
     link.click();
     URL.revokeObjectURL(url);
   }

@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useFitTrack } from "./fit-track-provider";
 
-/** Email sign-in: FitTrack sends a link, so there is no password to remember. */
+/** Email sign-in: RozFit sends a link, so there is no password to remember. */
 export function SignInForm() {
   const { browserClient } = useFitTrack();
   const [email, setEmail] = useState("");
@@ -23,7 +23,7 @@ export function SignInForm() {
     else setSentTo(email);
   }
 
-  if (!browserClient) return <div className="setup-note">Account sync is not set up for this copy of FitTrack. Your workouts are saved on this device.</div>;
+  if (!browserClient) return <div className="setup-note">Account sync is not set up for this copy of RozFit. Your workouts are saved on this device.</div>;
   if (sentTo) {
     return (
       <div className="sign-in-sent" role="status">

@@ -433,7 +433,7 @@ export function createInitialExerciseLogs(plan: WorkoutSession["plan"]): Exercis
 function isMissingFunction(error: { code?: string }): boolean {
   return error.code === "PGRST202" || error.code === "42883";
 }
-const NOT_DEPLOYED = "This feature is not switched on for this FitTrack database yet. Ask your trainer to apply the latest database update.";
+const NOT_DEPLOYED = "This feature is not switched on for this RozFit database yet. Ask your trainer to apply the latest database update.";
 
 export async function createTrainerInvite(client: SupabaseClient): Promise<{ code: string; expiresAt: string }> {
   const { data, error } = await client.rpc("create_trainer_invite");

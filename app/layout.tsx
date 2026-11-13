@@ -3,10 +3,10 @@ import { ServiceWorkerRegistration } from "@/components/app/service-worker-regis
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "FitTrack · Training, made steady",
+  title: "RozFit · Small steps, every day",
   description: "A simple, rule-based workout planner for steady beginner progress.",
-  applicationName: "FitTrack",
-  appleWebApp: { capable: true, title: "FitTrack", statusBarStyle: "default" },
+  applicationName: "RozFit",
+  appleWebApp: { capable: true, title: "RozFit", statusBarStyle: "default" },
   icons: { icon: "/icons/icon-192.png", apple: "/icons/apple-touch-icon.png" },
 };
 

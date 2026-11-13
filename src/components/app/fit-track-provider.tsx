@@ -168,12 +168,12 @@ export function FitTrackProvider({ children }: { children: React.ReactNode }) {
       // A newer edit for this date may already be waiting; its device draft must survive until it is saved.
       if (!delayedCloudWrites.current.has(session.date)) clearPendingSession(userId, session.date);
       setPendingSessions((items) => items.filter((item) => item.date !== session.date));
-      if (session.status === "completed") setNotice("Workout saved to your FitTrack account.");
+      if (session.status === "completed") setNotice("Workout saved to your RozFit account.");
       return true;
     }).catch((error: unknown) => {
       writePendingSession(userId, session);
       setPendingSessions(readPendingSessions(userId));
-      setSaveError(error instanceof Error ? error.message : "FitTrack could not sync this session. Retry when you’re back online.");
+      setSaveError(error instanceof Error ? error.message : "RozFit could not sync this session. Retry when you’re back online.");
       return false;
     }).finally(() => {
       pendingSessionWrites.current = Math.max(0, pendingSessionWrites.current - 1);

@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { AccountCard } from "@/components/app/account-cards";
 
-export const metadata: Metadata = { title: "Sign in · FitTrack" };
+export const metadata: Metadata = { title: "Sign in · RozFit" };
 
 export default function Page() {
   return (

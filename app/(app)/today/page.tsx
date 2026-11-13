@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { Suspense } from "react";
 import { TodayScreen } from "@/components/screens/today-screen";
 
-export const metadata: Metadata = { title: "Train · FitTrack" };
+export const metadata: Metadata = { title: "Train · RozFit" };
 
 export default function Page() {
   // The workout date comes from the address (?date=YYYY-MM-DD), which is only known in the browser.

@@ -1,10 +1,10 @@
 import type { MetadataRoute } from "next";
 
-/** Lets phones and computers install FitTrack to the home screen and open it like an app. */
+/** Lets phones and computers install RozFit to the home screen and open it like an app. */
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "FitTrack",
-    short_name: "FitTrack",
+    name: "RozFit",
+    short_name: "RozFit",
     description: "A simple, rule-based workout planner for steady beginner progress.",
     start_url: "/",
     scope: "/",

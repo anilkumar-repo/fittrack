@@ -55,7 +55,7 @@ export function validateTrainerRuleSettings(value: unknown): string[] {
         continue;
       }
       const exercise = typeof entry.exerciseId === "string" ? exercisesById.get(entry.exerciseId) : undefined;
-      if (!exercise || isDeadliftVariation(exercise) || !editableTemplateIds.has(entry.exerciseId as string) || /sec|each side/i.test(exercise.reps)) errors.push("Template changes must use an allowed repetition-based exercise from the FitTrack templates.");
+      if (!exercise || isDeadliftVariation(exercise) || !editableTemplateIds.has(entry.exerciseId as string) || /sec|each side/i.test(exercise.reps)) errors.push("Template changes must use an allowed repetition-based exercise from the RozFit templates.");
       if (typeof entry.exerciseId === "string" && seen.has(entry.exerciseId)) errors.push("An exercise can appear only once in template changes.");
       if (typeof entry.exerciseId === "string") seen.add(entry.exerciseId);
       if (!boundedNumber(entry.sets, 1, 3)) errors.push("Exercise sets must be between 1 and 3.");
@@ -92,7 +92,7 @@ export function validateTrainerRuleSettings(value: unknown): string[] {
   } else {
     const items = equipment.availableEquipment;
     if (items.length > equipmentKeys.length || items.some((item) => typeof item !== "string" || !equipmentKeys.includes(item as EquipmentKey)) || new Set(items).size !== items.length) {
-      errors.push("Equipment must use unique FitTrack equipment values only.");
+      errors.push("Equipment must use unique RozFit equipment values only.");
     }
     if ((equipment.mode === "inherit" || equipment.mode === "unknown") && items.length > 0) errors.push("Inherited or unknown equipment cannot include a confirmed equipment list.");
   }

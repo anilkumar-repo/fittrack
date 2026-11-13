@@ -1,6 +1,6 @@
-// FitTrack offline cache. It keeps the app's own pages and files so the app still opens with a weak
+// RozFit offline cache. It keeps the app's own pages and files so the app still opens with a weak
 // or missing connection. It never touches requests to other sites (such as the Supabase database).
-const CACHE = "fittrack-v1";
+const CACHE = "rozfit-v2";
 const PAGES = ["/", "/today", "/progress", "/library", "/settings", "/sign-in"];
 
 self.addEventListener("install", (event) => {

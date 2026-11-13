@@ -35,7 +35,7 @@ test("rejects rule values outside bounded progression, recovery, and equipment r
   const errors = validateTrainerRuleSettings(settings);
   assert.ok(errors.some((error) => error.includes("Progression")));
   assert.ok(errors.some((error) => error.includes("Recovery-session")));
-  assert.ok(errors.some((error) => error.includes("unique FitTrack")));
+  assert.ok(errors.some((error) => error.includes("unique RozFit")));
 });
 
 test("equipment overrides use only explicit trainer-confirmed choices", () => {

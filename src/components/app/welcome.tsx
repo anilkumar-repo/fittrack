@@ -8,6 +8,7 @@ import { hasSupabaseConfig } from "@/lib/supabase-browser";
 import { EQUIPMENT_OPTIONS } from "@/lib/templates";
 import type { EquipmentKey } from "@/lib/types";
 import { BodyFigure } from "./body-figure";
+import { BrandMark } from "./brand-mark";
 import { useFitTrack } from "./fit-track-provider";
 import { SignInForm } from "./sign-in-form";
 
@@ -54,7 +55,7 @@ export function Welcome() {
     return (
       <main className="onb">
         <section className="onb-frame onb-hero" aria-labelledby="onb-title">
-          <div className="onb-brand"><span className="brand-mark">F</span><strong>fittrack</strong></div>
+          <div className="onb-brand"><BrandMark /><strong>RozFit</strong></div>
           <div className="onb-hero-art"><BodyFigure figure={figure} highlight={["shoulders", "core", "thighs"]} /></div>
           <h1 id="onb-title">Small steps.<br />Every day.</h1>
           <p className="onb-lead">A simple strength plan that fits your week, shows you each movement, and adjusts to how you feel.</p>
