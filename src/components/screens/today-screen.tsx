@@ -1,5 +1,6 @@
 "use client";
 
+import { clearWorkoutNotification, notifyWorkoutStarted } from "@/lib/session-notify";
 import { levelTitle } from "@/lib/levels";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -30,16 +31,17 @@ const dedupeWorkoutSubmission = createInFlightDeduper<boolean>();
 /** The workout page for today, or for the date in `?date=YYYY-MM-DD`. */
 export function TodayScreen() {
   const { currentDate } = useFitTrack();
-  const requested = useSearchParams().get("date");
+  const params = useSearchParams();
+  const requested = params.get("date");
   const date = isIsoDate(requested) ? requested : currentDate;
-  // A new date starts a fresh check-in, logger, and review.
-  return <WorkoutDayView key={date} date={date} />;
+  // A new date starts a fresh check-in, logger, and review. "?step=review" (Finish on Home) opens the rating step.
+  return <WorkoutDayView key={date} date={date} startAtReview={params.get("step") === "review"} />;
 }
 
-function WorkoutDayView({ date }: { date: string }) {
+function WorkoutDayView({ date, startAtReview = false }: { date: string; startAtReview?: boolean }) {
   const router = useRouter();
   const { state, getState, currentDate, recordedSessions, trainerRuleSettings, planningProfile, upsertSession, savingSession, saveError, weightUnit, figure } = useFitTrack();
-  const [flowStep, setFlowStep] = useState<FlowStep>("preview");
+  const [flowStep, setFlowStep] = useState<FlowStep>(startAtReview ? "review" : "preview");
   const [checkIn, setCheckIn] = useState<CheckIn>(emptyCheckIn);
   const [checkInEdited, setCheckInEdited] = useState(false);
   const [review, setReview] = useState<WorkoutReview>(emptyReview);
@@ -108,6 +110,7 @@ function WorkoutDayView({ date }: { date: string }) {
     setFormError("");
     void upsertSession(session);
     setFlowStep("workout");
+    void notifyWorkoutStarted(startPlan.title, date);
   }
 
   function updateExercise(exerciseId: string, updater: (log: ExerciseLog) => ExerciseLog) {
@@ -153,7 +156,7 @@ function WorkoutDayView({ date }: { date: string }) {
     if (errors.length) { setFormError(errors.join(" ")); return false; }
     setFormError("");
     const saved = await upsertSession(completed);
-    if (saved) { setFlowStep("done"); setEditing(false); setRest(null); }
+    if (saved) { setFlowStep("done"); setEditing(false); setRest(null); void clearWorkoutNotification(sessionDate); }
     return saved;
   }
 

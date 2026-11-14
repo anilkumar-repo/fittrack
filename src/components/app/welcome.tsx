@@ -6,6 +6,8 @@ import { MAX_TRAINING_DAYS, MIN_TRAINING_DAYS, trainingDaysHint, trainingDaysVal
 import { FIGURE_OPTIONS, type FigureChoice } from "@/lib/figure";
 import { GOAL_OPTIONS, goalOf } from "@/lib/program";
 import { LEVEL_OPTIONS, levelOf } from "@/lib/levels";
+import { bodyPlan, validBodyStats } from "@/lib/body";
+import { BodyFields, bodyDraftValid, draftStats, draftWhy, EMPTY_BODY_DRAFT, WhyFields, whyDraftValid, type BodyDraft } from "./body-form";
 import { hasSupabaseConfig } from "@/lib/supabase-browser";
 import { EQUIPMENT_OPTIONS } from "@/lib/templates";
 import type { EquipmentKey, ExperienceLevel, Profile, TrainingGoal } from "@/lib/types";
@@ -15,8 +17,8 @@ import { BrandMark } from "./brand-mark";
 import { useFitTrack } from "./fit-track-provider";
 import { SignInForm } from "./sign-in-form";
 
-type Step = "hero" | "name" | "goal" | "level" | "figure" | "days" | "length" | "equipment" | "account";
-const BASE_QUESTIONS: Step[] = ["name", "goal", "level", "figure", "days", "length", "equipment"];
+type Step = "hero" | "name" | "body" | "why" | "goal" | "level" | "figure" | "days" | "length" | "equipment" | "account";
+const BASE_QUESTIONS: Step[] = ["name", "body", "why", "level", "goal", "figure", "days", "length", "equipment"];
 const LENGTHS = [
   { minutes: 30, title: "About 30 minutes", note: "Short and focused" },
   { minutes: 40, title: "About 40 minutes", note: "A steady, unhurried session" },
@@ -25,7 +27,7 @@ const LENGTHS = [
 
 /** First-run setup, one question per screen. Every answer can be changed later in Settings. */
 export function Welcome() {
-  const { state, isDemo, completeOnboarding, stageOnboarding, figure, setFigure } = useFitTrack();
+  const { state, isDemo, completeOnboarding, stageOnboarding, figure, setFigure, setWeightUnit } = useFitTrack();
   // With account sync available, the last step creates the account (or signs in) by email code.
   const QUESTIONS: Step[] = isDemo && hasSupabaseConfig() ? [...BASE_QUESTIONS, "account"] : BASE_QUESTIONS;
   const [step, setStep] = useState<Step>("hero");
@@ -34,19 +36,28 @@ export function Welcome() {
   const [days, setDays] = useState<number[]>(state.profile.trainingDays);
   const [goal, setGoal] = useState<TrainingGoal>(goalOf(state.profile));
   const [level, setLevel] = useState<ExperienceLevel>(levelOf(state.profile));
+  const [body, setBody] = useState<BodyDraft>(EMPTY_BODY_DRAFT);
+  const [goalTouched, setGoalTouched] = useState(false);
+  const bodyStats = draftStats(body);
+  const plan = validBodyStats(bodyStats) ? bodyPlan(bodyStats) : null;
   const [minutes, setMinutes] = useState(state.profile.preferredSessionMinutes);
   const [knowsEquipment, setKnowsEquipment] = useState(state.profile.equipmentAvailability === "verified");
   const [equipment, setEquipment] = useState<EquipmentKey[]>(state.profile.availableEquipment);
   const position = QUESTIONS.indexOf(step);
   const daysValid = trainingDaysValid(days);
   const daysHint = trainingDaysHint(days.length);
-  const canContinue = step === "name" ? Boolean(name.trim()) : step === "days" ? daysValid : true;
+  // Body stats and the "why" are required: the plan starts from them.
+  const canContinue = step === "name" ? Boolean(name.trim()) : step === "body" ? bodyDraftValid(body) : step === "why" ? whyDraftValid(body) : step === "days" ? daysValid : true;
 
   function answers(): Partial<Profile> {
     return {
       displayName: name.trim() || state.profile.displayName,
       goal,
       experience: level,
+      heightCm: bodyStats.heightCm,
+      birthYear: bodyStats.age ? new Date().getFullYear() - bodyStats.age : undefined,
+      sex: bodyStats.sex,
+      why: draftWhy(body),
       // The level starts with training (day one is set when setup finishes).
       levelSince: undefined,
       trainingDays: days,
@@ -58,12 +69,18 @@ export function Welcome() {
   }
 
   function finish() {
-    completeOnboarding(answers());
+    completeOnboarding(answers(), bodyStats.weightKg);
   }
 
   function next() {
     // The email step finishes by signing in, never by this button or a bubbled form submit.
     if (!canContinue || step === "account") return;
+    if (step === "body") {
+      // Imperial users see weights in pounds from now on.
+      if (body.unit === "us") setWeightUnit("lb");
+      // The BMI result picks the suggested goal (until the person picks one themselves).
+      if (plan && !goalTouched) { setGoal(plan.recommendedGoal); setDays(GOAL_OPTIONS.find((option) => option.id === plan.recommendedGoal)?.days ?? days); }
+    }
     if (position === QUESTIONS.length - 1) finish();
     else setStep(QUESTIONS[position + 1]);
   }
@@ -108,16 +125,29 @@ export function Welcome() {
           <input className="onb-input" type="text" autoComplete="given-name" autoFocus maxLength={80} value={name} onChange={(event) => setName(event.target.value)} placeholder="Your first name" aria-label="Your first name" />
         </>}
 
+        {step === "body" && <>
+          <h1 id="onb-title">Let’s start with you</h1>
+          <p className="onb-lead">Your height, weight and age shape your plan and show what a healthy weight looks like for you.</p>
+          <BodyFields draft={body} onChange={setBody} />
+        </>}
+
+        {step === "why" && <>
+          <h1 id="onb-title">Why are you starting?</h1>
+          <p className="onb-lead">Pick up to 3. On tough days, Rozi will remind you why you began.</p>
+          <WhyFields draft={body} onChange={setBody} />
+        </>}
+
         {step === "level" && <>
           <h1 id="onb-title">How much have you trained?</h1>
           <p className="onb-lead">Your first workouts start at this level. As you keep showing up, RozFit moves you up by itself.</p>
+          {plan && (plan.band === "obese" || plan.youth) && <p className="onb-hint">Rozi suggests <strong>Beginner</strong> to start — it’s kindest on your joints, and you’ll move up as you go.</p>}
           <div className="onb-options" role="radiogroup" aria-label="Fitness level">{LEVEL_OPTIONS.map((option) => <button key={option.id} type="button" role="radio" aria-checked={level === option.id} className={`onb-option ${level === option.id ? "selected" : ""}`} onClick={() => setLevel(option.id)}><span><strong>{option.title}</strong><small>{option.note}</small></span><span className="onb-check">{level === option.id && <Check aria-hidden="true" />}</span></button>)}</div>
         </>}
 
         {step === "goal" && <>
           <h1 id="onb-title">What’s your main goal?</h1>
           <p className="onb-lead">Your plan, weekly split and progress steps follow this. You can change it later in Settings.</p>
-          <div className="onb-options" role="radiogroup" aria-label="Goal">{GOAL_OPTIONS.map((option) => <button key={option.id} type="button" role="radio" aria-checked={goal === option.id} className={`onb-option ${goal === option.id ? "selected" : ""}`} onClick={() => { setGoal(option.id); setDays(option.days); }}><span><strong>{option.title}</strong><small>{option.note}</small></span><span className="onb-check">{goal === option.id && <Check aria-hidden="true" />}</span></button>)}</div>
+          <div className="onb-options" role="radiogroup" aria-label="Goal">{GOAL_OPTIONS.map((option) => <button key={option.id} type="button" role="radio" aria-checked={goal === option.id} className={`onb-option ${goal === option.id ? "selected" : ""}`} onClick={() => { setGoal(option.id); setDays(option.days); setGoalTouched(true); }}><span><strong>{option.title}{plan?.recommendedGoal === option.id && <em className="onb-recommended">Suggested for you</em>}</strong><small>{option.note}</small></span><span className="onb-check">{goal === option.id && <Check aria-hidden="true" />}</span></button>)}</div>
         </>}
 
         {step === "figure" && <>
@@ -158,7 +188,7 @@ export function Welcome() {
           <Rozi mood="signin" size={120} className="onb-account-rozi" />
           <h1 id="onb-title">Save your plan{name.trim() ? `, ${name.trim()}` : ""}</h1>
           <p className="onb-lead">Enter your email and we’ll send a 6-digit code. No password. Your plan, streak and progress stay safe on any phone, and you can add friends.</p>
-          <div className="onb-sign-in"><SignInForm beforeVerify={() => stageOnboarding(answers())} /></div>
+          <div className="onb-sign-in"><SignInForm beforeVerify={() => stageOnboarding(answers(), bodyStats.weightKg)} /></div>
         </>}
 
         {step !== "account" && <button className="button button-primary onb-cta" disabled={!canContinue}>{position === QUESTIONS.length - 1 ? "Start my plan" : "Continue"} <ArrowRight aria-hidden="true" /></button>}

@@ -61,6 +61,10 @@ function mapProfile(row: DbRow, id: string, trainerRole: boolean, deadliftEnable
     availableEquipment: Array.isArray(row.available_equipment) ? row.available_equipment.filter((item): item is EquipmentKey => typeof item === "string" && validEquipment.has(item as EquipmentKey)) : row.available_equipment === undefined ? defaults.availableEquipment : [],
     goal: row.goal === "muscle" || row.goal === "tone" || row.goal === "fatloss" ? row.goal : "general",
     ...(typeof row.avatar === "string" && row.avatar ? { avatar: row.avatar } : {}),
+    ...(row.height_cm !== null && row.height_cm !== undefined ? { heightCm: Number(row.height_cm) } : {}),
+    ...(row.birth_year !== null && row.birth_year !== undefined ? { birthYear: Number(row.birth_year) } : {}),
+    ...(row.sex === "female" || row.sex === "male" || row.sex === "other" ? { sex: row.sex } : {}),
+    ...(typeof row.why === "string" && row.why ? { why: row.why } : {}),
   };
 }
 
@@ -357,6 +361,10 @@ export async function saveCloudProfile(client: SupabaseClient, profile: Profile)
     display_name: profile.displayName,
     experience: profile.experience,
     level_since: profile.levelSince ?? null,
+    height_cm: profile.heightCm ?? null,
+    birth_year: profile.birthYear ?? null,
+    sex: profile.sex ?? null,
+    why: (profile.why ?? "").slice(0, 200),
     sessions_per_week: profile.sessionsPerWeek,
     training_days: profile.trainingDays,
     training_start_date: profile.trainingStartDate,
@@ -490,5 +498,58 @@ export async function removeMyTrainers(client: SupabaseClient): Promise<void> {
 
 export async function deleteMyWorkoutData(client: SupabaseClient): Promise<void> {
   const { error } = await client.rpc("delete_my_workout_data");
+  if (error) throw new Error(isMissingFunction(error) ? NOT_DEPLOYED : error.message);
+}
+
+// ---------- Water ----------
+
+export interface WaterLog { id: string; ml: number; at: string }
+
+export async function loadCloudWater(client: SupabaseClient, date: string): Promise<WaterLog[]> {
+  const { data, error } = await client.from("water_logs").select("id, ml, created_at").eq("logged_on", date).order("created_at");
+  if (error) throw new Error(isMissingTable(error) ? NOT_DEPLOYED : error.message);
+  return (data ?? []).map((row) => ({ id: String(row.id), ml: Number(row.ml), at: String(row.created_at) }));
+}
+
+export async function addCloudWater(client: SupabaseClient, date: string, ml: number): Promise<WaterLog> {
+  const { data, error } = await client.from("water_logs").insert({ logged_on: date, ml }).select("id, ml, created_at").single();
+  if (error) throw new Error(isMissingTable(error) ? NOT_DEPLOYED : error.message);
+  return { id: String(data.id), ml: Number(data.ml), at: String(data.created_at) };
+}
+
+export async function removeCloudWater(client: SupabaseClient, id: string): Promise<void> {
+  const { error } = await client.from("water_logs").delete().eq("id", id);
+  if (error) throw new Error(error.message);
+}
+
+function isMissingTable(error: { code?: string; message?: string }): boolean {
+  return error.code === "42P01" || error.code === "PGRST205" || /does not exist|schema cache/i.test(error.message ?? "");
+}
+
+// ---------- Clients add their own trainers ----------
+
+export async function createClientShareCode(client: SupabaseClient): Promise<{ code: string; expiresAt: string }> {
+  const { data, error } = await client.rpc("create_client_share_code");
+  if (error) throw new Error(isMissingFunction(error) ? NOT_DEPLOYED : error.message);
+  const row = (Array.isArray(data) ? data[0] : data) as { code?: unknown; expires_at?: unknown } | null;
+  if (!row || typeof row.code !== "string") throw new Error("The code could not be created. Please try again.");
+  return { code: row.code, expiresAt: String(row.expires_at ?? "") };
+}
+
+export async function trainerAddClientByCode(client: SupabaseClient, code: string): Promise<void> {
+  const { error } = await client.rpc("trainer_add_client_by_code", { p_code: code });
+  if (error) throw new Error(isMissingFunction(error) ? NOT_DEPLOYED : error.message);
+}
+
+export interface MyTrainer { id: string; name: string; since: string }
+
+export async function loadMyTrainers(client: SupabaseClient): Promise<MyTrainer[]> {
+  const { data, error } = await client.rpc("my_trainers");
+  if (error) throw new Error(isMissingFunction(error) ? NOT_DEPLOYED : error.message);
+  return ((data ?? []) as Array<{ trainer_id: string; display_name: string; linked_at: string }>).map((row) => ({ id: row.trainer_id, name: row.display_name, since: row.linked_at }));
+}
+
+export async function removeMyTrainer(client: SupabaseClient, trainerId: string): Promise<void> {
+  const { error } = await client.rpc("remove_my_trainer", { p_trainer: trainerId });
   if (error) throw new Error(isMissingFunction(error) ? NOT_DEPLOYED : error.message);
 }

@@ -38,6 +38,12 @@ export interface Profile {
   availableEquipment: EquipmentKey[];
   /** Missing on older saved profiles; treated as "general". */
   goal?: TrainingGoal;
+  /** Body stats from Get started (for BMI and targets). Weight lives in body-weight entries. */
+  heightCm?: number;
+  birthYear?: number;
+  sex?: "female" | "male" | "other";
+  /** Why the person started; quoted in comeback reminders. */
+  why?: string;
   /** Profile picture: "photo:<url>", "rozi:<mood>" or "color:<hex>". */
   avatar?: string;
 }

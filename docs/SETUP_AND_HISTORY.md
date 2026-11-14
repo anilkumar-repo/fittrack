@@ -319,6 +319,37 @@ Shown once after sign-up (7 cards with Rozi, highlighting each menu button). Set
 - Database: migration `20261113163106_fitness_levels.sql` allows the 4 levels, adds `profiles.level_since`, and adds an optional level to `trainer_update_client_plan`.
   Applied 2026-11-13 (verified: 4-level check, `level_since date`, one 5-argument trainer function, execute for signed-in users only, no invalid rows).
 
+### Body, BMI and "why" (2026-11-14) — `src/lib/body.ts`, `body-form.tsx`, `body-panel.tsx`, `profile-gate.tsx`
+- Get started order: name → **body** (height, weight, age, optional sex; cm/kg or ft/lb) → **why** → level → goal (BMI suggests one) → figure → days → length → equipment → account. Body and why are required.
+- BMI result: number, band, healthy range (BMI 18.5–24.9 for the height), and the target:
+  - above range → "lose about X kg of fat", at about 0.5% of body weight a week; suggested goal Lose weight;
+  - below range → "gain about X kg as muscle" (about 0.4 kg/month for women, 0.75 for men); suggested goal Build muscle;
+  - in range → keep weight, build muscle; suggested goal Get fit & toned;
+  - under 18 → no weight target. Minimum age 13.
+- People who finished setup before this see a one-time sheet (cannot be skipped) asking for body stats and why.
+- Starting weight goes into body-weight entries (also carried into the account at sign-in). Progress → "Body & BMI"; Settings → "Your body" to edit.
+
+### Monthly weigh-in, water, comeback reminders — `src/lib/wellness.ts`, `water-card.tsx`, `weigh-in-card.tsx`, `app/api/push/hourly/route.ts`
+- **Weigh-in:** 30 days after the last weight, Home asks for a weight and gives tips that follow the goal (loss pace, gain pace, steady). Phone reminder at the morning hour, at most weekly until done.
+- **Water:** daily target 35 ml × weight (1.8–4 L) + 500 ml on workout days. Home shows a filling bottle (+ Glass 250 ml, + Bottle 500 ml, undo). Rozi reacts to pace (on track / behind / thirsty / hero). Phone reminders only when behind pace (or right after a workout), at most every 3 hours, 10 am–9 pm local.
+- **Comeback:** after 5+ days without a workout, reminders at 9 am, 1 pm and 7 pm local, quoting the person's "why", until a workout starts. Home's Rozi message also quotes it.
+- Each can be turned off in Settings → Notifications.
+
+### Workout in progress (2026-11-14) — `src/lib/session-notify.ts`, `session-live-card.tsx`
+- Starting a workout shows a phone notification ("Workout in progress 💪", Rozi picture on Android). Permission is asked once at the first start. It is removed when the workout is saved.
+- Home shows a live card while a workout is open: sets done, minutes, **Continue**, **Finish** (opens the rating step), **End** (save what was done, or discard and return to "not started").
+
+### Trainers chosen by the client (2026-11-14)
+- The client creates an 8-character code (Settings → Your trainers → "Create a code for my trainer") and sends it. The trainer enters it under Trainer controls → "Add a client". Each code works once and lasts 7 days.
+- Clients can have several trainers and remove each one separately. Trainer-made codes still work.
+
+### Other (2026-11-14)
+- **Install page `/install`** (Settings → "Install on a phone / share QR code"): QR code of the app address, Share, "Install now" on Android Chrome, and iPhone/Android steps.
+- **Time zones:** a new account takes the phone's time zone; the app now also updates it quietly when the phone's zone changes (travel), and reminders follow the profile's zone. Friends abroad get their own local dates and reminder times.
+- **Small phones** (under 370 px) scale the app down slightly; other sizes already adapt.
+- **Fixes:** Library filters in two even columns with one arrow; no scrollbar line on the side; Finish bar sits above the menu and the rest timer covers it; extra sets are numbered (03, 04…) with an "extra" tag.
+- **Migration** `20261114075008_body_why_water_client_codes.sql`: profile body fields and why, `water_logs`, reminder switches, client share codes and functions. Applied 2026-11-14 and verified: columns present, row-level security on the new tables, functions for signed-in users only, and a rolled-back test of code → trainer add → reuse blocked → list → remove, with water private to its owner.
+
 ### Streak calendar and repairs — `src/lib/streak.ts`, `streak-screen.tsx` (`/streak`), `workout-celebration.tsx`
 - Each finished workout adds 1. Rest days never break the streak.
 - A missed training day breaks it. Any workout within **7 days** repairs it (bandage icon) and gives the old streak back plus 1.
@@ -353,12 +384,13 @@ Shown once after sign-up (7 cards with Rozi, highlighting each menu button). Set
 | Fixes (2026-11-13) | Trainer Settings crash fixed (null client check); trainer-controls spacing; notices close by themselves after 12 s. |
 | Streaks (2026-11-13) | Streak calendar page `/streak`, 5 repairs per streak (7-day window), pause for unwell/sore/travel, Rozi workout-done popup with the streak counting up and this week's checks. |
 | Fitness levels (2026-11-13) | Beginner / Intermediate / Advanced / Pro: picked in Get started, Settings or by the trainer; sets the starting program stage and volume; moves up by itself with steady pain-free training and down one after a 6-week break. Migration `20261113163106_fitness_levels.sql`. |
+| Big update (2026-11-14) | BMI-based Get started (body + why steps, suggested goal), monthly weigh-in with tips, smart water tracking and reminders, comeback reminders with the person's why, workout-in-progress notification and Home card, client-chosen trainers by code, install page with QR, time-zone auto-update, small-phone scaling, UI fixes. Migration `20261114075008_body_why_water_client_codes.sql`. |
 | New body pictures (2026-11-14) | 48 generated one-figure pictures (female, male, neutral; 16 each) replace every old body picture. Whole hands, same size and position across muscles. `scripts/build-figures.mjs` → `public/figures/v3/`. Old pictures and the cutting script removed. |
 | Image prompts (2026-11-13) | `docs/IMAGE_PROMPTS.md`: prompts for 48 single-figure body pictures (to replace the cut-out ones) and 130 stretch/mobility moves sorted from 16 reference boards, plus 16 RozFit routines. Waiting for the generated images. |
 | Body pictures fixed (2026-11-13) | One-figure pictures had fingers cut off and bits of the other figure's hand at the edge (82 of 84). All 84 were rebuilt with `scripts/split-figures.mjs` into `public/figures/v2/`. |
 | Liquid glass (2026-11-13) | Whole app restyled as liquid glass. Light, Dark and Auto themes replace Soft pastel and the purple glass. Home has a "Day N" glass hero with Rozi. The phone menu is a floating glass pill plus a round Settings button. |
 
-Tests: `npm test` (127 at the last update), `npm run lint`, `npx tsc --noEmit`, `npm run build`.
+Tests: `npm test` (134 at the last update), `npm run lint`, `npx tsc --noEmit`, `npm run build`.
 
 ---
 

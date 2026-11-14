@@ -4,13 +4,13 @@ import { noticeDuration } from "@/lib/notice";
 import { checkLevelChange, type LevelChange } from "@/lib/levels";
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import type { SupabaseClient, User } from "@supabase/supabase-js";
-import { createDemoState, readDemoState, todayInTimeZone, writeDemoState } from "@/lib/demo-data";
+import { createDemoState, localTimeZone, readDemoState, todayInTimeZone, writeDemoState } from "@/lib/demo-data";
 import { isDeadliftVariation } from "@/lib/exercise-library";
 import { clearPendingSession, readPendingSessions, writePendingSession } from "@/lib/pending-sessions";
 import { getSupabaseBrowserClient } from "@/lib/supabase-browser";
 import { computeFriendStats } from "@/lib/friends";
 import { publishFriendStats } from "@/lib/friends-repository";
-import { loadCloudState, saveCloudMissedDay, saveCloudProfile, saveCloudSession } from "@/lib/supabase-repository";
+import { loadCloudState, saveCloudBodyWeightEntry, saveCloudMissedDay, saveCloudProfile, saveCloudSession } from "@/lib/supabase-repository";
 import { DEFAULT_TRAINER_RULE_SETTINGS, profileWithTrainerEquipment } from "@/lib/trainer-rules";
 import { isFigureChoice, type FigureChoice } from "@/lib/figure";
 import type { WeightUnit } from "@/lib/logging";
@@ -61,11 +61,11 @@ interface FitTrackContextValue {
   upsertSession: (session: WorkoutSession, options?: { debounce?: boolean }) => Promise<boolean>;
   /** Saves skipped sessions with a reason for missed days. Resolves false if the account could not be updated. */
   recordMissedDays: (sessions: WorkoutSession[]) => Promise<boolean>;
-  updateProfile: (patch: Partial<Profile>) => void;
+  updateProfile: (patch: Partial<Profile>, options?: { quiet?: boolean }) => void;
   /** Saves the answers from the welcome steps and opens the app. */
-  completeOnboarding: (patch: Partial<Profile>) => void;
+  completeOnboarding: (patch: Partial<Profile>, startingWeightKg?: number) => void;
   /** Saves the welcome answers on this device without leaving the welcome steps, so signing in carries them into the new account. */
-  stageOnboarding: (patch: Partial<Profile>) => void;
+  stageOnboarding: (patch: Partial<Profile>, startingWeightKg?: number) => void;
   signOut: () => Promise<void>;
   refreshTrainerClients: () => Promise<void>;
   /** How weights are shown and typed on this device. They are always stored in kilograms. */
@@ -275,6 +275,17 @@ export function FitTrackProvider({ children }: { children: React.ReactNode }) {
       stateRef.current = merged;
       setState(merged);
       for (const session of [...drafts, ...imported]) void upsertSession(session);
+      // Weights saved on this device before signing in (for example the starting weight from Get started) move in too.
+      const newWeights = (local?.bodyWeightEntries ?? []).filter((entry) => !merged.bodyWeightEntries.some((item) => item.measuredOn === entry.measuredOn));
+      if (newWeights.length) {
+        const savedWeights = await Promise.all(newWeights.map((entry) => saveCloudBodyWeightEntry(browserClient, user.id, entry).catch(() => null)));
+        const added = savedWeights.filter((entry): entry is NonNullable<typeof entry> => entry !== null);
+        if (added.length && accountInView.current === user.id) {
+          const latest = { ...stateRef.current, bodyWeightEntries: [...stateRef.current.bodyWeightEntries, ...added].sort((a, b) => a.measuredOn.localeCompare(b.measuredOn)) };
+          stateRef.current = latest;
+          setState(latest);
+        }
+      }
       if (local && carried.length) writeDemoState({ ...local, sessions: local.sessions.filter((session) => !carried.includes(session)) });
       if (imported.length) setNotice(`${imported.length} ${imported.length === 1 ? "workout" : "workouts"} logged on this device ${imported.length === 1 ? "was" : "were"} added to your account.`);
     } catch (error) {
@@ -327,7 +338,7 @@ export function FitTrackProvider({ children }: { children: React.ReactNode }) {
     });
   }, [browserClient]);
 
-  const updateProfile = useCallback((patch: Partial<Profile>) => {
+  const updateProfile = useCallback((patch: Partial<Profile>, options: { quiet?: boolean } = {}) => {
     const current = stateRef.current;
     const profile = { ...current.profile, ...patch };
     const next = { ...current, profile };
@@ -337,7 +348,7 @@ export function FitTrackProvider({ children }: { children: React.ReactNode }) {
       profileSaveTimer.current = window.setTimeout(async () => {
         try {
           await saveCloudProfile(browserClient, profile);
-          setNotice("Profile settings saved.");
+          if (!options.quiet) setNotice("Profile settings saved.");
         } catch (error) {
           setNotice(error instanceof Error ? error.message : "Profile could not be saved.");
         }
@@ -345,25 +356,33 @@ export function FitTrackProvider({ children }: { children: React.ReactNode }) {
     }
   }, [browserClient, updateState]);
 
-  const completeOnboarding = useCallback((patch: Partial<Profile>) => {
+  const completeOnboarding = useCallback((patch: Partial<Profile>, startingWeightKg?: number) => {
     const current = stateRef.current;
     const hasHistory = current.sessions.some((session) => !session.sampleData && session.status !== "planned");
     // Day one of training is the day the plan is set up, unless workouts were already logged.
     const profile = { ...current.profile, ...patch, ...(hasHistory ? {} : { trainingStartDate: todayInTimeZone(current.profile.timeZone) }) };
-    updateState({ ...current, profile, onboarded: true });
+    const today = todayInTimeZone(profile.timeZone);
+    const entry = startingWeightKg ? { id: `weight-${profile.id}-${today}`, measuredOn: today, weightKg: startingWeightKg } : null;
+    const bodyWeightEntries = entry ? [...current.bodyWeightEntries.filter((item) => item.measuredOn !== today), entry] : current.bodyWeightEntries;
+    updateState({ ...current, profile, bodyWeightEntries, onboarded: true });
     if (current.mode === "supabase" && browserClient) {
       void saveCloudProfile(browserClient, profile).catch((error: unknown) => {
         setNotice(error instanceof Error ? error.message : "Your profile could not be saved yet.");
       });
+      if (entry) void saveCloudBodyWeightEntry(browserClient, profile.id, entry).catch(() => undefined);
     }
   }, [browserClient, updateState]);
 
-  const stageOnboarding = useCallback((patch: Partial<Profile>) => {
+  const stageOnboarding = useCallback((patch: Partial<Profile>, startingWeightKg?: number) => {
     const current = stateRef.current;
     if (current.mode !== "demo") return;
     const hasHistory = current.sessions.some((session) => !session.sampleData && session.status !== "planned");
     const profile = { ...current.profile, ...patch, ...(hasHistory ? {} : { trainingStartDate: todayInTimeZone(current.profile.timeZone) }) };
-    writeDemoState({ ...current, profile, onboarded: true });
+    const today = todayInTimeZone(profile.timeZone);
+    const bodyWeightEntries = startingWeightKg
+      ? [...current.bodyWeightEntries.filter((item) => item.measuredOn !== today), { id: `weight-local-${today}`, measuredOn: today, weightKg: startingWeightKg }]
+      : current.bodyWeightEntries;
+    writeDemoState({ ...current, profile, bodyWeightEntries, onboarded: true });
   }, []);
 
   const signOut = useCallback(async () => {
@@ -408,6 +427,15 @@ export function FitTrackProvider({ children }: { children: React.ReactNode }) {
     window.addEventListener("online", retryPendingSessions);
     return () => window.removeEventListener("online", retryPendingSessions);
   }, [retryPendingSessions]);
+
+  // Dates and reminder times follow the phone: if the person travels or moves, the time zone updates quietly.
+  useEffect(() => {
+    if (!ready || accountLoading || !state.onboarded) return;
+    const zone = localTimeZone();
+    if (!zone || zone === state.profile.timeZone) return;
+    const timer = window.setTimeout(() => updateProfile({ timeZone: zone }, { quiet: true }), 0);
+    return () => window.clearTimeout(timer);
+  }, [ready, accountLoading, state.onboarded, state.profile.timeZone, updateProfile]);
 
   // Levels move by themselves: up after steady, pain-free training; down one after a 6-week break.
   const [levelChange, setLevelChange] = useState<LevelChange | null>(null);

@@ -6,6 +6,7 @@ import { MissedDayPrompt } from "./missed-day-prompt";
 import { TourGuide } from "./tour-guide";
 import { LevelChangePopup } from "./level-change";
 import { GlassGlider } from "./glass-glider";
+import { ProfileGate } from "./profile-gate";
 import { Avatar } from "./avatar";
 import { unexplainedMissedDays } from "@/lib/missed-days";
 import { AlertCircle, BookOpen, ChartColumn, Check, CloudOff, Dumbbell, House, Settings, Users, X, type LucideIcon } from "lucide-react";
@@ -40,7 +41,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const missedDays = unexplainedMissedDays(state.profile, state.sessions, currentDate);
 
   const active = navItems.find((item) => item.href === pathname);
-  const pageTitle = active?.title ?? (pathname === "/sign-in" ? "Sign in" : pathname === "/streak" ? "Your streak" : "RozFit");
+  const pageTitle = active?.title ?? (pathname === "/sign-in" ? "Sign in" : pathname === "/streak" ? "Your streak" : pathname === "/install" ? "Install the app" : "RozFit");
   const dueToday = state.profile.trainingDays.includes(weekdayOf(currentDate)) || Boolean(sessionForDate(state, currentDate));
   const saveLabel = isDemo
     ? accountLoading ? "Loading your account…" : "Saved on this device"
@@ -52,6 +53,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <TourGuide blocked={missedDays.length > 0} />
       <LevelChangePopup />
       <GlassGlider />
+      {missedDays.length === 0 && <ProfileGate />}
       <aside className="sidebar">
         <Link className="brand" href="/">
           <BrandMark /><span><strong>RozFit</strong><small>Small steps, every day</small></span>

@@ -8,14 +8,20 @@ export interface PushPrefs {
   evening: boolean;
   eveningHour: number;
   nudges: boolean;
+  /** Smart water reminders (only when behind pace). */
+  hydration: boolean;
+  /** Three reminders a day after a 5-day break, until the next workout. */
+  comeback: boolean;
+  /** Monthly weigh-in reminder. */
+  weighIn: boolean;
 }
 
-export const DEFAULT_PUSH_PREFS: PushPrefs = { morning: true, morningHour: 7, evening: true, eveningHour: 19, nudges: true };
+export const DEFAULT_PUSH_PREFS: PushPrefs = { morning: true, morningHour: 7, evening: true, eveningHour: 19, nudges: true, hydration: true, comeback: true, weighIn: true };
 export const MORNING_HOURS = [5, 6, 7, 8, 9, 10, 11];
 export const EVENING_HOURS = [16, 17, 18, 19, 20, 21, 22];
 
 export interface PushMessage {
-  kind: "morning" | "evening" | "nudge";
+  kind: "morning" | "evening" | "nudge" | "water" | "comeback" | "weigh-in";
   title: string;
   body: string;
   /** Page to open when the notification is tapped. */

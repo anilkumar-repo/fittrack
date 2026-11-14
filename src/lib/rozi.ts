@@ -91,6 +91,8 @@ interface MomentInput {
   hour: number;
   name: string;
   wins?: WorkoutWins;
+  /** Why the person started (from Get started); quoted after a long break. */
+  why?: string;
 }
 
 function timeOfDay(hour: number): "morning" | "afternoon" | "evening" | "night" {
@@ -98,7 +100,8 @@ function timeOfDay(hour: number): "morning" | "afternoon" | "evening" | "night" 
 }
 
 /** Which Rozi to show on Home, and what Rozi says. Kind words always; grumpy only for a missed day. */
-export function roziMoment({ streak, todaySession, hour, name, wins }: MomentInput): RoziMoment {
+export function roziMoment({ streak, todaySession, hour, name, wins, why }: MomentInput): RoziMoment {
+  const reason = why?.trim() ? ` Remember why you started: “${why.trim()}”.` : "";
   const run = streak.current;
   const inARow = `${run} ${run === 1 ? "session" : "sessions"} in a row`;
   if (todaySession?.status === "completed") {
@@ -114,7 +117,8 @@ export function roziMoment({ streak, todaySession, hour, name, wins }: MomentInp
     return { mood: "care", title: "Take it gently today", message: "Recovery counts too. Stop anything that hurts." };
   }
   if (streak.broken) {
-    if ((streak.daysSinceLastWorkout ?? 0) >= LONG_BREAK_DAYS) return { mood: "comeback", title: `I missed you, ${name}!`, message: "No pressure. Your next session is a gentle restart." };
+    if ((streak.daysSinceLastWorkout ?? 0) >= LONG_BREAK_DAYS) return { mood: "comeback", title: `I missed you, ${name}!`, message: `No pressure. Your next session is a gentle restart.${reason}` };
+    if ((streak.daysSinceLastWorkout ?? 0) >= 5 && !streak.repair) return { mood: "comeback", title: `Ready for a comeback, ${name}?`, message: `It’s been ${streak.daysSinceLastWorkout} days. Even 10 minutes today restarts your streak.${reason}` };
     if (streak.repair) {
       const by = new Intl.DateTimeFormat("en", { weekday: "short", month: "short", day: "numeric", timeZone: "UTC" }).format(new Date(`${streak.repair.deadline}T12:00:00Z`));
       return { mood: "grumpy", title: "Hmph. We missed one.", message: `Do a workout by ${by} to win back your ${streak.repair.lostStreak}-workout streak.` };

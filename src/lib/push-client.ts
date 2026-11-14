@@ -40,7 +40,11 @@ async function registration(): Promise<ServiceWorkerRegistration> {
 }
 
 function rowToPrefs(row: Record<string, unknown>): PushPrefs {
-  return { morning: row.morning === true, morningHour: Number(row.morning_hour), evening: row.evening === true, eveningHour: Number(row.evening_hour), nudges: row.nudges === true };
+  return {
+    morning: row.morning === true, morningHour: Number(row.morning_hour), evening: row.evening === true, eveningHour: Number(row.evening_hour), nudges: row.nudges === true,
+    // Older databases may not have the new switches yet: treat them as on.
+    hydration: row.hydration !== false, comeback: row.comeback !== false, weighIn: row.weigh_in !== false,
+  };
 }
 
 /** This device's saved choices, or null when notifications are off here. */
@@ -61,6 +65,7 @@ export async function enablePush(client: SupabaseClient, timeZone: string, prefs
   const { error } = await client.from("push_subscriptions").upsert({
     endpoint: subscription.endpoint, p256dh: json.keys?.p256dh ?? "", auth: json.keys?.auth ?? "", time_zone: timeZone,
     morning: prefs.morning, morning_hour: prefs.morningHour, evening: prefs.evening, evening_hour: prefs.eveningHour, nudges: prefs.nudges,
+    hydration: prefs.hydration, comeback: prefs.comeback, weigh_in: prefs.weighIn,
     updated_at: new Date().toISOString(),
   }, { onConflict: "endpoint" });
   if (error) throw new Error(error.message);
@@ -72,6 +77,7 @@ export async function savePushPrefs(client: SupabaseClient, timeZone: string, pr
   if (!subscription) throw new Error("Turn notifications on first.");
   const { error } = await client.from("push_subscriptions").update({
     time_zone: timeZone, morning: prefs.morning, morning_hour: prefs.morningHour, evening: prefs.evening, evening_hour: prefs.eveningHour, nudges: prefs.nudges,
+    hydration: prefs.hydration, comeback: prefs.comeback, weigh_in: prefs.weighIn,
     updated_at: new Date().toISOString(),
   }).eq("endpoint", subscription.endpoint);
   if (error) throw new Error(error.message);

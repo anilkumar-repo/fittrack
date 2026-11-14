@@ -6,7 +6,8 @@ import { NotificationsCard } from "@/components/app/notifications-card";
 import { AvatarPicker } from "@/components/app/avatar";
 import { replayTour } from "@/components/app/tour-guide";
 import { TrainerControls } from "@/components/trainer-controls";
-import { CalendarDays, Moon, Palette, ShieldCheck, Smartphone, Sun } from "lucide-react";
+import { CalendarDays, Moon, Palette, QrCode, ShieldCheck, Smartphone, Sun } from "lucide-react";
+import Link from "next/link";
 import { GOAL_OPTIONS, goalOf } from "@/lib/program";
 import { LEVEL_OPTIONS, levelOf } from "@/lib/levels";
 import { MAX_TRAINING_DAYS, MIN_TRAINING_DAYS, shortDate, trainingDaysValid, WEEKDAY_LABELS } from "@/lib/dates";
@@ -15,6 +16,7 @@ import { EQUIPMENT_OPTIONS, RULE_VERSION, TEMPLATE_VERSION } from "@/lib/templat
 import type { Profile } from "@/lib/types";
 import { useState } from "react";
 import { SaveBar, useUnsavedGuard } from "@/components/app/save-bar";
+import { BodySettings } from "@/components/app/body-panel";
 import type { Theme } from "@/components/app/fit-track-provider";
 
 const THEME_OPTIONS: Array<{ id: Theme; label: string; icon: typeof Sun }> = [
@@ -103,6 +105,7 @@ export function SettingsScreen() {
               <div className="goal-options">{GOAL_OPTIONS.map((option) => <button key={option.id} type="button" className={goalOf(profile) === option.id ? "selected" : ""} aria-pressed={goalOf(profile) === option.id} onClick={() => edit({ goal: option.id })}><strong>{option.title}</strong><small>{option.note}</small></button>)}</div>
               <small>Changing your goal starts its plan from the first workout. Your history and records stay.</small>
             </div>
+            <BodySettings />
             <div className="settings-field"><span>Level</span>
               <div className="segmented level-switch">{LEVEL_OPTIONS.map((option) => <button key={option.id} type="button" className={levelOf(profile) === option.id ? "selected" : ""} aria-pressed={levelOf(profile) === option.id} onClick={() => edit({ experience: option.id, levelSince: currentDate })}>{option.title}</button>)}</div>
               <small>{LEVEL_OPTIONS.find((option) => option.id === levelOf(profile))?.note}. RozFit moves you up by itself as you train; see Progress → Your level.</small>
@@ -159,6 +162,7 @@ export function SettingsScreen() {
           <AccountCard />
           <DataCard />
           <button type="button" className="button button-subtle replay-tour" onClick={replayTour}>Show the app tour again</button>
+          <Link className="button button-subtle replay-tour" href="/install"><QrCode aria-hidden="true" /> Install on a phone / share QR code</Link>
           <details className="why-plan">
             <summary>About this plan</summary>
             <p>Workouts are built by fixed, written rules from your schedule, equipment, check-ins and logged results. No AI service is involved.</p>

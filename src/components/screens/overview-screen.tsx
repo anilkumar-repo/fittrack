@@ -5,6 +5,9 @@ import { useRouter } from "next/navigation";
 import { ArrowRight, CalendarDays, Check, ChevronRight, Clock, Flame, ListChecks, Moon, Repeat, Sparkles, Trophy } from "lucide-react";
 import { motivationFor } from "@/lib/motivation";
 import { NudgeBanner } from "@/components/app/nudge-banner";
+import { SessionLiveCard } from "@/components/app/session-live-card";
+import { WaterCard } from "@/components/app/water-card";
+import { WeighInCard } from "@/components/app/weigh-in-card";
 import { MusclePicture } from "@/components/app/muscle-picture";
 import { Rozi } from "@/components/app/rozi";
 import { Avatar } from "@/components/app/avatar";
@@ -49,7 +52,7 @@ export function OverviewScreen() {
   const openDay = (date: string) => router.push(todayHref(date, currentDate));
   const streak = calculateStreak(state.profile, recordedSessions, currentDate);
   const moment = roziMoment({
-    streak, todaySession, hour: hourIn(state.profile.timeZone), name: state.profile.displayName,
+    streak, todaySession, hour: hourIn(state.profile.timeZone), name: state.profile.displayName, why: state.profile.why,
     wins: todaySession?.status === "completed" ? winsForWorkout(recordedSessions, currentDate, state.profile.sessionsPerWeek) : undefined,
   });
 
@@ -83,7 +86,13 @@ export function OverviewScreen() {
         </div>
       </header>
 
+      <SessionLiveCard />
+
+      <WeighInCard />
+
       <NudgeBanner />
+
+      <WaterCard />
 
       <p className="daily-line"><Sparkles aria-hidden="true" /><span><small>Today’s thought</small>{motivationFor(currentDate)}</span></p>
 

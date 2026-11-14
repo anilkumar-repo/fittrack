@@ -53,8 +53,10 @@ export function ExerciseLogCard({ exercise, index, log, substitutedForName, last
         <span>SET</span><span>PLAN</span><span>ACTUAL REPS</span><span>LOAD ({unit.toUpperCase()})</span><span>DONE</span>
         {log.sets.map((set, setIndex) => (
           <div className="set-row" key={setIndex}>
-            <strong>{set.extra ? "＋" : String(setIndex + 1).padStart(2, "0")}</strong>
-            <span className="planned-reps">{set.plannedReps ?? "Extra"}</span>
+            {set.extra
+              ? <strong className="set-number-extra">{String(setIndex + 1).padStart(2, "0")}<small>extra</small></strong>
+              : <strong>{String(setIndex + 1).padStart(2, "0")}</strong>}
+            <span className="planned-reps">{set.plannedReps ?? "—"}</span>
             <input aria-label={`${exercise.name} set ${setIndex + 1} actual reps`} type="number" inputMode="numeric" min="1" max="1000" value={set.actualReps ?? ""} disabled={skipped}
               onChange={(event) => updateSet(setIndex, (item) => ({ ...item, actualReps: event.target.value === "" ? null : Number(event.target.value), completed: event.target.value === "" ? false : item.completed }))} />
             <input aria-label={`${exercise.name} set ${setIndex + 1} load in ${unit === "lb" ? "pounds" : "kilograms"}`} type="number" inputMode="decimal" min="0" max={unit === "lb" ? 4400 : 2000} step="0.5"
