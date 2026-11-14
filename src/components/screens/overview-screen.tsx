@@ -7,6 +7,7 @@ import { motivationFor } from "@/lib/motivation";
 import { NudgeBanner } from "@/components/app/nudge-banner";
 import { SessionLiveCard } from "@/components/app/session-live-card";
 import { WaterCard } from "@/components/app/water-card";
+import { MobilitySuggestion } from "@/components/app/mobility-suggestion";
 import { WeighInCard } from "@/components/app/weigh-in-card";
 import { MusclePicture } from "@/components/app/muscle-picture";
 import { Rozi } from "@/components/app/rozi";
@@ -91,6 +92,8 @@ export function OverviewScreen() {
       <WeighInCard />
 
       <NudgeBanner />
+
+      <MobilitySuggestion />
 
       <WaterCard />
 

@@ -319,6 +319,34 @@ Shown once after sign-up (7 cards with Rozi, highlighting each menu button). Set
 - Database: migration `20261113163106_fitness_levels.sql` allows the 4 levels, adds `profiles.level_since`, and adds an optional level to `trainer_update_client_plan`.
   Applied 2026-11-13 (verified: 4-level check, `level_since date`, one 5-argument trainer function, execute for signed-in users only, no invalid rows).
 
+### Stretch & mobility (2026-11-14) — `src/lib/mobility.ts`, `mobility-data.ts`, `mobility-screen.tsx`, `mobility-player.tsx`, `mobility-suggestion.tsx`
+- **130 moves and 16 routines** from `docs/IMAGE_PROMPTS.md`:
+  - `mobility-data.ts` is generated from Part B (moves) and Part C (routines).
+  - Each move has a name, what it works, a one-line how-to and a dose: 40 s holds, 30 s planks/holds, 10 reps strength, 6 reps landings, 5 slow breaths.
+  - One-sided moves play left then right.
+- **Pictures:** originals in `design/stretches-incoming/{id}.png` (black background, 2:1; `source-names.json` lists the original file names). `node scripts/build-stretches.mjs` makes `public/stretches/v1/{id}.webp` (840×420, about 3.3 MB in total).
+  - Only black connected to the edge, plus enclosed pure-black gaps, is removed, so dark props (chairs, benches, foam roller) stay solid.
+- **Mobility page `/mobility`** (Library → "Stretch & mobility"): today's suggestion, 16 routine cards (✓ when done today), all moves by body area (tap for details).
+- **Routine page `/mobility?routine=id`:** move list and a Start button.
+- **Guided player:**
+  - 5 s "get ready", then a countdown ring for holds, a breathe-in/out ring for breathing, or a "tap when done" button for reps;
+  - left/right sides, back/pause/skip, progress bars, and Rozi with a trophy at the end.
+  - "Done today" is kept on the device.
+- **Suggestions:**
+  - Train shows an optional quick warm-up (first 5 moves of the matching routine) before "Start workout": leg day, back day or upper body, otherwise Morning wake-up. It returns to the workout after.
+  - The done card offers a cool-down (Arms cool-down after push/arm days, otherwise Full-body cool-down).
+  - Home "Mobility for today":
+    - Knee care after recent discomfort or pain;
+    - Desk & travel after a "Travelling" missed day;
+    - Breathing when sore or unwell;
+    - Morning wake-up / Posture reset on rest days;
+    - Breathing after 8 pm.
+
+### App address (2026-11-14)
+- `src/lib/app-url.ts` holds the public address `https://rozfit-a.vercel.app`. The install page and QR code always use it.
+- Sign-in email links return to the address the person is using.
+- The Vercel setting `NEXT_PUBLIC_SITE_URL` still says the old address. Change it to `https://rozfit-a.vercel.app` in Vercel → Settings → Environment Variables, then redeploy. The code no longer depends on it.
+
 ### Body, BMI and "why" (2026-11-14) — `src/lib/body.ts`, `body-form.tsx`, `body-panel.tsx`, `profile-gate.tsx`
 - Get started order: name → **body** (height, weight, age, optional sex; cm/kg or ft/lb) → **why** → level → goal (BMI suggests one) → figure → days → length → equipment → account. Body and why are required.
 - BMI result: number, band, healthy range (BMI 18.5–24.9 for the height), and the target:
@@ -384,13 +412,14 @@ Shown once after sign-up (7 cards with Rozi, highlighting each menu button). Set
 | Fixes (2026-11-13) | Trainer Settings crash fixed (null client check); trainer-controls spacing; notices close by themselves after 12 s. |
 | Streaks (2026-11-13) | Streak calendar page `/streak`, 5 repairs per streak (7-day window), pause for unwell/sore/travel, Rozi workout-done popup with the streak counting up and this week's checks. |
 | Fitness levels (2026-11-13) | Beginner / Intermediate / Advanced / Pro: picked in Get started, Settings or by the trainer; sets the starting program stage and volume; moves up by itself with steady pain-free training and down one after a 6-week break. Migration `20261113163106_fitness_levels.sql`. |
+| Stretch & mobility (2026-11-14) | 130 stretch/mobility moves with generated pictures, 16 routines, guided player, warm-up/cool-down on Train, "Mobility for today" on Home. Install page/QR always uses rozfit-a.vercel.app. |
 | Big update (2026-11-14) | BMI-based Get started (body + why steps, suggested goal), monthly weigh-in with tips, smart water tracking and reminders, comeback reminders with the person's why, workout-in-progress notification and Home card, client-chosen trainers by code, install page with QR, time-zone auto-update, small-phone scaling, UI fixes. Migration `20261114075008_body_why_water_client_codes.sql`. |
 | New body pictures (2026-11-14) | 48 generated one-figure pictures (female, male, neutral; 16 each) replace every old body picture. Whole hands, same size and position across muscles. `scripts/build-figures.mjs` → `public/figures/v3/`. Old pictures and the cutting script removed. |
 | Image prompts (2026-11-13) | `docs/IMAGE_PROMPTS.md`: prompts for 48 single-figure body pictures (to replace the cut-out ones) and 130 stretch/mobility moves sorted from 16 reference boards, plus 16 RozFit routines. Waiting for the generated images. |
 | Body pictures fixed (2026-11-13) | One-figure pictures had fingers cut off and bits of the other figure's hand at the edge (82 of 84). All 84 were rebuilt with `scripts/split-figures.mjs` into `public/figures/v2/`. |
 | Liquid glass (2026-11-13) | Whole app restyled as liquid glass. Light, Dark and Auto themes replace Soft pastel and the purple glass. Home has a "Day N" glass hero with Rozi. The phone menu is a floating glass pill plus a round Settings button. |
 
-Tests: `npm test` (134 at the last update), `npm run lint`, `npx tsc --noEmit`, `npm run build`.
+Tests: `npm test` (137 at the last update), `npm run lint`, `npx tsc --noEmit`, `npm run build`.
 
 ---
 

@@ -1,5 +1,7 @@
 "use client";
 
+import Link from "next/link";
+import { MOBILITY_MOVES, MOBILITY_ROUTINES } from "@/lib/mobility";
 import { useState } from "react";
 import { ChevronRight, Search, SlidersHorizontal, X } from "lucide-react";
 import { ExerciseGuideModal, toGuideExercise } from "@/components/app/exercise-guide-modal";
@@ -52,7 +54,12 @@ export function LibraryScreen() {
               <Rozi mood={AREA_MOODS[area.id]} size={96} className="area-rozi" />
             </button>
           );
-        })}</div>
+        })}
+          <Link href="/mobility" className="area-card area-mobility">
+            <span className="area-text"><strong>Stretch &amp; mobility</strong><small>{MOBILITY_MOVES.length} moves · {MOBILITY_ROUTINES.length} routines</small></span>
+            <Rozi mood="stretch" size={96} className="area-rozi" />
+          </Link>
+        </div>
         <div className="library-chips" role="group" aria-label="Category">{["All", "Strength", "Core", "Conditioning"].map((filter) => <button key={filter} type="button" className={libraryFilter === filter ? "selected" : ""} aria-pressed={libraryFilter === filter} onClick={() => setLibraryFilter(filter)}>{filter}</button>)}</div>
         <details className="library-more">
           <summary><SlidersHorizontal aria-hidden="true" /> More filters{extraFilters > 0 ? ` (${extraFilters})` : ""}</summary>

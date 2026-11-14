@@ -29,7 +29,8 @@ export function SignInForm({ beforeVerify, intro }: { beforeVerify?: () => void;
     if (!browserClient || busy) return;
     setBusy(true);
     setError("");
-    const redirectTo = `${process.env.NEXT_PUBLIC_SITE_URL ?? window.location.origin}/auth/callback`;
+    // Back to the address the person is using (the email link opens the same app they signed in from).
+    const redirectTo = `${window.location.origin}/auth/callback`;
     const { error: sendError } = await browserClient.auth.signInWithOtp({ email: address, options: { emailRedirectTo: redirectTo, shouldCreateUser: true } });
     setBusy(false);
     if (sendError) { setError(sendError.message); return; }

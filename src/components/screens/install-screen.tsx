@@ -4,11 +4,12 @@ import { useEffect, useState } from "react";
 import QRCode from "qrcode";
 import { Check, Download, Share2, Smartphone } from "lucide-react";
 import { Rozi } from "@/components/app/rozi";
+import { APP_URL } from "@/lib/app-url";
 
 /** Chrome on Android offers its own install prompt; the page keeps it to show an "Install now" button. */
 interface InstallPromptEvent extends Event { prompt: () => Promise<void>; userChoice: Promise<{ outcome: string }> }
 
-const SITE = (process.env.NEXT_PUBLIC_SITE_URL || "https://rozfit-a.vercel.app").replace(/\/$/, "");
+const SITE = APP_URL;
 
 /**
  * How to put RozFit on a phone's Home Screen: a QR code of the app address to scan with another phone,

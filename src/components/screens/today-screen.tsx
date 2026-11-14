@@ -1,5 +1,6 @@
 "use client";
 
+import { CoolDownCard, WarmUpCard } from "@/components/app/mobility-suggestion";
 import { clearWorkoutNotification, notifyWorkoutStarted } from "@/lib/session-notify";
 import { levelTitle } from "@/lib/levels";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -241,6 +242,8 @@ function WorkoutDayView({ date, startAtReview = false }: { date: string; startAt
             <small>Template {plan.templateVersion} · Rules {plan.ruleVersion}</small>
           </details>
 
+          {plan.sessionType !== "recovery" && <WarmUpCard focus={`${plan.focus} ${plan.title}`} date={date} />}
+
           <div className="train-cta"><button className="button button-primary" onClick={() => { setFormError(""); setFlowStep("checkin"); }}>Start workout <Play aria-hidden="true" /></button></div>
         </>}
 
@@ -270,6 +273,7 @@ function WorkoutDayView({ date, startAtReview = false }: { date: string; startAt
             <div><dd>{setsDone}</dd><dt>sets done</dt></div>
             <div><dd>{todaySession.review?.effort ?? "—"}<small>/10</small></dd><dt>effort</dt></div>
           </dl>
+          <CoolDownCard focus={`${todaySession.plan.focus} ${todaySession.plan.title}`} />
           <div className="done-actions"><button className="button button-primary" onClick={() => router.push("/streak")}>See my streak <ArrowRight aria-hidden="true" /></button><button className="button button-subtle" onClick={() => { setEditing(true); setFlowStep("workout"); }}><Pencil aria-hidden="true" /> Edit entries</button></div>
         </article>}
 
