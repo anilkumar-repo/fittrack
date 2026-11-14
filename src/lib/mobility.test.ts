@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { existsSync } from "node:fs";
 import test from "node:test";
-import { coolDownFor, doseLabel, MOBILITY_MOVES, MOBILITY_ROUTINES, mobilityMove, routineMinutes, routineSteps, suggestionForDay, warmUpFor } from "./mobility.ts";
+import { AREA_LABELS, coolDownFor, MOBILITY_VIDEOS, moveVideo, youTubeId, doseLabel, MOBILITY_MOVES, MOBILITY_ROUTINES, mobilityMove, routineMinutes, routineSteps, suggestionForDay, warmUpFor } from "./mobility.ts";
 
 test("130 moves, each with a picture, and 16 routines that only use known moves", () => {
   assert.equal(MOBILITY_MOVES.length, 130);
@@ -9,6 +9,10 @@ test("130 moves, each with a picture, and 16 routines that only use known moves"
   for (const move of MOBILITY_MOVES) assert.ok(existsSync(new URL(`../../public/stretches/v1/${move.id}.webp`, import.meta.url)), `missing picture ${move.id}`);
   assert.equal(MOBILITY_ROUTINES.length, 16);
   for (const routine of MOBILITY_ROUTINES) for (const id of routine.moves) assert.ok(mobilityMove(id), `${routine.id} uses unknown ${id}`);
+  // Every body area on the Mobility page has moves (Knee care once showed 0).
+  for (const area of Object.keys(AREA_LABELS)) assert.ok(MOBILITY_MOVES.some((move) => move.area === area), `${area} has no moves`);
+  assert.equal(MOBILITY_MOVES.filter((move) => move.area === "knee").length, 8);
+  assert.equal(MOBILITY_MOVES.filter((move) => move.area === "strength").length, 21);
   const used = new Set(MOBILITY_ROUTINES.flatMap((routine) => routine.moves));
   assert.equal(used.size, 130);
 });
@@ -38,4 +42,22 @@ test("warm-ups and cool-downs follow the workout; the day's pick follows how you
   assert.equal(suggestionForDay({ hour: 9, restDay: true })?.routine.id, "morning-wake-up");
   assert.equal(suggestionForDay({ hour: 15, restDay: true })?.routine.id, "posture-and-pelvis-reset");
   assert.equal(suggestionForDay({ hour: 10, restDay: false }), null);
+});
+
+test("videos: a search for every move until a trainer picks one, which then plays inside the app", () => {
+  const pigeon = mobilityMove("pigeon-stretch")!;
+  const search = moveVideo(pigeon);
+  assert.equal(search.curated, false);
+  assert.equal(search.embedUrl, null);
+  assert.match(search.url, /youtube\.com\/results\?search_query=Pigeon%20stretch%20stretch/);
+  assert.match(moveVideo(mobilityMove("glute-bridge")!).url, /exercise%20how%20to/);
+  assert.equal(youTubeId("https://youtu.be/dQw4w9WgXcQ"), "dQw4w9WgXcQ");
+  assert.equal(youTubeId("https://www.youtube.com/watch?v=dQw4w9WgXcQ&t=10"), "dQw4w9WgXcQ");
+  assert.equal(youTubeId("https://www.youtube.com/shorts/dQw4w9WgXcQ"), "dQw4w9WgXcQ");
+  assert.equal(youTubeId("https://example.com/video"), null);
+  MOBILITY_VIDEOS["pigeon-stretch"] = "https://youtu.be/dQw4w9WgXcQ";
+  const picked = moveVideo(pigeon);
+  assert.equal(picked.curated, true);
+  assert.equal(picked.embedUrl, "https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ?rel=0&modestbranding=1&playsinline=1");
+  delete MOBILITY_VIDEOS["pigeon-stretch"];
 });

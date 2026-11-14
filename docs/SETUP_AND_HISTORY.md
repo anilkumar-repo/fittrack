@@ -342,6 +342,10 @@ Shown once after sign-up (7 cards with Rozi, highlighting each menu button). Set
     - Morning wake-up / Posture reset on rest days;
     - Breathing after 8 pm.
 
+- **Videos:** every move has "Watch a video" (move sheet, a play button on each routine row, and in the player, which pauses the timer). It opens a YouTube search for that move. To show a checked video inside RozFit instead, add its YouTube address to `MOBILITY_VIDEOS` in `src/lib/mobility.ts` (key = move id); it then plays in a privacy-friendly player (youtube-nocookie).
+- Fixed: "Knee care" showed 0 moves (its 8 moves had been filed under Hip & leg strength). A test now checks every body area has moves.
+- **Mobility Rozi** (butterfly stretch on a mint mat; prompt in `docs/IMAGE_PROMPTS.md` Part D): `public/rozi/mobility.webp`, mood `mobility`. Used on the Library "Stretch & mobility" card (now full width), the Mobility page and the relaxing routines. The side-stretch Rozi stays on Core & cardio. Source: `design/rozi-incoming/mobility-source.webp`. New Rozi pictures: `node scripts/cut-rozi.mjs <source> <name>` (transparent pictures are used as they are; white backgrounds are removed).
+
 ### App address (2026-11-14)
 - `src/lib/app-url.ts` holds the public address `https://rozfit-a.vercel.app`. The install page and QR code always use it.
 - Sign-in email links return to the address the person is using.

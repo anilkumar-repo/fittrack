@@ -10,6 +10,7 @@ import { useFitTrack } from "@/components/app/fit-track-provider";
 import { MobilityPlayer } from "@/components/app/mobility-player";
 import { MobilitySuggestion } from "@/components/app/mobility-suggestion";
 import { Rozi } from "@/components/app/rozi";
+import { MoveVideo } from "@/components/app/move-video";
 
 /** Stretch & mobility: today's pick, every routine, and every move by body area. "?routine=id" opens a routine. */
 export function MobilityScreen() {
@@ -28,7 +29,7 @@ function MobilityHome() {
   return (
     <section className="mobility-page">
       <article className="panel mobility-hero">
-        <Rozi mood="stretch" size={110} priority />
+        <Rozi mood="mobility" size={110} priority />
         <div><h2>Stretch &amp; mobility</h2><p>Short guided routines — follow the pictures, Rozi keeps time. Stretch to mild tension, never pain.</p></div>
       </article>
       <MobilitySuggestion />
@@ -68,6 +69,7 @@ function MoveSheet({ move, onClose }: { move: MobilityMove; onClose: () => void 
         <h2>{move.name}</h2>
         <p>{move.how}</p>
         <div className="chip-row"><span className="chip">{doseLabel(move)}</span><span className="chip">{move.works}</span></div>
+        <MoveVideo move={move} />
         <p className="card-note">In: {MOBILITY_ROUTINES.filter((item) => item.moves.includes(move.id)).map((item) => item.title).join(", ")}</p>
       </section>
     </div>
@@ -99,7 +101,7 @@ function RoutineView({ routineId, autoplay, quick, then }: { routineId: string; 
         {routine.moves.map((id, i) => {
           const move = mobilityMove(id);
           if (!move) return null;
-          return <li key={id}><span className="routine-num">{i + 1}</span><Image src={stretchPicture(id)} alt="" width={420} height={210} sizes="120px" loading="lazy" /><span><strong>{move.name}</strong><small>{doseLabel(move)} · {move.works}</small></span></li>;
+          return <li key={id}><span className="routine-num">{i + 1}</span><Image src={stretchPicture(id)} alt="" width={420} height={210} sizes="120px" loading="lazy" /><span><strong>{move.name}</strong><small>{doseLabel(move)} · {move.works}</small></span><MoveVideo move={move} compact /></li>;
         })}
       </ol>
       {playing && <MobilityPlayer routine={routine} date={currentDate} onClose={(finished) => { setPlaying(false); if (finished && then) router.push(backTo); }} />}

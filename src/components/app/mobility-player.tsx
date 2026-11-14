@@ -3,8 +3,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import Image from "next/image";
-import { Check, ChevronLeft, Pause, Play, SkipForward, X } from "lucide-react";
-import { markRoutineDone, routineMinutes, routineSteps, sideSeconds, stretchPicture, type MobilityRoutine } from "@/lib/mobility";
+import { Check, ChevronLeft, Pause, Play, SkipForward, Video, X } from "lucide-react";
+import { markRoutineDone, moveVideo, routineMinutes, routineSteps, sideSeconds, stretchPicture, type MobilityRoutine } from "@/lib/mobility";
 import { Rozi } from "./rozi";
 
 const GET_READY = 5;
@@ -91,6 +91,8 @@ export function MobilityPlayer({ routine, date, onClose }: { routine: MobilityRo
             <h2>{step.move.name}</h2>
             <p>{step.move.how}</p>
             <small>{step.move.works}</small>
+            {/* Opening a video pauses the timer, so the move isn't missed. */}
+            <a className="text-button player-video" href={moveVideo(step.move).url} target="_blank" rel="noopener noreferrer" onClick={() => { if (!paused) togglePause(); }}><Video aria-hidden="true" /> Watch a video</a>
           </div>
           <div className="player-clock">
             {phase === "ready" ? (

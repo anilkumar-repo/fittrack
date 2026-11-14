@@ -8,7 +8,7 @@ import type { Profile, WorkoutSession } from "./types";
 export const ROZI_MOODS = [
   "base", "morning", "afternoon", "evening", "night", "cheer", "streak-risk", "grumpy", "comeback", "milestone",
   "trophy", "personal-record", "rest", "care", "workout", "energy-1", "energy-2", "energy-3", "energy-4", "energy-5",
-  "hello", "signin", "full-body", "upper-body", "lower-body", "stretch", "water",
+  "hello", "signin", "full-body", "upper-body", "lower-body", "stretch", "water", "mobility",
 ] as const;
 export type RoziMood = (typeof ROZI_MOODS)[number];
 

@@ -57,7 +57,7 @@ export function LibraryScreen() {
         })}
           <Link href="/mobility" className="area-card area-mobility">
             <span className="area-text"><strong>Stretch &amp; mobility</strong><small>{MOBILITY_MOVES.length} moves · {MOBILITY_ROUTINES.length} routines</small></span>
-            <Rozi mood="stretch" size={96} className="area-rozi" />
+            <Rozi mood="mobility" size={96} className="area-rozi" />
           </Link>
         </div>
         <div className="library-chips" role="group" aria-label="Category">{["All", "Strength", "Core", "Conditioning"].map((filter) => <button key={filter} type="button" className={libraryFilter === filter ? "selected" : ""} aria-pressed={libraryFilter === filter} onClick={() => setLibraryFilter(filter)}>{filter}</button>)}</div>

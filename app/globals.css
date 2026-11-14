@@ -2270,3 +2270,17 @@ img.water-rozi { flex: none; width: 78px; height: 78px; }
 .player-done h2 { margin: 0; }
 .player-done p { margin: 0; color: var(--muted); }
 @media (prefers-reduced-motion: reduce) { .player-ring { transition: none; } .player-ring.breathe-in, .player-ring.breathe-out { transform: none; } }
+
+/* Stretch videos */
+.move-video { position: relative; overflow: hidden; border-radius: 18px; background: #000000; aspect-ratio: 16 / 9; }
+.move-video iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
+.move-video-button { justify-self: start; gap: 8px; text-decoration: none; }
+.move-video-button svg, .player-video svg { width: 16px; height: 16px; }
+.routine-list li { grid-template-columns: auto 110px 1fr auto; }
+.move-video-link { width: 38px; height: 38px; text-decoration: none; }
+.move-video-link svg { width: 16px; height: 16px; }
+.player-video { display: inline-flex; align-items: center; gap: 6px; margin-top: 6px; text-decoration: none; }
+.modal.move-sheet { position: relative; padding: 18px 18px calc(18px + env(safe-area-inset-bottom)); }
+.move-sheet .modal-close { z-index: 2; }
+/* Stretch & mobility gets a full-width card under the four body areas. */
+.area-card.area-mobility { grid-column: 1 / -1; }

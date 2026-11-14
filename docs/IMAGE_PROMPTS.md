@@ -370,3 +370,26 @@ These replace the reference boards with RozFit routines. Each move is about 30�
 - [ ] Part A: 48 body pictures → `design/figures-incoming/singles/`
 - [ ] Part B: 130 move pictures → `design/stretches-incoming/` (send 3–4 first for a check)
 - [ ] Tell me when they're in. I'll process them and build the Stretch & mobility feature.
+
+---
+
+## Part D — New Rozi for Stretch & mobility
+
+The Core & cardio card already uses Rozi's side stretch, so mobility gets its own pose. Same character and style as the existing Rozi set.
+
+**Base description (paste first):**
+```
+Cute round fluffy coral-orange mascot named Rozi (#EF7D5C), soft fluffy fur (not striped), big glossy black eyes, small pink blush cheeks, tiny arms and feet, 3D Pixar-style soft render, soft studio lighting, full body, centred, transparent background, no text, no logo. 1024 x 1024.
+```
+
+**Option A — Butterfly stretch on a mat (recommended):**
+```
+Rozi sits on a small rounded mint-green yoga mat (#BFE6DC) in a butterfly stretch: soles of the feet together, knees out to the sides, tiny hands holding the feet, leaning slightly forward. Eyes gently closed, calm happy smile, three small soft sparkle lines around the head to show relaxation. The whole mat and Rozi fit inside the frame with space around them.
+```
+
+**Option B — Tree pose balance:**
+```
+Rozi balances on one foot in a yoga tree pose: the other foot resting against the standing leg, both tiny arms raised overhead with paws touching. Eyes closed, peaceful smile, a small mint-green yoga mat (#BFE6DC) under the standing foot, two tiny leaf shapes floating nearby.
+```
+
+**Save as:** `design/rozi-incoming/mobility.png`. Then tell me, and I'll process it and swap it in on the Library "Stretch & mobility" card and the Mobility page.

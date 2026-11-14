@@ -50,6 +50,37 @@ export function routineMinutes(routine: MobilityRoutine): number {
   return Math.max(1, Math.round(seconds / 60));
 }
 
+// ---------- Videos ----------
+
+/**
+ * Videos picked by a trainer, keyed by move id: paste a YouTube address after watching it and checking it
+ * matches the move (for example "pigeon-stretch": "https://www.youtube.com/watch?v=XXXXXXXXXXX").
+ * Picked videos play inside RozFit; every other move opens a YouTube search, so no link is ever invented.
+ */
+export const MOBILITY_VIDEOS: Record<string, string> = {};
+
+export interface MoveVideo {
+  /** Where "Watch a video" goes. */
+  url: string;
+  /** A privacy-friendly player address when a trainer picked the video, else null. */
+  embedUrl: string | null;
+  curated: boolean;
+}
+
+/** YouTube video id from a watch, share or shorts address. */
+export function youTubeId(address: string): string | null {
+  const match = address.match(/(?:youtube\.com\/(?:watch\?(?:.*&)?v=|shorts\/|embed\/)|youtu\.be\/)([A-Za-z0-9_-]{11})/);
+  return match ? match[1] : null;
+}
+
+export function moveVideo(move: Pick<MobilityMove, "id" | "name" | "area">): MoveVideo {
+  const picked = MOBILITY_VIDEOS[move.id];
+  const id = picked ? youTubeId(picked) : null;
+  if (picked && id) return { url: `https://www.youtube.com/watch?v=${id}`, embedUrl: `https://www.youtube-nocookie.com/embed/${id}?rel=0&modestbranding=1&playsinline=1`, curated: true };
+  const kind = move.area === "strength" || move.area === "knee" || move.area === "landing" || move.area === "core" ? "exercise how to do it" : move.area === "breathing" ? "breathing exercise how to" : "stretch how to do it";
+  return { url: `https://www.youtube.com/results?search_query=${encodeURIComponent(`${move.name} ${kind}`)}`, embedUrl: null, curated: false };
+}
+
 // ---------- Suggestions ----------
 
 /** Warm-up for a workout, from its focus/title (lower body, pull/back, push/upper, or full body). */
