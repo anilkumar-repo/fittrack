@@ -2284,3 +2284,16 @@ img.water-rozi { flex: none; width: 78px; height: 78px; }
 .move-sheet .modal-close { z-index: 2; }
 /* Stretch & mobility gets a full-width card under the four body areas. */
 .area-card.area-mobility { grid-column: 1 / -1; }
+
+/* Profile card stats: three equal, centred glass tiles (no lopsided gaps). */
+.profile-stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; width: min(100%, 380px); margin: 0; }
+.profile-stats > div { display: grid; justify-items: center; align-content: center; gap: 2px; min-width: 0; padding: 10px 6px; border: var(--glass-edge); border-radius: 16px; background: var(--surface-2); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .5); text-align: center; }
+.profile-stats dd { overflow: hidden; max-width: 100%; font-size: 19px; line-height: 1.15; text-overflow: ellipsis; white-space: nowrap; }
+.profile-stats dt { font-size: 12px; white-space: nowrap; }
+@media (max-width: 700px) { .profile-stats { width: 100%; } }
+
+/* Player text: name, how-to, what it works and the video link each on their own line. */
+.player-info { display: grid; justify-items: start; gap: 4px; }
+.player-info h2, .player-info p { margin: 0; }
+.player-info small { display: block; }
+.player-video { margin-top: 4px; min-height: 36px; padding: 0 14px; border: var(--glass-edge); border-radius: 999px; background: var(--surface-2); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .4); }
