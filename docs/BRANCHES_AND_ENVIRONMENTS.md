@@ -46,6 +46,10 @@ also lists any new files in `supabase/migrations/` as a warning, so the database
 2. Commit as you go. *Push* → GitHub Actions runs the checks; Vercel posts a preview link.
 3. *Create Pull Request* into `develop`. When checks are green, merge. Test on the dev URL.
 4. When `develop` is good, open a pull request `develop → main`. Merge → production deploys.
+   Then publish a GitHub **Release** with the template in `docs/RELEASE_NOTES_TEMPLATE.md`
+   ("Generate release notes" groups the pull requests by label, set up in `.github/release.yml`).
+   Every pull request gets a checklist from `.github/pull_request_template.md`; give it one label
+   (feature, fix, design, database, docs or chore).
 5. Database migrations: Claude writes them into `supabase/migrations/`; they are applied only after you say
    "Yes, apply it" (dev project first once it exists, then production).
 

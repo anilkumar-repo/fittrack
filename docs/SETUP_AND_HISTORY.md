@@ -510,3 +510,9 @@ in to this account; the phone then moves from the old account to this one.
 
 **Checked:** 140 tests, typecheck, lint, build; preview at 375/390 px and desktop, light and dark (Profile, Ask Rozi,
 future-day Train, rest-day "Train today anyway", Library A–Z, Progress width, Home rest-day Rozi).
+
+### 2026-11-16 — Release notes template (branch `feature/2026-11-16-release-notes`)
+
+| What | Why | How | Files |
+|---|---|---|---|
+| A default format for GitHub release notes | So every release reads the same and "Generate release notes" is sorted, not one long list | `.github/release.yml` groups merged pull requests by label (features, fixes, design and Rozi, database, docs, behind the scenes, other). Every pull request gets a checklist (what, why, how to check, database, docs). `docs/RELEASE_NOTES_TEMPLATE.md` has the steps (tag `vX.Y.Z` on `main`), a summary block to paste, and the ready-made notes for `v1.1.0`. | `.github/release.yml`, `.github/pull_request_template.md`, `docs/RELEASE_NOTES_TEMPLATE.md` |
