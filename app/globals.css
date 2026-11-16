@@ -2390,3 +2390,21 @@ html.scroll-locked body { position: fixed; left: 0; right: 0; width: 100%; }
 @keyframes rozi-squish { 0%, 100% { transform: scaleX(1); opacity: 1; } 50% { transform: scaleX(.55); opacity: .5; } }
 @keyframes rozi-fade { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
 @media (prefers-reduced-motion: reduce) { .rozi-bounce img, .rozi-shadow { animation: none; } }
+
+/* Pill search and chat fields (2026-11-16): the field blends into its pill instead of drawing a second box
+   inside it (the global glass rule above gives every text field its own border, fill and inner shadow).
+   The pill itself shows the focus ring. */
+.library-find input:not([type="range"]):not([type="checkbox"]):not([type="radio"]), .chat-input input:not([type="range"]):not([type="checkbox"]):not([type="radio"]) {
+  height: 44px; padding: 0 4px; border: 0 !important; border-radius: 0; background: transparent !important; box-shadow: none !important;
+  outline: none !important; -webkit-appearance: none; appearance: none;
+}
+.library-find input::placeholder, .chat-input input::placeholder { color: var(--faint); opacity: 1; }
+.library-find input::-webkit-search-cancel-button, .library-find input::-webkit-search-decoration { -webkit-appearance: none; appearance: none; }
+.library-find, .chat-input { transition: box-shadow .2s ease, border-color .2s ease; }
+.library-find:focus-within, .chat-input:focus-within { box-shadow: var(--glass-shadow, 0 6px 18px rgba(0,0,0,.08)), 0 0 0 3px color-mix(in srgb, var(--accent) 28%, transparent); }
+.library-find:focus-within > svg { color: var(--accent-ink, #c4532f); }
+.chat-input { align-items: center; min-height: 58px; padding: 6px 6px 6px 18px; border: var(--glass-edge); }
+.chat-input .icon-button { flex: none; width: 44px; height: 44px; border-radius: 50%; color: #fff; background: var(--accent, #ef7d5c); box-shadow: none; transition: opacity .2s ease, transform .15s ease; }
+.chat-input .icon-button:disabled { color: var(--muted); background: var(--surface-3); }
+.chat-input .icon-button:not(:disabled):active { transform: scale(.94); }
+.chat-input .icon-button svg { width: 19px; height: 19px; }

@@ -516,3 +516,9 @@ future-day Train, rest-day "Train today anyway", Library A–Z, Progress width, 
 | What | Why | How | Files |
 |---|---|---|---|
 | A default format for GitHub release notes | So every release reads the same and "Generate release notes" is sorted, not one long list | `.github/release.yml` groups merged pull requests by label (features, fixes, design and Rozi, database, docs, behind the scenes, other). Every pull request gets a checklist (what, why, how to check, database, docs). `docs/RELEASE_NOTES_TEMPLATE.md` has the steps (tag `vX.Y.Z` on `main`), a summary block to paste, and the ready-made notes for `v1.1.0`. | `.github/release.yml`, `.github/pull_request_template.md`, `docs/RELEASE_NOTES_TEMPLATE.md` |
+
+### 2026-11-16 — Search and chat boxes look like one clean pill
+
+| What you saw | Why | How it's fixed | Files |
+|---|---|---|---|
+| A second rectangle inside the Library search and the Ask Rozi box | The liquid-glass rule gives *every* text field its own border, white fill and inner shadow (`!important`, with a very specific selector), so it beat the pill's own "no border" rule | Fields inside the pills now match that selector's strength and drop the border, fill and shadow. The focus ring moves onto the whole pill (soft coral), the search icon turns coral while typing, Safari's own "×" in search is hidden (we have our own), and the Rozi send button is a round coral button that greys out until you type. | `globals.css` |
