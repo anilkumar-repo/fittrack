@@ -422,8 +422,11 @@ Shown once after sign-up (7 cards with Rozi, highlighting each menu button). Set
 | Image prompts (2026-11-13) | `docs/IMAGE_PROMPTS.md`: prompts for 48 single-figure body pictures (to replace the cut-out ones) and 130 stretch/mobility moves sorted from 16 reference boards, plus 16 RozFit routines. Waiting for the generated images. |
 | Body pictures fixed (2026-11-13) | One-figure pictures had fingers cut off and bits of the other figure's hand at the edge (82 of 84). All 84 were rebuilt with `scripts/split-figures.mjs` into `public/figures/v2/`. |
 | Liquid glass (2026-11-13) | Whole app restyled as liquid glass. Light, Dark and Auto themes replace Soft pastel and the purple glass. Home has a "Day N" glass hero with Rozi. The phone menu is a floating glass pill plus a round Settings button. |
+| Rozi face avatars (2026-11-16) | 17 round Rozi faces (from the Part E prompts in `docs/IMAGE_PROMPTS.md`) were added to Settings → Your picture as a "Rozi faces" section. They are happy, wink, love, cool, strong, focused, laughing, starry, party, sweet, shy, surprised, zen, cozy, hydrated, sleepy and grumpy. The earlier Rozi pictures (now "Rozi in action"), photo upload and initials are kept. The saved value is `face:<name>`. Sources are in `design/rozi-incoming/avatars/avatar-<name>.png`. `node scripts/build-avatars.mjs` builds 256 px webp files into `public/rozi/faces/v1/` (about 10 KB each). These are cached like the rest of `/rozi/`. The cozy, hydrated and grumpy faces were replaced with the user's second versions. "sweet" is the spare cheerful picture. To add a face, add the PNG, run the script, and add the name to `ROZI_FACES` in `src/components/app/avatar.tsx`. The test `src/lib/avatar-faces.test.ts` checks that every face has its picture. If you ever change a picture, use a new folder (`v2`) so phones load the new one. The picker sheet now scrolls on short screens. No database change was needed, because `profiles.avatar` is text. |
 
-Tests: `npm test` (137 at the last update), `npm run lint`, `npx tsc --noEmit`, `npm run build`.
+| 18 comments, part 1 (2026-11-16) | Fixes: wrong-date workouts, rest-day training, BMI asked twice, notifications error, Progress cut on iPhone, page scrolling behind sheets, Rozi by time of day. New: Profile page (☰ = Settings), Rozi button + Ask Rozi chat v0, install sheet, Library A–Z strip, branches + CI. Plans: `docs/ROADMAP.md`. Details: section 12. |
+
+Tests: `npm test` (140 at the last update), `npm run lint`, `npx tsc --noEmit`, `npm run build`.
 
 ---
 
@@ -466,3 +469,44 @@ Tests: `npm test` (137 at the last update), `npm run lint`, `npx tsc --noEmit`, 
 - Native app wrapper (Capacitor) for the most reliable iPhone notifications.
 - Generate a full AI neutral figure set; regenerate early Rozi moods in the newer fur style for consistency.
 - True 3D body rotation would need a licensed 3D model (large download) — front/back turn kept for now.
+
+
+---
+
+## 12. Change log in detail (what was wrong · why · how it was fixed · what to check)
+
+From 2026-11-16 every change gets an entry here in this shape. Plans and ideas live in `docs/ROADMAP.md`; branches
+and environments in `docs/BRANCHES_AND_ENVIRONMENTS.md`; picture prompts in `docs/IMAGE_PROMPTS.md`.
+
+### 2026-11-16 — Your 18 comments, part 1 (branch `feature/2026-11-16-fixes-profile-rozi`)
+
+**How the app flows now (phone):** open link → (first time in a browser) *Get the RozFit app* sheet, skippable →
+welcome steps (name, body + BMI, why, level, goal, days…) → sign in with email code → Home. Dock: Home · Train ·
+Progress · Friends · Profile, and Rozi in the round corner button. Profile's ☰ opens Settings; Library is inside Profile.
+
+| # | What you saw | Why it happened | How it's fixed | Files |
+|---|---|---|---|---|
+| 3, 15 | Workouts on 13 and 14 Nov showed as missed; 16 Nov showed "done" without training | Your days were Mon/Tue/Wed when you set up (the default), so Fri 13 and Sat 14 were rest days. The rest-day screen's "See next session" opened Monday's workout, and the app let you log it there, so it was saved under **16 Nov** (and 14 Nov's under **17 Nov**). Database proof: started 13 Nov 06:02, saved as 2026-11-16. | (1) A future day is now **preview only**: "This workout is planned for Tue 17 Nov. It opens for logging on that day" + **Train today instead**. (2) Rest days get **Train today anyway** (Home and Train): it plans a workout for today and saves it under today. (3) Your two saved workouts need moving back to 13 and 14 Nov (data repair, waits for "Yes, apply it"). | `today-screen.tsx`, `use-workout-day.ts`, `overview-screen.tsx` |
+| 10 | BMI and "why" asked again after signing in with a new email | When a brand-new account was created after the welcome steps, the app copied over your name, days and goal, but not height, birth year, sex, why or level. The BMI check then saw them missing. | All of them are now carried into the new account. | `supabase-repository.ts` (`newAccountProfileDefaults`) |
+| 13 | "new row violates row-level security policy … push_subscriptions" | Your phone was first registered for notifications under your other account (made on 13 Nov). Signed in as your main account, the database refused to update a row owned by another account. Notifications still arrived because they went to that other account. | New database function `claim_push_subscription` hands the phone to whoever is signed in now. The app uses it; until it's applied the old way runs with a clearer message. | migration `20261116120000_push_device_claim.sql`, `push-client.ts` |
+| 14 | Progress page cut on the right on iPhone | iPhone Safari ignores "hide sideways overflow" on the page itself, so one slightly-too-wide box let the whole page slide sideways. | The page area now clips its own overflow on phones (`overflow-x: clip`), and grid tiles may shrink (`minmax(0, 1fr)`, `min-width: 0`). Checked at 375 px and 390 px. | `globals.css` |
+| 7 | Mobility page scrolls behind the player | Sheets didn't lock the page. | New `useScrollLock` (iPhone-safe: fixes the body and restores the scroll position). Used by the mobility player, move sheet, exercise guide, history, missed-day, level, celebration, picture picker and install sheet. | `use-scroll-lock.ts` + those components |
+| 6 | "Day 1" stuck; Rozi asleep | "Day N" is your streak, and the wrong dates broke it (fixed by #3). Rozi slept on every rest day. | Rest days follow the clock: morning stretch, afternoon water, evening rest, night sleep. After a workout late at night, Rozi sleeps with "Workout done. Sleep well!". New pictures for each moment: `IMAGE_PROMPTS.md` Part F. | `rozi.ts`, `rozi.test.ts` |
+| 17 | Rozi in the corner, Profile with ☰ for Settings | — | Dock: Home, Train, Progress, Friends, **Profile** (your picture as the icon); the round corner button is **Rozi** → Ask Rozi. New `/profile`: picture, name, level, workouts, streak, BMI, links (streak, progress, library, mobility, friends & trainers, Ask Rozi, install); ☰ → Settings. | `app-shell.tsx`, `profile-screen.tsx`, `app/(app)/profile` |
+| 8 | Rozi chat (from your plan) | — | **Ask Rozi v0** at `/rozi`: answers today / next / last workout, this week, streak, best lifts, stretches, weight, water, only from your own data, nothing sent anywhere. Suggested-question chips, typed questions, links into the app. | `rozi-chat.ts` (+ test), `rozi-chat-screen.tsx` |
+| 4 | Nobody finds Install in Settings | — | First time the link is opened in a phone browser: a **Get the RozFit app** sheet with 3 steps (iPhone) or an Install button (Android), *Maybe later* / *Full guide*. Shows once. | `install-hint.tsx` |
+| 11.2 | A–Z letters at the side | — | Library has an A–Z strip: touch or drag, the list jumps, the letter grows and a big bubble shows it. | `alphabet-index.tsx`, `library-screen.tsx` |
+| 16 | Branches and pipelines | — | `develop` + feature branches created; CI runs on `main`, `develop`, `feature/**`, `fix/**` and pull requests; warns about new migrations on PRs to `main`. Setup steps in `BRANCHES_AND_ENVIRONMENTS.md`. | `.github/workflows/ci.yml` |
+| 1 | First email had only a link (to Vercel); "Resend" sent the code | Brand-new emails use Supabase's **Confirm sign up** template; it still has the default text (link only). "Resend" goes to an existing user, so it uses the **Magic link** template, which has the code. | **You:** Supabase → Authentication → Emails → *Confirm sign up* → paste section 6.2. And Authentication → URL configuration → **Site URL = https://rozfit-a.vercel.app** (the link went to the old address). | dashboard only |
+| 2 | Loading screen style | The old screen was a small logo with "Getting your training space ready…" | You picked **style 1, Bouncing Rozi**: Rozi (hello picture) hops with a squash-and-stretch while its shadow squishes, and the line under it changes every 1.6 s ("Rozi is warming up…", "Loading your plan…", "Checking your streak…", "Almost ready…"). It stays still if the phone asks for reduced motion. | `rozi-loader.tsx`, `app-shell.tsx`, `globals.css` |
+| 5, 8, 11, 12, 18 | Trainers, ideas, references, feed/chat, Apple Watch… | — | Planned with phases in `docs/ROADMAP.md` (every reference screen is listed with what we take from it). | `ROADMAP.md` |
+
+**Applied on 2026-11-16 after "Yes, apply it":** (a) migration `20261116120000_push_device_claim.sql` (checked:
+signed-in users can run it, anonymous visitors can't); (b) data repair on the main account: the two "missed" entries
+for 13 and 14 Nov (no sets in them) were removed, and the workouts saved under 16 and 17 Nov were moved back to
+13 Nov (Foundation A) and 14 Nov (Foundation B), plan date included. Run as one block that stops if anything
+doesn't match exactly. Notifications: on the phone, open Settings → Notifications and turn them on once while signed
+in to this account; the phone then moves from the old account to this one.
+
+**Checked:** 140 tests, typecheck, lint, build; preview at 375/390 px and desktop, light and dark (Profile, Ask Rozi,
+future-day Train, rest-day "Train today anyway", Library A–Z, Progress width, Home rest-day Rozi).

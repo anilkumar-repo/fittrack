@@ -110,6 +110,7 @@ export function roziMoment({ streak, todaySession, hour, name, wins, why }: Mome
     if (wins?.milestone) return { mood: "milestone", title: "Achievement unlocked!", message: "A new badge is waiting on your Progress page." };
     if (streak.repairedToday) return { mood: "cheer", title: "Streak repaired!", message: `Your streak is back: ${inARow}. ${streak.repairsLeft} ${streak.repairsLeft === 1 ? "repair" : "repairs"} left.` };
     if (streak.comebackToday) return { mood: "comeback", title: "Welcome back!", message: "You came back, and that’s what counts. New streak started." };
+    if (timeOfDay(hour) === "night") return { mood: "night", title: "Workout done. Sleep well!", message: run > 1 ? `${inARow}. Recovery happens tonight.` : "Great job today. Recovery happens tonight." };
     return { mood: "cheer", title: "Workout done!", message: run > 1 ? `That’s ${inARow}. Keep it going!` : "Great job showing up today." };
   }
   if (todaySession?.status === "in_progress") return { mood: "workout", title: "You’ve got this", message: "Workout in progress. Take your time between sets." };
@@ -130,8 +131,12 @@ export function roziMoment({ streak, todaySession, hour, name, wins, why }: Mome
   }
   const period = timeOfDay(hour);
   if (!streak.todayPlanned) {
+    // Rest days follow the clock too: a morning stretch, an afternoon water reminder, an evening on the sofa, then sleep.
+    const safe = run > 0 ? ` Your streak is safe: ${inARow}.` : "";
     if (period === "night") return { mood: "night", title: `Good night, ${name}`, message: "Rest day done. Sleep well." };
-    return { mood: "rest", title: "Rest day", message: run > 0 ? `Recharge today. Your streak is safe: ${inARow}.` : "Recharge today. Your muscles grow while you rest." };
+    if (period === "morning") return { mood: "stretch", title: `Good morning, ${name}`, message: `Rest day. A few minutes of stretching keeps you loose.${safe}` };
+    if (period === "afternoon") return { mood: "water", title: "Rest day", message: `Recharge and keep sipping water.${safe}` };
+    return { mood: "rest", title: "Rest day", message: `Your muscles grow while you rest.${safe}` };
   }
   const greeting = { morning: "Good morning", afternoon: "Good afternoon", evening: "Good evening", night: "Good evening" }[period];
   const mood: RoziMood = period;
