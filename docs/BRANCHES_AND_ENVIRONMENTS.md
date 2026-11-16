@@ -48,3 +48,18 @@ also lists any new files in `supabase/migrations/` as a warning, so the database
 4. When `develop` is good, open a pull request `develop → main`. Merge → production deploys.
 5. Database migrations: Claude writes them into `supabase/migrations/`; they are applied only after you say
    "Yes, apply it" (dev project first once it exists, then production).
+
+## Troubleshooting
+
+**"fatal: couldn't find remote ref refs/heads/main" in GitHub Desktop (2026-11-16)**
+- What happened: on GitHub, `main` had been renamed to `develop`, so `main` no longer existed there and GitHub's
+  default branch became `develop`. This computer's git was also set to fetch only `main`, so every fetch failed.
+- Fixed on this computer:
+  - Git now fetches all branches (`remote.origin.fetch = +refs/heads/*:refs/remotes/origin/*`).
+  - Local `main` points at the last production commit (`ee466e7`) and local `develop` tracks `origin/develop`.
+  - An older local-only commit is kept as `backup/main-before-fix-a4b133a`; its work is already in the feature commit.
+- Still to do in the browser/app:
+  1. GitHub Desktop → Current branch → `main` → **Publish branch**. This puts `main` (production) back on GitHub.
+  2. GitHub → Settings → General → Default branch → switch to `main`.
+  3. Vercel → Settings → Git → Production Branch = `main`.
+- Never rename `main`. Make a new branch for `develop` instead.
