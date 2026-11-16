@@ -62,12 +62,23 @@ export async function enablePush(client: SupabaseClient, timeZone: string, prefs
   const reg = await registration();
   const subscription = await reg.pushManager.getSubscription() ?? await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: keyBytes(vapidKey) });
   const json = subscription.toJSON();
+  // The phone may still be registered to another account that signed in here before. The database
+  // function hands this device over to whoever is signed in now (a plain upsert is blocked by row security).
+  const { error: claimError } = await client.rpc("claim_push_subscription", {
+    p_endpoint: subscription.endpoint, p_p256dh: json.keys?.p256dh ?? "", p_auth: json.keys?.auth ?? "", p_time_zone: timeZone,
+    p_morning: prefs.morning, p_morning_hour: prefs.morningHour, p_evening: prefs.evening, p_evening_hour: prefs.eveningHour, p_nudges: prefs.nudges,
+    p_hydration: prefs.hydration, p_comeback: prefs.comeback, p_weigh_in: prefs.weighIn,
+  });
+  if (!claimError) return prefs;
+  // Before the function exists (PGRST202), fall back to the old save.
+  if (claimError.code !== "PGRST202") throw new Error(claimError.message);
   const { error } = await client.from("push_subscriptions").upsert({
     endpoint: subscription.endpoint, p256dh: json.keys?.p256dh ?? "", auth: json.keys?.auth ?? "", time_zone: timeZone,
     morning: prefs.morning, morning_hour: prefs.morningHour, evening: prefs.evening, evening_hour: prefs.eveningHour, nudges: prefs.nudges,
     hydration: prefs.hydration, comeback: prefs.comeback, weigh_in: prefs.weighIn,
     updated_at: new Date().toISOString(),
   }, { onConflict: "endpoint" });
+  if (error?.message.includes("row-level security")) throw new Error("This phone gets notifications for another RozFit account. Sign in to that account and turn them off there, then try again.");
   if (error) throw new Error(error.message);
   return prefs;
 }

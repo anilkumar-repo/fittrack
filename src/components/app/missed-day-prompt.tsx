@@ -1,5 +1,6 @@
 "use client";
 
+import { useScrollLock } from "./use-scroll-lock";
 import { useState } from "react";
 import { createPortal } from "react-dom";
 import { Check } from "lucide-react";
@@ -16,6 +17,7 @@ import { Rozi } from "./rozi";
  */
 export function MissedDayPrompt({ dates }: { dates: string[] }) {
   const { state, recordedSessions, trainerRuleSettings, recordMissedDays } = useFitTrack();
+  useScrollLock();
   const [reason, setReason] = useState<MissedReason | null>(null);
   const [note, setNote] = useState("");
   const [applyAll, setApplyAll] = useState(false);

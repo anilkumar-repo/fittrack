@@ -1,0 +1,40 @@
+/**
+ * Rozi chat, version 0: works out what a question is about from its words (no AI service, no cost) so the
+ * chat screen can answer from the person's own saved data. Phase 1 of the roadmap grows this into the full
+ * engine (entities, follow-ups, saved conversations); see docs/ROADMAP.md.
+ */
+export type RoziIntent =
+  | "TODAY_WORKOUT" | "NEXT_WORKOUT" | "LAST_WORKOUT" | "WEEKLY_WORKOUT_COUNT" | "STREAK_STATUS"
+  | "PROGRESS_CHECK" | "MOBILITY_RECOMMENDATION" | "WATER" | "BODY_GOAL_PROGRESS" | "HELLO" | "UNKNOWN";
+
+// Checked in order: the first intent with a matching phrase wins, so more specific ones come first.
+const DICTIONARY: Array<[RoziIntent, RegExp]> = [
+  ["LAST_WORKOUT", /\b(last|previous|yesterday'?s?|recent)\b.*\b(workout|session|train|trained|training)\b|what did i (do|train)/],
+  ["NEXT_WORKOUT", /\b(next|tomorrow'?s?|upcoming)\b.*\b(workout|session|train|training|day)\b/],
+  ["TODAY_WORKOUT", /\b(today'?s?|now)\b.*\b(workout|session|train|plan)\b|what('?s| is) my workout|what am i training|what should i (do|train)/],
+  ["WEEKLY_WORKOUT_COUNT", /how many.*\b(workouts?|sessions?)\b|\bthis week\b/],
+  ["STREAK_STATUS", /\bstreak\b|in a row|\bconsisten/],
+  ["MOBILITY_RECOMMENDATION", /\b(stretch|stretching|mobility|flexib|tight|stiff|warm ?up|cool ?down)\b/],
+  ["WATER", /\b(water|drink|hydrat)/],
+  ["BODY_GOAL_PROGRESS", /\b(weight|bmi|kg|fat|lose|losing)\b/],
+  ["PROGRESS_CHECK", /\b(progress|progressing|stronger|improv|records?|pr|best)\b/],
+  ["HELLO", /^(hi|hello|hey|yo|hola|namaste)\b/],
+];
+
+export function detectIntent(message: string): RoziIntent {
+  const text = message.toLowerCase().replace(/[’]/g, "'").trim();
+  if (!text) return "UNKNOWN";
+  return DICTIONARY.find(([, pattern]) => pattern.test(text))?.[0] ?? "UNKNOWN";
+}
+
+export const SUGGESTED_QUESTIONS = [
+  "What’s my workout today?",
+  "Show my last workout",
+  "How many workouts this week?",
+  "How is my streak?",
+  "Am I getting stronger?",
+  "I feel stiff, what should I stretch?",
+];
+
+/** Messages longer than this are cut, so a pasted essay can't slow the page down. */
+export const MAX_MESSAGE_LENGTH = 300;

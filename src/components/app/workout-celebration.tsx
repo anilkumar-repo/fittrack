@@ -1,5 +1,6 @@
 "use client";
 
+import { useScrollLock } from "./use-scroll-lock";
 import { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import Link from "next/link";
@@ -22,6 +23,7 @@ export function WorkoutCelebration({ session, setsDone, roziMood }: { session: W
   const { state, recordedSessions } = useFitTrack();
   const key = `${SEEN_PREFIX}${session.date}`;
   const [open, setOpen] = useState(false);
+  useScrollLock(open);
   const [shown, setShown] = useState(0);
   const timeline = useMemo(() => buildStreakTimeline(state.profile, recordedSessions, session.date), [state.profile, recordedSessions, session.date]);
   const streak = timeline.current;

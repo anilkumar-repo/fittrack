@@ -5,6 +5,7 @@ import { workoutPlanMatchesProfile } from "@/lib/exercise-library";
 import { generateWorkout, preserveManualExerciseChoices } from "@/lib/planner";
 import type { CheckIn, WorkoutPlan, WorkoutSession } from "@/lib/types";
 import { createInFlightDeduper } from "@/lib/workout-tracking";
+import { weekdayOf } from "@/lib/dates";
 import { sessionForDate, useFitTrack } from "./fit-track-provider";
 
 const dedupePlannedWorkout = createInFlightDeduper<boolean>();
@@ -23,14 +24,18 @@ export interface WorkoutDay {
 /**
  * The saved session and current plan for one date. For today and future training days it also
  * saves the generated plan as a `planned` session, so the same plan is reused after a refresh.
+ * `extraDay` (today only) plans a workout on a rest day, for "Train today anyway".
  */
-export function useWorkoutDay(date: string, checkIn: CheckIn | undefined, checkInEdited = false): WorkoutDay {
+export function useWorkoutDay(date: string, checkIn: CheckIn | undefined, checkInEdited = false, extraDay = false): WorkoutDay {
   const { state, ready, currentDate, recordedSessions, trainerRuleSettings, planningProfile, upsertSession } = useFitTrack();
   const session = sessionForDate(state, date);
+  const extra = extraDay && date === currentDate;
   const generatedPlan = useMemo(() => {
+    const weekday = weekdayOf(date);
+    const profile = extra && !state.profile.trainingDays.includes(weekday) ? { ...state.profile, trainingDays: [...state.profile.trainingDays, weekday] } : state.profile;
     const generated = generateWorkout({
       date,
-      profile: state.profile,
+      profile,
       sessions: recordedSessions,
       checkIn: session?.checkIn ?? checkIn,
       trainerRuleSettings,
@@ -39,7 +44,7 @@ export function useWorkoutDay(date: string, checkIn: CheckIn | undefined, checkI
     return generated && session?.status === "planned"
       ? preserveManualExerciseChoices(generated, session.plan, planningProfile)
       : generated;
-  }, [date, state.profile, recordedSessions, session, checkIn, trainerRuleSettings, state.trainerRuleRevision, planningProfile]);
+  }, [date, extra, state.profile, recordedSessions, session, checkIn, trainerRuleSettings, state.trainerRuleRevision, planningProfile]);
   const savedPlanCompatible = session?.status !== "planned" || date < currentDate || workoutPlanMatchesProfile(session.plan, planningProfile);
   const plan = session?.status === "planned" && (checkInEdited || !savedPlanCompatible) ? generatedPlan : session?.plan ?? generatedPlan;
 

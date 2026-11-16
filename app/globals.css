@@ -1632,6 +1632,10 @@ body { touch-action: manipulation; }
 .avatar-sheet .button svg { width: 17px; height: 17px; }
 .avatar-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
 .avatar-grid.colors { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+.avatar-grid.faces { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+.avatar-grid.faces button { padding: 3px; border-radius: 50%; aspect-ratio: 1; }
+.avatar-grid.faces .avatar-img { width: 100% !important; height: auto !important; aspect-ratio: 1; }
+.avatar-sheet { max-height: calc(100dvh - 32px); overflow-y: auto; overscroll-behavior: contain; }
 .avatar-grid button { display: grid; place-items: center; padding: 6px; border: 2px solid transparent; border-radius: 18px; background: var(--surface-2); cursor: pointer; }
 .avatar-grid button.selected { border-color: #16181a; }
 .avatar-sheet-backdrop { z-index: 1000; }
@@ -2297,3 +2301,92 @@ img.water-rozi { flex: none; width: 78px; height: 78px; }
 .player-info h2, .player-info p { margin: 0; }
 .player-info small { display: block; }
 .player-video { margin-top: 4px; min-height: 36px; padding: 0 14px; border: var(--glass-edge); border-radius: 999px; background: var(--surface-2); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .4); }
+
+/* Train: a future day is preview-only (2026-11-16). */
+.train-cta.future-note { display: grid; gap: 10px; padding: 14px; border-radius: 22px; background: var(--surface); box-shadow: var(--shadow-soft, 0 8px 24px rgba(0,0,0,.08)); }
+.train-cta.future-note p { margin: 0; color: var(--muted); font-size: 14px; line-height: 1.5; text-align: center; }
+.hero-cta-row { display: flex; flex-wrap: wrap; gap: 8px; }
+
+/* Page behind an open sheet or player stays still (2026-11-16). */
+html.scroll-locked, html.scroll-locked body { overflow: hidden; overscroll-behavior: none; }
+html.scroll-locked body { position: fixed; left: 0; right: 0; width: 100%; }
+.player-backdrop, .modal-backdrop, .avatar-sheet-backdrop { overscroll-behavior: contain; }
+
+/* iPhone Safari ignores overflow-x on html/body, so one slightly-too-wide child let the whole page slide
+   sideways (Progress looked cut on the right). Clip inside the page area instead; grid and flex children may shrink. (2026-11-16) */
+@media (max-width: 700px) { .main-area { max-width: 100vw; overflow-x: clip; } }
+.main-area > *, .progress > *, .stat-row > *, .panel { min-width: 0; }
+.stat-row { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.stat-row strong, .stat-row span, .panel h2, .panel h3 { overflow-wrap: anywhere; }
+
+/* Phone dock: Profile tab shows your picture; Rozi sits in the round corner button (2026-11-16). */
+.dock-avatar { width: 24px !important; height: 24px !important; font-size: 11px !important; }
+.mobile-nav a.dock-rozi { padding: 0; overflow: hidden; }
+.mobile-nav a.dock-rozi img { width: 54px; height: 54px; border-radius: 50%; object-fit: cover; }
+.mobile-nav a.dock-rozi.active img { box-shadow: 0 0 0 3px var(--accent, #ef7d5c); }
+
+/* Profile page */
+.profile-page { display: grid; gap: 14px; width: 100%; max-width: 640px; margin: 0 auto; }
+.profile-card { position: relative; display: grid; justify-items: center; gap: 6px; padding: 26px 18px 18px !important; text-align: center; }
+.profile-card h2 { margin: 6px 0 0; color: var(--ink); font-size: 24px; }
+.profile-card > p { margin: 0 0 8px; color: var(--muted); font-size: 13px; overflow-wrap: anywhere; }
+.profile-menu { position: absolute; top: 14px; right: 14px; }
+.profile-stats > div strong { color: var(--ink); font-size: 19px; line-height: 1.15; }
+.profile-stats > div small { color: var(--muted); font-size: 12px; }
+.profile-links { display: grid; padding: 6px !important; }
+.profile-links a { display: grid; grid-template-columns: 40px minmax(0, 1fr) 18px; align-items: center; gap: 12px; padding: 12px 10px; border-radius: 16px; color: var(--ink); text-decoration: none; }
+.profile-links a:hover { background: var(--surface-2); }
+.profile-links a + a { border-top: 1px solid var(--line, rgba(0,0,0,.06)); }
+.profile-links strong { display: block; font-size: 15px; }
+.profile-links small { color: var(--muted); font-size: 12.5px; }
+.profile-links svg { width: 18px; height: 18px; color: var(--muted); }
+.profile-link-icon { display: grid; width: 40px; height: 40px; place-items: center; border-radius: 12px; background: var(--accent-soft-2, #fde7dd); }
+.profile-link-icon svg { color: var(--accent-ink, #c4532f); }
+
+/* Ask Rozi chat */
+.rozi-chat { display: grid; grid-template-rows: 1fr auto auto; gap: 10px; width: 100%; max-width: 680px; min-height: calc(100dvh - 230px); margin: 0 auto; }
+.chat-log { display: grid; align-content: start; gap: 10px; }
+.chat-row { display: flex; align-items: flex-end; gap: 8px; }
+.chat-row.me { justify-content: flex-end; }
+.chat-face { flex: none; border-radius: 50%; }
+.chat-bubble { max-width: 82%; padding: 11px 14px; border-radius: 20px 20px 20px 6px; background: var(--surface); box-shadow: var(--glass-key, 0 6px 18px rgba(0,0,0,.06)); }
+.chat-row.me .chat-bubble { border-radius: 20px 20px 6px 20px; color: #fff; background: var(--accent, #ef7d5c); }
+.chat-bubble p { margin: 0; font-size: 15px; line-height: 1.5; }
+.chat-link { display: inline-flex; align-items: center; gap: 4px; margin-top: 8px; color: var(--accent-ink, #c4532f); font-size: 14px; font-weight: 700; text-decoration: none; }
+.chat-link svg { width: 15px; height: 15px; }
+.chat-suggestions { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 2px; scrollbar-width: none; }
+.chat-suggestions .chip { flex: none; cursor: pointer; }
+.chat-input { position: sticky; bottom: 96px; display: flex; gap: 8px; padding: 6px; border-radius: 999px; background: var(--surface); box-shadow: var(--glass-key, 0 6px 18px rgba(0,0,0,.08)); }
+.chat-input input { flex: 1; min-width: 0; padding: 10px 14px; border: 0; background: transparent; color: var(--ink); font-size: 16px; outline: none; }
+@media (min-width: 701px) { .chat-input { bottom: 18px; } }
+
+/* First-visit install sheet (2026-11-16) */
+.install-hint { display: grid; justify-items: center; gap: 10px; text-align: center; }
+.install-hint h2 { margin: 0; font-size: 22px; }
+.install-hint > p { margin: 0; color: var(--muted); font-size: 14.5px; line-height: 1.5; }
+.install-hint-steps { display: grid; gap: 8px; width: 100%; margin: 4px 0; padding: 0; list-style: none; text-align: left; }
+.install-hint-steps li { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 16px; background: var(--surface-2); font-size: 14.5px; }
+.install-hint-steps li > span { display: grid; flex: none; width: 34px; height: 34px; place-items: center; border-radius: 10px; background: var(--surface); color: #0a84ff; font-weight: 800; }
+.install-hint-steps svg { width: 18px; height: 18px; }
+.install-hint-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; width: 100%; }
+
+/* Library A–Z strip (2026-11-16): touch a letter to jump; the touched letter grows and shows in a bubble. */
+.alpha-rail { position: fixed; z-index: 30; top: 50%; right: 4px; display: grid; gap: 0; padding: 6px 2px; border-radius: 999px; transform: translateY(-50%); touch-action: none; user-select: none; -webkit-user-select: none; }
+.alpha-rail.touching { background: var(--surface); box-shadow: var(--glass-key, 0 6px 18px rgba(0,0,0,.08)); }
+.alpha-rail button { width: 22px; height: 15px; padding: 0; border: 0; background: none; color: var(--accent-ink, #c4532f); font-size: 10.5px; font-weight: 800; line-height: 15px; cursor: pointer; transition: transform .12s ease, color .12s ease; }
+.alpha-rail button.on { color: #fff; border-radius: 50%; background: var(--accent, #ef7d5c); transform: scale(1.45); }
+.alpha-bubble { position: absolute; top: 50%; right: 40px; display: grid; width: 64px; height: 64px; place-items: center; border-radius: 50%; color: #fff; background: var(--accent, #ef7d5c); font-size: 30px; font-weight: 800; transform: translateY(-50%); box-shadow: 0 10px 24px rgba(0,0,0,.18); }
+.library-list.has-alpha { padding-right: 18px; }
+.library-list li[data-letter] { scroll-margin-top: 90px; }
+@media (min-width: 701px) { .alpha-rail { right: 12px; } }
+
+/* Loading screen: bouncing Rozi (style 1, chosen 2026-11-16) */
+.rozi-loader { flex-direction: column; gap: 6px; }
+.rozi-bounce { display: grid; justify-items: center; }
+.rozi-bounce img { width: 120px; height: 120px; object-fit: contain; animation: rozi-hop 1s cubic-bezier(.45, 0, .55, 1) infinite; }
+.rozi-shadow { width: 64px; height: 10px; margin-top: -6px; border-radius: 50%; background: rgba(120, 70, 50, .18); animation: rozi-squish 1s cubic-bezier(.45, 0, .55, 1) infinite; }
+.rozi-loader-line { margin-top: 10px; color: var(--muted); font-size: 14px; font-weight: 600; animation: rozi-fade .4s ease-out; }
+@keyframes rozi-hop { 0%, 100% { transform: translateY(0) scale(1.04, .96); } 15% { transform: translateY(-4px) scale(.98, 1.02); } 50% { transform: translateY(-34px) scale(1, 1); } 85% { transform: translateY(-4px) scale(.98, 1.02); } }
+@keyframes rozi-squish { 0%, 100% { transform: scaleX(1); opacity: 1; } 50% { transform: scaleX(.55); opacity: .5; } }
+@keyframes rozi-fade { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .rozi-bounce img, .rozi-shadow { animation: none; } }

@@ -1,9 +1,14 @@
 name: CI
 
+# Branch flow (see docs/BRANCHES_AND_ENVIRONMENTS.md):
+#   feature/*  -> pull request into develop  (dev site: Vercel preview for the develop branch)
+#   develop    -> pull request into main     (production: rozfit-a.vercel.app)
+# Every push and pull request runs the same checks. Vercel builds and deploys on its own from Git.
 on:
   push:
-    branches: [main]
+    branches: [main, develop, "feature/**", "fix/**"]
   pull_request:
+    branches: [main, develop]
 
 permissions:
   contents: read
@@ -14,8 +19,9 @@ concurrency:
 
 jobs:
   checks:
+    name: Test, typecheck, lint, build
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 12
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -27,3 +33,21 @@ jobs:
       - run: npm run typecheck
       - run: npm run lint
       - run: npm run build
+
+  # Only for pull requests into main: a reminder that database changes go to Supabase separately.
+  migrations-note:
+    if: github.event_name == 'pull_request' && github.base_ref == 'main'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: List new database migrations in this pull request
+        run: |
+          git diff --name-only origin/${{ github.base_ref }}...HEAD -- supabase/migrations > migrations.txt || true
+          if [ -s migrations.txt ]; then
+            echo "::warning::This pull request adds database migrations. Apply them in Supabase (dev first, then production) before or right after merging:"
+            cat migrations.txt
+          else
+            echo "No new migrations."
+          fi

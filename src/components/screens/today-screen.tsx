@@ -18,7 +18,7 @@ import { calculateStreak, roziMoment, winsForWorkout } from "@/lib/rozi";
 import { lastPerformance } from "@/lib/logging";
 import { sessionForDate, useFitTrack } from "@/components/app/fit-track-provider";
 import { emptyCheckIn, useWorkoutDay } from "@/components/app/use-workout-day";
-import { dateLabel, describeNextDay, isIsoDate, nextTrainingDate, todayHref, hourIn } from "@/lib/dates";
+import { dateLabel, describeNextDay, isIsoDate, nextTrainingDate, todayHref, hourIn, weekdayOf } from "@/lib/dates";
 import { generateWorkout, preserveManualExerciseChoices } from "@/lib/planner";
 import { createInitialExerciseLogs } from "@/lib/supabase-repository";
 import type { CheckIn, ExerciseDefinition, ExerciseLog, WorkoutReview, WorkoutSession } from "@/lib/types";
@@ -31,15 +31,18 @@ const dedupeWorkoutSubmission = createInFlightDeduper<boolean>();
 
 /** The workout page for today, or for the date in `?date=YYYY-MM-DD`. */
 export function TodayScreen() {
-  const { currentDate } = useFitTrack();
+  const { currentDate, state } = useFitTrack();
   const params = useSearchParams();
   const requested = params.get("date");
   const date = isIsoDate(requested) ? requested : currentDate;
   // A new date starts a fresh check-in, logger, and review. "?step=review" (Finish on Home) opens the rating step.
-  return <WorkoutDayView key={date} date={date} startAtReview={params.get("step") === "review"} />;
+  // "?extra=1" plans a workout today even though it is a rest day ("Train today anyway").
+  // A workout already saved today on a rest day stays an extra day after a reload.
+  const extraDay = date === currentDate && (params.get("extra") === "1" || (Boolean(sessionForDate(state, date)) && !state.profile.trainingDays.includes(weekdayOf(date))));
+  return <WorkoutDayView key={`${date}${extraDay ? "-extra" : ""}`} date={date} extraDay={extraDay} startAtReview={params.get("step") === "review"} />;
 }
 
-function WorkoutDayView({ date, startAtReview = false }: { date: string; startAtReview?: boolean }) {
+function WorkoutDayView({ date, extraDay = false, startAtReview = false }: { date: string; extraDay?: boolean; startAtReview?: boolean }) {
   const router = useRouter();
   const { state, getState, currentDate, recordedSessions, trainerRuleSettings, planningProfile, upsertSession, savingSession, saveError, weightUnit, figure } = useFitTrack();
   const [flowStep, setFlowStep] = useState<FlowStep>(startAtReview ? "review" : "preview");
@@ -49,7 +52,9 @@ function WorkoutDayView({ date, startAtReview = false }: { date: string; startAt
   const reviewRef = useRef(review);
   const [formError, setFormError] = useState("");
   const [guideExercise, setGuideExercise] = useState<ExerciseDefinition | null>(null);
-  const { session: todaySession, plan } = useWorkoutDay(date, flowStep === "preview" || flowStep === "checkin" ? checkIn : undefined, checkInEdited);
+  const { session: todaySession, plan } = useWorkoutDay(date, flowStep === "preview" || flowStep === "checkin" ? checkIn : undefined, checkInEdited, extraDay);
+  // A future day can be looked at, not logged: workouts are saved on the day they are done.
+  const isFuture = date > currentDate;
   /** True while a saved session is reopened to correct its entries. */
   const [editing, setEditing] = useState(false);
   const [rest, setRest] = useState<{ endsAt: number; exerciseName: string } | null>(null);
@@ -82,6 +87,7 @@ function WorkoutDayView({ date, startAtReview = false }: { date: string; startAt
   }
 
   function startWorkout() {
+    if (isFuture) return;
     const generatedForStart = todaySession?.status === "planned"
       ? generateWorkout({ date, profile: state.profile, sessions: recordedSessions, checkIn, trainerRuleSettings, trainerRuleRevision: state.trainerRuleRevision ?? 1 })
       : null;
@@ -194,7 +200,8 @@ function WorkoutDayView({ date, startAtReview = false }: { date: string; startAt
           <Rozi mood={hourIn(state.profile.timeZone) >= 21 ? "night" : "rest"} size={150} />
           <h3>Rest is part of getting stronger</h3>
           <p>No workout is planned for this day. Your next session is {describeNextDay(state.profile, date)}.</p>
-          <button className="button button-primary" onClick={openNextWorkout}>See next session <ArrowRight aria-hidden="true" /></button>
+          {date === currentDate && <button className="button button-primary" onClick={() => router.push("/today?extra=1")}>Train today anyway <Play aria-hidden="true" /></button>}
+          <button className={`button ${date === currentDate ? "button-subtle" : "button-primary"}`} onClick={openNextWorkout}>See next session <ArrowRight aria-hidden="true" /></button>
         </article>}
 
         {plan && preStart && displayFlowStep === "preview" && <>
@@ -244,7 +251,11 @@ function WorkoutDayView({ date, startAtReview = false }: { date: string; startAt
 
           {plan.sessionType !== "recovery" && <WarmUpCard focus={`${plan.focus} ${plan.title}`} date={date} />}
 
-          <div className="train-cta"><button className="button button-primary" onClick={() => { setFormError(""); setFlowStep("checkin"); }}>Start workout <Play aria-hidden="true" /></button></div>
+          {isFuture ? <div className="train-cta future-note">
+            <p>This workout is planned for <strong>{dateLabel(date)}</strong>. It opens for logging on that day, so it is saved on the right date.</p>
+            <button className="button button-primary" onClick={() => router.push(state.profile.trainingDays.includes(weekdayOf(currentDate)) ? "/today" : "/today?extra=1")}>Train today instead <Play aria-hidden="true" /></button>
+          </div>
+            : <div className="train-cta"><button className="button button-primary" onClick={() => { setFormError(""); setFlowStep("checkin"); }}>Start workout <Play aria-hidden="true" /></button></div>}
         </>}
 
         {plan && preStart && displayFlowStep === "checkin" && <article className="panel flow-card">

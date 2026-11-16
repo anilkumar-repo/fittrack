@@ -11,6 +11,7 @@ import { MobilityPlayer } from "@/components/app/mobility-player";
 import { MobilitySuggestion } from "@/components/app/mobility-suggestion";
 import { Rozi } from "@/components/app/rozi";
 import { MoveVideo } from "@/components/app/move-video";
+import { useScrollLock } from "@/components/app/use-scroll-lock";
 
 /** Stretch & mobility: today's pick, every routine, and every move by body area. "?routine=id" opens a routine. */
 export function MobilityScreen() {
@@ -61,6 +62,7 @@ function MobilityHome() {
 }
 
 function MoveSheet({ move, onClose }: { move: MobilityMove; onClose: () => void }) {
+  useScrollLock();
   return (
     <div className="modal-backdrop" role="dialog" aria-modal="true" aria-label={move.name} onClick={onClose}>
       <section className="modal move-sheet" onClick={(event) => event.stopPropagation()}>
