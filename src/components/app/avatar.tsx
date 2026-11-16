@@ -1,5 +1,6 @@
 "use client";
 
+import { useScrollLock } from "./use-scroll-lock";
 import { useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Camera, X } from "lucide-react";
@@ -10,6 +11,7 @@ import { useFitTrack } from "./fit-track-provider";
  * A person's picture. The saved value is one of:
  *   "photo:<url>"  an uploaded photo (a small data URL on this device, or a Supabase Storage link)
  *   "rozi:<mood>"  a Rozi avatar
+ *   "face:<name>"  a round Rozi face (pastel background), from public/rozi/faces/v1
  *   "color:<hex>"  initials on a colour
  * Anything else shows the initial on coral.
  */
@@ -20,6 +22,10 @@ export function Avatar({ value, name, size = 40, className = "" }: { value?: str
     // eslint-disable-next-line @next/next/no-img-element -- small user photo, already resized; may be a data URL
     return <img src={value.slice(6)} alt="" width={size} height={size} className={`avatar-img ${className}`} style={style} />;
   }
+  if (value?.startsWith("face:") && (ROZI_FACES as readonly string[]).includes(value.slice(5))) {
+    // eslint-disable-next-line @next/next/no-img-element -- static Rozi face
+    return <img src={`/rozi/faces/v1/${value.slice(5)}.webp`} alt="" width={size} height={size} className={`avatar-img ${className}`} style={style} />;
+  }
   if (value?.startsWith("rozi:") && (ROZI_MOODS as readonly string[]).includes(value.slice(5))) {
     // eslint-disable-next-line @next/next/no-img-element -- static Rozi picture
     return <img src={`/rozi/${value.slice(5)}.webp`} alt="" width={size} height={size} className={`avatar-img avatar-rozi ${className}`} style={style} />;
@@ -27,6 +33,9 @@ export function Avatar({ value, name, size = 40, className = "" }: { value?: str
   const color = value?.startsWith("color:") && /^#[0-9a-f]{6}$/i.test(value.slice(6)) ? value.slice(6) : "#ef7d5c";
   return <span className={`avatar-initial ${className}`} style={{ ...style, background: color }} aria-hidden="true">{initial}</span>;
 }
+
+/** Rozi faces in the picker's order. Each has public/rozi/faces/v1/<name>.webp (built by scripts/build-avatars.mjs). */
+export const ROZI_FACES = ["happy", "wink", "love", "cool", "strong", "focused", "laughing", "starry", "party", "sweet", "shy", "surprised", "zen", "cozy", "hydrated", "sleepy", "grumpy"] as const;
 
 const AVATAR_MOODS: RoziMood[] = ["base", "hello", "cheer", "upper-body", "full-body", "stretch", "water", "trophy"];
 const AVATAR_COLORS = ["#ef7d5c", "#7cc576", "#5b9bd5", "#9b7be0", "#e5a33b", "#16181a"];
@@ -57,6 +66,7 @@ function blobToDataUrl(blob: Blob): Promise<string> {
 export function AvatarPicker() {
   const { state, isDemo, browserClient, updateProfile } = useFitTrack();
   const [open, setOpen] = useState(false);
+  useScrollLock(open);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const fileInput = useRef<HTMLInputElement>(null);
@@ -103,7 +113,9 @@ export function AvatarPicker() {
           <div className="avatar-sheet-head"><h3 id="avatar-title">Your picture</h3><button type="button" className="icon-button" aria-label="Close" onClick={() => setOpen(false)}><X /></button></div>
           <input ref={fileInput} type="file" accept="image/*" hidden onChange={(event) => void savePhoto(event.target.files?.[0])} />
           <button type="button" className="button button-primary full-width" disabled={busy} onClick={() => fileInput.current?.click()}><Camera aria-hidden="true" /> {busy ? "Saving photo…" : "Upload a photo"}</button>
-          <h4>Pick a Rozi</h4>
+          <h4>Rozi faces</h4>
+          <div className="avatar-grid faces">{ROZI_FACES.map((face) => <button key={face} type="button" className={profile.avatar === `face:${face}` ? "selected" : ""} onClick={() => choose(`face:${face}`)} aria-label={`Rozi ${face}`} title={face[0].toUpperCase() + face.slice(1)}><Avatar value={`face:${face}`} name={profile.displayName} size={52} /></button>)}</div>
+          <h4>Rozi in action</h4>
           <div className="avatar-grid">{AVATAR_MOODS.map((mood) => <button key={mood} type="button" className={profile.avatar === `rozi:${mood}` ? "selected" : ""} onClick={() => choose(`rozi:${mood}`)} aria-label={`Rozi ${mood}`}><Avatar value={`rozi:${mood}`} name={profile.displayName} size={56} /></button>)}</div>
           <h4>Or your initial</h4>
           <div className="avatar-grid colors">{AVATAR_COLORS.map((color) => <button key={color} type="button" className={profile.avatar === `color:${color}` ? "selected" : ""} onClick={() => choose(`color:${color}`)} aria-label={`Initial on colour ${color}`}><Avatar value={`color:${color}`} name={profile.displayName} size={36} /></button>)}</div>

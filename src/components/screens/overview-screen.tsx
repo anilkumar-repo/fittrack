@@ -66,7 +66,7 @@ export function OverviewScreen() {
       {/* The day hero: a big glass "Day N" (the streak) with Rozi standing in front of it. */}
       <header className={`day-hero ${streak.repair ? "on-hold" : ""}`}>
         <div className="day-hero-top">
-          <Link className="hero-me" href="/settings" aria-label="Open settings">
+          <Link className="hero-me" href="/profile" aria-label="Open your profile">
             <Avatar value={state.profile.avatar} name={state.profile.displayName} size={44} />
             <span><small>{dateLabel(currentDate)}</small><strong>Hi, {state.profile.displayName}</strong></span>
           </Link>
@@ -120,7 +120,10 @@ export function OverviewScreen() {
               <h3>Rest is part of the plan</h3>
               <p className="hero-rest">{nextDate ? `Your next session is ${dateLabel(nextDate)}.` : "No training days are set yet. Choose them in Settings."}</p>
               {nextDate
-                ? <button className="button button-primary hero-cta" onClick={() => openDay(nextDate)}>See next session <ArrowRight aria-hidden="true" /></button>
+                ? <div className="hero-cta-row">
+                  <button className="button button-primary hero-cta" onClick={() => router.push("/today?extra=1")}>Train today anyway <ArrowRight aria-hidden="true" /></button>
+                  <button className="button button-subtle hero-cta" onClick={() => openDay(nextDate)}>See next session</button>
+                </div>
                 : <button className="button button-primary hero-cta" onClick={() => router.push("/settings")}>Open Settings <ArrowRight aria-hidden="true" /></button>}
             </div>
             <div className="hero-figure"><MusclePicture figure={figure} priority /></div>

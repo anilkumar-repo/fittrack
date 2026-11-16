@@ -1,5 +1,6 @@
 "use client";
 
+import { useScrollLock } from "./use-scroll-lock";
 import { createPortal } from "react-dom";
 import Link from "next/link";
 import { LEVELS, levelTitle } from "@/lib/levels";
@@ -20,6 +21,7 @@ export function LevelSteps({ level }: { level: ExperienceLevel }) {
 /** Rozi tells the person their level changed by itself (up after steady training, down after a long break). */
 export function LevelChangePopup() {
   const { levelChange, dismissLevelChange } = useFitTrack();
+  useScrollLock(Boolean(levelChange));
   if (!levelChange || typeof document === "undefined") return null;
   const up = levelChange.direction === "up";
   return createPortal(

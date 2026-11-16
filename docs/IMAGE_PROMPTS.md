@@ -393,3 +393,65 @@ Rozi balances on one foot in a yoga tree pose: the other foot resting against th
 ```
 
 **Save as:** `design/rozi-incoming/mobility.png`. Then tell me, and I'll process it and swap it in on the Library "Stretch & mobility" card and the Mobility page.
+
+---
+
+## Part E — Rozi profile pictures (avatars)
+
+Close-up portraits made for a round profile picture: Rozi's face and chest fill the circle, each on its own soft colour. These replace the small full-body poses in the avatar picker.
+
+**Base description (paste first):**
+```
+Cute round fluffy coral-orange mascot named Rozi (#EF7D5C), soft fluffy fur (not striped), a small tuft of fur on top, big glossy dark-brown eyes with white highlights, small pink blush cheeks, tiny arms, 3D Pixar-style soft render, soft studio lighting.
+Close-up portrait for a round profile picture: head and upper body only, facing the viewer, centred, Rozi filling about 80% of the width. Everything important (face, hands, props) stays inside the centre circle so a round crop never cuts it.
+Solid flat background in the colour given below, filling the whole square, no gradient, no floor, no shadow at the edges, no text, no logo. 1024 x 1024.
+```
+
+**Then add one line:**
+
+| File name | Emotion | Add this line |
+|---|---|---|
+| `avatar-happy` | Happy | `Big open happy smile, sparkling eyes, both tiny hands raised in a little wave. Background #FCE3D6 (soft peach).` |
+| `avatar-cool` | Cool | `Wearing tiny black sunglasses pushed down the nose, confident smirk, one eyebrow raised. Background #D6E9F5 (soft sky blue).` |
+| `avatar-love` | In love | `Heart-shaped eyes, dreamy smile, hugging a small glossy pink heart. Background #F8D7DF (soft blush pink).` |
+| `avatar-wink` | Playful | `Winking one eye, tongue slightly out, giving a thumbs-up. Background #F7EBC0 (soft butter yellow).` |
+| `avatar-strong` | Strong | `Wearing a coral sweatband, flexing one tiny arm with a proud grin. Background #D3EEE2 (soft mint).` |
+| `avatar-focused` | Determined | `Focused game face: eyebrows down, determined small smile, tiny fists up like a boxer. Background #FCE3D6 (soft peach).` |
+| `avatar-laughing` | Laughing | `Laughing hard, eyes squeezed shut, mouth wide open, tiny tears of joy. Background #F7EBC0 (soft butter yellow).` |
+| `avatar-shy` | Shy | `Very shy: extra-pink blushing cheeks, small bashful smile, tiny hands touching the cheeks, eyes looking to the side. Background #F8D7DF (soft blush pink).` |
+| `avatar-surprised` | Surprised | `Surprised: eyes wide open, small round "o" mouth, tiny hands up by the face. Background #D6E9F5 (soft sky blue).` |
+| `avatar-starry` | Excited | `Excited: sparkly star-shaped eyes, huge smile, a few tiny gold sparkles around the head. Background #E3DDF5 (soft lavender).` |
+| `avatar-zen` | Calm | `Calm and peaceful: eyes gently closed, soft smile, a tiny green leaf resting on the fur tuft. Background #D3EEE2 (soft mint).` |
+| `avatar-sleepy` | Sleepy | `Sleepy: wearing a small navy nightcap with a white pom-pom, eyes half closed, cute little yawn. Background #E3DDF5 (soft lavender).` |
+| `avatar-party` | Party | `Wearing a small striped party hat, cheering, a few colourful confetti pieces around. Background #F7EBC0 (soft butter yellow).` |
+| `avatar-cozy` | Cozy | `Wrapped in a small knitted mint scarf, holding a tiny warm mug with steam, content smile. Background #FCE3D6 (soft peach).` |
+| `avatar-hydrated` | Hydrated | `Sipping from a small mint water bottle through a straw, happy eyes. Background #D6E9F5 (soft sky blue).` |
+| `avatar-grumpy` | Grumpy (cute) | `Cute grumpy pout, puffed cheeks, tiny arms crossed, one eyebrow down. Background #E3DDF5 (soft lavender).` |
+
+**Tips:**
+- Make `avatar-happy` first, then attach it as a reference image for the rest ("same character, same framing"), so all 16 match.
+- Keep the same zoom in every picture: the top of the fur tuft near the top edge, the chest at the bottom edge.
+
+**Save to:** `design/rozi-incoming/avatars/` with the file names above (for example `avatar-cool.png`). I'll crop them into circles, add them to the avatar picker (Settings → your picture), and keep the current options too.
+
+---
+
+## Part F — Home Rozi for every time of day (comment 6, 2026-11-16)
+
+Home's big Rozi now follows the clock on **every** day. The app already does this with the pictures it has: morning stretch, afternoon water, evening rest and night sleep on rest days; morning, afternoon and evening on training days; and sleep after a finished workout at night. These 8 new pictures make each moment unique. Save them as `design/rozi-incoming/<file name>.png` and I'll cut them in (transparent background, 480 px, like the others).
+
+**Base description (paste first):** the same as Part D:
+```
+Cute round fluffy coral-orange mascot named Rozi (#EF7D5C), soft fluffy fur (not striped), big glossy black eyes, small pink blush cheeks, tiny arms and feet, 3D Pixar-style soft render, soft studio lighting, full body, centred, transparent background, no text, no logo. 1024 x 1024.
+```
+
+| File name | When it shows | Add this line |
+|---|---|---|
+| `rest-morning.png` | Rest day, before 12:00 | Rozi stretching both tiny arms up with a big sleepy-happy yawn, a small steaming mint mug on the floor beside the feet, two soft sun-ray lines above the head. |
+| `rest-afternoon.png` | Rest day, 12:00–17:00 | Rozi sitting cross-legged, relaxed, sipping from a mint water bottle with a straw, eyes happily closed, a tiny leaf sticker on the bottle. |
+| `rest-evening.png` | Rest day, 17:00–21:00 | Rozi lying on a small round peach cushion reading a tiny book, wearing round reading glasses, cosy and content. |
+| `train-morning.png` | Training day, before 12:00 | Rozi in a mint headband doing a cheerful warm-up arm swing, one foot lifted, energetic grin, two small yellow motion lines. |
+| `train-afternoon.png` | Training day, 12:00–17:00 | Rozi holding a tiny coral dumbbell in one hand and giving a thumbs-up with the other, determined happy face. |
+| `train-evening.png` | Training day, 17:00–21:00 | Rozi with a small gym bag over the shoulder, waving goodbye, a crescent moon sticker on the bag, "let's go" smile. |
+| `done-night.png` | Workout finished, after 21:00 | Rozi tucked under a tiny peach blanket hugging a small gold medal, eyes closed, peaceful smile, a few "z z" letters above. |
+| `done-day.png` | Workout finished, before 21:00 | Rozi jumping with both arms up, a small gold medal bouncing on its chest, coral and mint confetti around. |

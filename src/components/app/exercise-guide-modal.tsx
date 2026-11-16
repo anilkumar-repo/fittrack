@@ -1,5 +1,6 @@
 "use client";
 
+import { useScrollLock } from "./use-scroll-lock";
 import { exerciseEquipmentIsAvailable, getExerciseReferenceInstructions, getSafeExerciseAlternatives, isDeadliftVariation } from "@/lib/exercise-library";
 import { deadliftAllowedForPlan, preserveOriginalPlan } from "@/lib/planner";
 import { getExerciseDefinition } from "@/lib/templates";
@@ -40,6 +41,7 @@ interface ExerciseGuideModalProps {
 
 export function ExerciseGuideModal({ exercise, workout, onOpen, onClose }: ExerciseGuideModalProps) {
   const { state, getState, upsertSession, setNotice, figure } = useFitTrack();
+  useScrollLock();
   const todaySession = workout?.session;
   const plan = workout?.plan ?? null;
   const restricted = isDeadliftVariation(exercise) && !deadliftAllowedForPlan(state.profile);

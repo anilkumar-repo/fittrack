@@ -9,7 +9,7 @@ import { GlassGlider } from "./glass-glider";
 import { ProfileGate } from "./profile-gate";
 import { Avatar } from "./avatar";
 import { unexplainedMissedDays } from "@/lib/missed-days";
-import { AlertCircle, BookOpen, ChartColumn, Check, CloudOff, Dumbbell, House, Settings, Users, X, type LucideIcon } from "lucide-react";
+import { AlertCircle, BookOpen, ChartColumn, Check, CloudOff, Dumbbell, House, MessageCircle, Settings, UserRound, Users, X, type LucideIcon } from "lucide-react";
 import { noticeDuration, noticeIsProblem } from "@/lib/notice";
 import { usePathname } from "next/navigation";
 import { dateLabel, weekdayOf } from "@/lib/dates";
@@ -17,6 +17,8 @@ import { RULE_VERSION } from "@/lib/templates";
 import { hasSupabaseConfig } from "@/lib/supabase-browser";
 import { sessionForDate, useFitTrack } from "./fit-track-provider";
 import { Welcome } from "./welcome";
+import { InstallHint } from "./install-hint";
+import { RoziLoader } from "./rozi-loader";
 
 const navItems: Array<{ href: string; label: string; shortLabel: string; icon: LucideIcon; title: string }> = [
   { href: "/", label: "Home", shortLabel: "Home", icon: House, title: "Home" },
@@ -24,8 +26,13 @@ const navItems: Array<{ href: string; label: string; shortLabel: string; icon: L
   { href: "/progress", label: "Progress", shortLabel: "Progress", icon: ChartColumn, title: "Your progress" },
   { href: "/friends", label: "Friends", shortLabel: "Friends", icon: Users, title: "Friends" },
   { href: "/library", label: "Library", shortLabel: "Library", icon: BookOpen, title: "Exercise library" },
+  { href: "/profile", label: "Profile", shortLabel: "Profile", icon: UserRound, title: "Your profile" },
+  { href: "/rozi", label: "Ask Rozi", shortLabel: "Rozi", icon: MessageCircle, title: "Ask Rozi" },
   { href: "/settings", label: "Settings", shortLabel: "Settings", icon: Settings, title: "Settings" },
 ];
+
+/** The phone dock: Library moves into Profile, Settings into Profile's menu, and Rozi takes the round corner button. */
+const DOCK_HREFS = ["/", "/today", "/progress", "/friends", "/profile"];
 
 function Icon({ children }: { children: React.ReactNode }) {
   return <span className="nav-icon" aria-hidden="true">{children}</span>;
@@ -36,8 +43,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const { state, ready, isDemo, accountLoading, authChecked, currentDate, notice, setNotice, saveError, savingSession, retryPendingSessions } = useFitTrack();
 
-  if (!ready || !authChecked || (accountLoading && isDemo)) return <main className="app-loading"><BrandMark /><span>Getting your training space ready…</span></main>;
-  if (!state.onboarded) return <Welcome />;
+  if (!ready || !authChecked || (accountLoading && isDemo)) return <RoziLoader />;
+  if (!state.onboarded) return <><Welcome /><InstallHint /></>;
   const missedDays = unexplainedMissedDays(state.profile, state.sessions, currentDate);
 
   const active = navItems.find((item) => item.href === pathname);
@@ -53,6 +60,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <TourGuide blocked={missedDays.length > 0} />
       <LevelChangePopup />
       <GlassGlider />
+      {missedDays.length === 0 && <InstallHint />}
       {missedDays.length === 0 && <ProfileGate />}
       <aside className="sidebar">
         <Link className="brand" href="/">
@@ -80,7 +88,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         {/* Home has no top bar: its hero carries the picture, greeting and date. */}
         {pathname === "/" ? <h1 className="sr-only">Home</h1> : <header className="topbar">
           <div><span className="eyebrow">{dateLabel(currentDate, { month: "long", day: "numeric", year: "numeric" })}</span><h1>{pageTitle}</h1></div>
-          <div className="topbar-actions">{!isDemo && (savingSession || saveError) && <span className={`save-state ${saveError ? "sync-error" : "connected"}`}><span className="save-dot" />{saveLabel}</span>}{isDemo && hasSupabaseConfig() && pathname !== "/sign-in" && <Link className="button button-subtle topbar-sign-in" href="/sign-in">Sign in</Link>}<Link className="round-avatar has-picture" aria-label="Open settings" href="/settings"><Avatar value={state.profile.avatar} name={state.profile.displayName} size={36} /></Link></div>
+          <div className="topbar-actions">{!isDemo && (savingSession || saveError) && <span className={`save-state ${saveError ? "sync-error" : "connected"}`}><span className="save-dot" />{saveLabel}</span>}{isDemo && hasSupabaseConfig() && pathname !== "/sign-in" && <Link className="button button-subtle topbar-sign-in" href="/sign-in">Sign in</Link>}<Link className="round-avatar has-picture" aria-label="Open your profile" href="/profile"><Avatar value={state.profile.avatar} name={state.profile.displayName} size={36} /></Link></div>
         </header>}
 
         {/* Messages float at the top as small glass toasts; information closes by itself, sync errors stay. */}
@@ -105,8 +113,14 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
       {/* Phone navigation: a floating glass pill for the main pages, and a round glass button for Settings. */}
       <nav className="mobile-nav" aria-label="Mobile navigation">
-        <div className="dock-pill">{navItems.filter((item) => item.href !== "/settings").map((item) => <Link key={item.href} href={item.href} className={active?.href === item.href ? "active" : ""} aria-label={item.label} aria-current={active?.href === item.href ? "page" : undefined}><Icon><item.icon aria-hidden="true" strokeWidth={1.8} /></Icon><small>{item.shortLabel}</small>{item.href === "/today" && dueToday && active?.href !== "/today" && <span className="dock-dot" aria-hidden="true" />}</Link>)}</div>
-        <Link href="/settings" className={`dock-round ${active?.href === "/settings" ? "active" : ""}`} aria-label="Settings" aria-current={active?.href === "/settings" ? "page" : undefined}><Icon><Settings aria-hidden="true" strokeWidth={1.8} /></Icon></Link>
+        <div className="dock-pill">{navItems.filter((item) => DOCK_HREFS.includes(item.href)).map((item) => {
+          const on = active?.href === item.href || (item.href === "/profile" && (pathname === "/settings" || pathname === "/library"));
+          return <Link key={item.href} href={item.href} className={on ? "active" : ""} aria-label={item.label} aria-current={on ? "page" : undefined}><Icon>{item.href === "/profile" ? <Avatar value={state.profile.avatar} name={state.profile.displayName} size={24} className="dock-avatar" /> : <item.icon aria-hidden="true" strokeWidth={1.8} />}</Icon><small>{item.shortLabel}</small>{item.href === "/today" && dueToday && active?.href !== "/today" && <span className="dock-dot" aria-hidden="true" />}</Link>;
+        })}</div>
+        <Link href="/rozi" className={`dock-round dock-rozi ${active?.href === "/rozi" ? "active" : ""}`} aria-label="Ask Rozi" aria-current={active?.href === "/rozi" ? "page" : undefined}>
+          {/* eslint-disable-next-line @next/next/no-img-element -- small static Rozi face */}
+          <img src="/rozi/faces/v1/happy.webp" alt="" width={52} height={52} />
+        </Link>
       </nav>
     </div>
   );

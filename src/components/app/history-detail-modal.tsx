@@ -1,5 +1,6 @@
 "use client";
 
+import { useScrollLock } from "./use-scroll-lock";
 import { shortDate } from "@/lib/dates";
 import { formatWeight } from "@/lib/logging";
 import { useFitTrack } from "./fit-track-provider";
@@ -7,6 +8,7 @@ import type { WorkoutSession } from "@/lib/types";
 
 export function HistoryDetailModal({ session, onClose }: { session: WorkoutSession; onClose: () => void }) {
   const { weightUnit } = useFitTrack();
+  useScrollLock();
   return (
     <div className="modal-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}><section className="exercise-modal history-detail-modal" role="dialog" aria-modal="true" aria-labelledby="history-detail-title"><button className="modal-close" aria-label="Close workout details" onClick={() => onClose()}>×</button><span className="modal-kicker">WORKOUT HISTORY · {shortDate(session.date)}</span><h2 id="history-detail-title">{session.plan.title}</h2><p className="modal-subtitle">{session.status.replaceAll("_", " ")} · Template {session.plan.templateVersion} · Rules {session.plan.ruleVersion}</p>
       <div className="history-feedback"><strong>Why this plan</strong>{session.plan.generationReasons.map((reason) => <p key={reason}>{reason}</p>)}{session.plan.originalExercises.length > 0 && <p>Original template: {session.plan.originalExercises.map((exercise) => exercise.name).join(" · ")}</p>}</div>

@@ -1,0 +1,21 @@
+# Used by GitHub's "Generate release notes" button (Releases → New release).
+# Merged pull requests are grouped by their label. Add one label per pull request
+# (feature, fix, design, database, docs, chore). Unlabelled ones land in "Other changes".
+changelog:
+  exclude:
+    labels: [skip-release-notes]
+  categories:
+    - title: "✨ New features"
+      labels: [feature, enhancement]
+    - title: "🐛 Fixes"
+      labels: [fix, bug]
+    - title: "🎨 Design and Rozi"
+      labels: [design, ui]
+    - title: "🗄️ Database changes (apply in Supabase before or right after release)"
+      labels: [database, migration]
+    - title: "📝 Docs"
+      labels: [docs, documentation]
+    - title: "🔧 Behind the scenes"
+      labels: [chore, ci, dependencies]
+    - title: "Other changes"
+      labels: ["*"]

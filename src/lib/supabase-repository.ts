@@ -28,6 +28,12 @@ export function newAccountProfileDefaults(user: AuthUser, seed?: NewAccountSeed)
     equipmentAvailability: local?.equipmentAvailability ?? base.equipmentAvailability,
     availableEquipment: local?.availableEquipment ?? base.availableEquipment,
     goal: local?.goal ?? base.goal,
+    experience: local?.experience ?? base.experience,
+    // Body details and the "why" from the welcome steps come along too, so the BMI step isn't asked twice.
+    ...(local?.heightCm ? { heightCm: local.heightCm } : {}),
+    ...(local?.birthYear ? { birthYear: local.birthYear } : {}),
+    ...(local?.sex ? { sex: local.sex } : {}),
+    ...(local?.why ? { why: local.why } : {}),
     ...(local?.avatar && !local.avatar.startsWith("photo:data:") ? { avatar: local.avatar } : {}),
     deadliftEnabled: false,
     trainerRole: false,

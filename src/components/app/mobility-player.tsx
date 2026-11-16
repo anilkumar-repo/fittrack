@@ -6,6 +6,7 @@ import Image from "next/image";
 import { Check, ChevronLeft, Pause, Play, SkipForward, Video, X } from "lucide-react";
 import { markRoutineDone, moveVideo, routineMinutes, routineSteps, sideSeconds, stretchPicture, type MobilityRoutine } from "@/lib/mobility";
 import { Rozi } from "./rozi";
+import { useScrollLock } from "./use-scroll-lock";
 
 const GET_READY = 5;
 
@@ -23,6 +24,7 @@ export function MobilityPlayer({ routine, date, onClose }: { routine: MobilityRo
   const endsAt = useRef(0);
   const remainingWhenPaused = useRef(0);
   const step = steps[index];
+  useScrollLock();
   const timed = step && step.move.kind !== "reps";
 
   const startPhase = useCallback((next: "ready" | "go", seconds: number) => {

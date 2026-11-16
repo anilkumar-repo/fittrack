@@ -60,7 +60,11 @@ test("Rozi's mood follows the day: done, at risk, broken, care, rest, and time o
   assert.equal(roziMoment({ streak: base, hour: 14, name: "P" }).mood, "afternoon");
   assert.equal(roziMoment({ streak: base, hour: 18, name: "P" }).mood, "streak-risk");
   const restDay = calculateStreak(profile, [done("2026-11-02")], "2026-11-03");
-  assert.equal(roziMoment({ streak: restDay, hour: 10, name: "P" }).mood, "rest");
+  // Rest days follow the clock: morning stretch, afternoon water, evening rest, night sleep.
+  assert.equal(roziMoment({ streak: restDay, hour: 10, name: "P" }).mood, "stretch");
+  assert.equal(roziMoment({ streak: restDay, hour: 14, name: "P" }).mood, "water");
+  assert.equal(roziMoment({ streak: restDay, hour: 19, name: "P" }).mood, "rest");
+  assert.equal(roziMoment({ streak: restDay, hour: 22, name: "P" }).mood, "night");
   assert.equal(roziMoment({ streak: restDay, hour: 22, name: "P" }).mood, "night");
   const broken = calculateStreak(profile, [done("2026-11-02")], "2026-11-05");
   assert.equal(roziMoment({ streak: broken, hour: 10, name: "P" }).mood, "grumpy");
