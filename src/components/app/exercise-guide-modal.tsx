@@ -13,6 +13,8 @@ import { REGION_LABELS, regionsForExercises } from "@/lib/figure";
 import { TurnableFigure } from "./turnable-figure";
 import { MuscleThumb } from "./muscle-thumb";
 import { sessionForDate, useFitTrack } from "./fit-track-provider";
+import { SheetGrip } from "@/components/ui/sheet-grip";
+import { ExerciseStats } from "./exercise-stats";
 
 /** The library guide for an exercise, keeping the sets, reps, and reasons from the plan it was opened from. */
 export function toGuideExercise(exercise: ExerciseDefinition): ExerciseDefinition {
@@ -95,6 +97,7 @@ export function ExerciseGuideModal({ exercise, workout, onOpen, onClose }: Exerc
   const ready = exerciseEquipmentIsAvailable(exercise, state.profile);
   const regions = regionsForExercises([exercise]);
   const [shownRegion, setShownRegion] = useState(regions[0]);
+  const [tab, setTab] = useState<"about" | "how" | "history" | "charts" | "records">("about");
 
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => { if (event.key === "Escape") onClose(); };
@@ -105,6 +108,7 @@ export function ExerciseGuideModal({ exercise, workout, onOpen, onClose }: Exerc
   return (
     <div className="modal-backdrop guide-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
       <section className="exercise-modal guide" role="dialog" aria-modal="true" aria-labelledby="exercise-modal-title">
+        <SheetGrip onClose={onClose} />
         <div className="guide-head">
           <div><p className="guide-kicker">{exercise.category === "core" ? "Core" : exercise.category === "conditioning" ? "Conditioning" : "Strength"} · {exercise.difficulty}</p><h2 id="exercise-modal-title">{exercise.name}</h2></div>
           <button className="guide-close" aria-label="Close guide" onClick={() => onClose()}><X aria-hidden="true" /></button>
@@ -116,7 +120,23 @@ export function ExerciseGuideModal({ exercise, workout, onOpen, onClose }: Exerc
         </div>
         {!ready && !restricted && <p className="guide-note warn">This needs equipment that is not ticked in your Settings. Confirm you have it before using this movement.</p>}
 
-        {restricted ? <div className="locked-note">This movement is restricted until your trainer approves it, so its instructions are not shown.</div> : <>
+        {!restricted && <div className="segmented guide-tabs" role="tablist" aria-label="Exercise details">
+          {([["about", "About"], ["how", "How to"], ["history", "History"], ["charts", "Charts"], ["records", "Records"]] as const).map(([id, label]) => (
+            <button key={id} type="button" role="tab" aria-selected={tab === id} className={tab === id ? "selected" : ""} onClick={() => setTab(id)}>{label}</button>
+          ))}
+        </div>}
+
+        {!restricted && (tab === "history" || tab === "charts" || tab === "records") && <ExerciseStats exerciseId={exercise.id} view={tab} />}
+
+        {!restricted && tab === "how" && <>
+          <ol className="guide-steps big">{instructions.map((instruction, index) => <li key={`${index}-${instruction}`}><span>{index + 1}</span><p>{instruction}</p></li>)}</ol>
+          {exercise.cues.length > 0 && <div className="guide-cues"><strong>Keep in mind</strong><ul>{exercise.cues.map((cue) => <li key={cue}>{cue}</li>)}</ul></div>}
+          <div className="guide-video">
+            <a className="button button-subtle" href={demoVideo.url} target="_blank" rel="noopener noreferrer"><Play aria-hidden="true" /> Watch a demonstration</a>
+          </div>
+        </>}
+
+        {restricted ? <div className="locked-note">This movement is restricted until your trainer approves it, so its instructions are not shown.</div> : tab === "about" && <>
           <div className="guide-body">
             <TurnableFigure key={`${figure}-${shownRegion ?? "base"}`} figure={figure} region={shownRegion} />
             <div className="guide-works">

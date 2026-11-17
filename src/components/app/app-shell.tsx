@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useEffect } from "react";
 import { BrandMark } from "./brand-mark";
 import { MissedDayPrompt } from "./missed-day-prompt";
 import { TourGuide } from "./tour-guide";
@@ -11,12 +12,13 @@ import { Avatar } from "./avatar";
 import { unexplainedMissedDays } from "@/lib/missed-days";
 import { AlertCircle, BookOpen, ChartColumn, Check, CloudOff, Dumbbell, House, MessageCircle, Settings, UserRound, Users, X, type LucideIcon } from "lucide-react";
 import { noticeDuration, noticeIsProblem } from "@/lib/notice";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { dateLabel, weekdayOf } from "@/lib/dates";
 import { RULE_VERSION } from "@/lib/templates";
 import { hasSupabaseConfig } from "@/lib/supabase-browser";
 import { sessionForDate, useFitTrack } from "./fit-track-provider";
-import { Welcome } from "./welcome";
+import { START_TODAY_KEY, WANT_PUSH_KEY, Welcome } from "./welcome";
+import { enablePush } from "@/lib/push-client";
 import { InstallHint } from "./install-hint";
 import { RoziLoader } from "./rozi-loader";
 
@@ -41,14 +43,37 @@ function Icon({ children }: { children: React.ReactNode }) {
 /** Sidebar, top bar, messages, and mobile navigation around every page. */
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const { state, ready, isDemo, accountLoading, authChecked, currentDate, notice, setNotice, saveError, savingSession, retryPendingSessions } = useFitTrack();
+  // Big page titles shrink into a frosted bar once the page scrolls (see "LIQUID GLASS 2" in globals.css).
+  useEffect(() => {
+    const root = document.documentElement;
+    const update = () => root.classList.toggle("scrolled", window.scrollY > 12);
+    update();
+    window.addEventListener("scroll", update, { passive: true });
+    return () => window.removeEventListener("scroll", update);
+  }, [pathname]);
+  const { state, ready, isDemo, accountLoading, authChecked, currentDate, notice, setNotice, saveError, savingSession, retryPendingSessions, browserClient } = useFitTrack();
+  const router = useRouter();
+  // After setup: "First workout: Today" opens Train once, and "Allow notifications" is finished once signed in.
+  useEffect(() => {
+    if (!ready || !state.onboarded) return;
+    try {
+      if (window.localStorage.getItem(START_TODAY_KEY) === "1") {
+        window.localStorage.removeItem(START_TODAY_KEY);
+        router.push(state.profile.trainingDays.includes(weekdayOf(currentDate)) ? "/today" : "/today?extra=1");
+      }
+      if (!isDemo && browserClient && window.localStorage.getItem(WANT_PUSH_KEY) === "1" && "Notification" in window && Notification.permission === "granted") {
+        window.localStorage.removeItem(WANT_PUSH_KEY);
+        void enablePush(browserClient, state.profile.timeZone).then(() => setNotice("Reminders are on. Rozi will check in.")).catch(() => undefined);
+      }
+    } catch { /* storage blocked: nothing to do */ }
+  }, [ready, state.onboarded, isDemo, browserClient, currentDate, state.profile.trainingDays, state.profile.timeZone, router, setNotice]);
 
   if (!ready || !authChecked || (accountLoading && isDemo)) return <RoziLoader />;
   if (!state.onboarded) return <><Welcome /><InstallHint /></>;
   const missedDays = unexplainedMissedDays(state.profile, state.sessions, currentDate);
 
   const active = navItems.find((item) => item.href === pathname);
-  const pageTitle = active?.title ?? (pathname === "/sign-in" ? "Sign in" : pathname === "/streak" ? "Your streak" : pathname === "/install" ? "Install the app" : pathname === "/mobility" ? "Stretch & mobility" : "RozFit");
+  const pageTitle = active?.title ?? (pathname === "/sign-in" ? "Sign in" : pathname === "/streak" ? "Your streak" : pathname === "/install" ? "Install the app" : pathname === "/mobility" ? "Stretch & mobility" : pathname === "/recovery" ? "Recovery" : pathname === "/report" ? "Your week" : pathname === "/routines" ? "My routines" : "RozFit");
   const dueToday = state.profile.trainingDays.includes(weekdayOf(currentDate)) || Boolean(sessionForDate(state, currentDate));
   const saveLabel = isDemo
     ? accountLoading ? "Loading your account…" : "Saved on this device"

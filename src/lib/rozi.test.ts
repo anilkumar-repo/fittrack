@@ -56,14 +56,14 @@ test("a brand-new person who has not trained yet is never shown as grumpy", () =
 
 test("Rozi's mood follows the day: done, at risk, broken, care, rest, and time of day", () => {
   const base = calculateStreak(profile, [done("2026-11-02")], "2026-11-04");
-  assert.equal(roziMoment({ streak: base, hour: 8, name: "P" }).mood, "morning");
-  assert.equal(roziMoment({ streak: base, hour: 14, name: "P" }).mood, "afternoon");
+  assert.equal(roziMoment({ streak: base, hour: 8, name: "P" }).mood, "train-morning");
+  assert.equal(roziMoment({ streak: base, hour: 14, name: "P" }).mood, "train-afternoon");
   assert.equal(roziMoment({ streak: base, hour: 18, name: "P" }).mood, "streak-risk");
   const restDay = calculateStreak(profile, [done("2026-11-02")], "2026-11-03");
   // Rest days follow the clock: morning stretch, afternoon water, evening rest, night sleep.
-  assert.equal(roziMoment({ streak: restDay, hour: 10, name: "P" }).mood, "stretch");
-  assert.equal(roziMoment({ streak: restDay, hour: 14, name: "P" }).mood, "water");
-  assert.equal(roziMoment({ streak: restDay, hour: 19, name: "P" }).mood, "rest");
+  assert.equal(roziMoment({ streak: restDay, hour: 10, name: "P" }).mood, "rest-morning");
+  assert.equal(roziMoment({ streak: restDay, hour: 14, name: "P" }).mood, "rest-afternoon");
+  assert.equal(roziMoment({ streak: restDay, hour: 19, name: "P" }).mood, "rest-evening");
   assert.equal(roziMoment({ streak: restDay, hour: 22, name: "P" }).mood, "night");
   assert.equal(roziMoment({ streak: restDay, hour: 22, name: "P" }).mood, "night");
   const broken = calculateStreak(profile, [done("2026-11-02")], "2026-11-05");
@@ -73,7 +73,7 @@ test("Rozi's mood follows the day: done, at risk, broken, care, rest, and time o
   const pain = done("2026-11-04", { status: "planned", checkIn: { energy: 3, soreness: 1, pain: true, recovery: 3, discomfort: "", note: "" } });
   assert.equal(roziMoment({ streak: base, todaySession: pain, hour: 10, name: "P" }).mood, "care");
   const finished = calculateStreak(profile, [done("2026-11-02"), done("2026-11-04")], "2026-11-04");
-  assert.equal(roziMoment({ streak: finished, todaySession: done("2026-11-04"), hour: 10, name: "P" }).mood, "cheer");
+  assert.equal(roziMoment({ streak: finished, todaySession: done("2026-11-04"), hour: 10, name: "P" }).mood, "done-day");
   assert.equal(roziMoment({ streak: finished, todaySession: done("2026-11-04"), hour: 10, name: "P", wins: { newRecord: true, bigMilestone: false, milestone: false, earned: [] } }).mood, "personal-record");
 });
 
@@ -90,4 +90,17 @@ test("the energy slider maps 1–5 to Rozi's energy pictures", () => {
   assert.equal(energyMood(1), "energy-1");
   assert.equal(energyMood(5), "energy-5");
   assert.equal(energyMood(9), "energy-5");
+});
+
+test("Rozi moves to match the moment: wave hello, sleep at night, cheer on a finish", async () => {
+  const { roziMotion } = await import("./rozi.ts");
+  assert.equal(roziMotion("hello"), "wave");
+  assert.equal(roziMotion("train-morning"), "wave");
+  assert.equal(roziMotion("rest-morning"), "yawn");
+  assert.equal(roziMotion("done-night"), "sleep");
+  assert.equal(roziMotion("done-day"), "cheer");
+  assert.equal(roziMotion("trophy"), "cheer");
+  assert.equal(roziMotion("chat-thinking"), "think");
+  assert.equal(roziMotion("water"), "float");
+  for (const mood of ROZI_MOODS) assert.match(roziMotion(mood), /^(wave|yawn|sleep|cheer|think|pop|float)$/);
 });

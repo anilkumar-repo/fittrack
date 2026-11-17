@@ -4,6 +4,8 @@ import { extraSets, levelOf, levelSetBonus, levelTitle, programWeek, usesFoundat
 import { exerciseEquipmentIsAvailable, isDeadliftVariation, isExerciseAllowedForProfile } from "./exercise-library.ts";
 import type { CheckIn, ExerciseDefinition, Profile, TrainerRuleSettings, TrainingGoal, TrainingPhase, WorkoutFocus, WorkoutPlan, WorkoutSession } from "./types";
 import { DEFAULT_TRAINER_RULE_SETTINGS, normalizeTrainerRuleSettings, profileWithTrainerEquipment } from "./trainer-rules.ts";
+import { regionsForExercises } from "./figure.ts";
+import { FOCUS_OPTIONS, focusRegions } from "./onboarding.ts";
 
 export interface PlanInput {
   date: string;
@@ -315,7 +317,8 @@ export function generateWorkout({ date, profile, sessions, checkIn, trainerRuleS
     return program ? { ...plan, goal, weekNumber: week, stage, recoveryWeek, level } : { ...plan, level };
   }
 
-  const baseFocus: TemplateFocus = focus === "Return to training" || focus === "Recovery" ? CYCLE[0] : focus;
+  // The planner never produces "Your routine" (that comes from routinePlan); it only needs a template focus here.
+  const baseFocus = (focus === "Return to training" || focus === "Recovery" || focus === "Your routine" ? CYCLE[0] : focus) as TemplateFocus;
   const originalTemplateExercises = getTemplateExercises(baseFocus);
   const sourceExercises = originalTemplateExercises.map((exercise) => {
     const override = settings.exerciseTemplates.find((item) => item.exerciseId === exercise.id);
@@ -379,6 +382,8 @@ export function generateWorkout({ date, profile, sessions, checkIn, trainerRuleS
   if (avoidRecentPatterns) generationReasons.push("The last completed workout was within one day; repeated movement patterns are replaced or omitted where a safe alternative is available.");
   if (profile.deadliftEnabled && baseFocus === "Foundation B") generationReasons.push("A trainer-approved rule permits the hinge variation for this client; time in training alone never enables it.");
 
+  const focusTargets = focusRegions(profile.focusArea);
+  let focusUsed = false;
   const exercises: ExerciseDefinition[] = [];
   for (const source of sourceExercises) {
     if (isDeadliftVariation(source) && !deadliftAllowedForPlan(profile)) continue;
@@ -442,7 +447,12 @@ export function generateWorkout({ date, profile, sessions, checkIn, trainerRuleS
     const levelSets = isReturnSession ? 0 : extraSets(level, exercises.length);
     const cap = setCap(goal, week, isEarlyFoundation, isReturnSession) + (isReturnSession ? 0 : levelSetBonus(level));
     const cappedSets = Math.min(candidate.sets + levelSets, cap);
-    const plannedSets = recoveryWeek && goal !== "muscle" ? recoveryWeekSets(cappedSets) : cappedSets;
+    const weekSets = recoveryWeek && goal !== "muscle" ? recoveryWeekSets(cappedSets) : cappedSets;
+    // Focus muscle: one extra set on moves that train it (never in a return, recovery or first-weeks session).
+    const focusHit = focusTargets.length > 0 && !isReturnSession && !recoveryWeek && !isEarlyFoundation
+      && regionsForExercises([candidate]).some((region) => focusTargets.includes(region));
+    const plannedSets = focusHit ? Math.min(weekSets + 1, cap + 1) : weekSets;
+    if (focusHit) focusUsed = true;
     exercises.push({
       ...candidate,
       sets: volumeAdjustment ? Math.max(1, plannedSets - settings.recovery.volumeReductionSets) : plannedSets,
@@ -455,6 +465,8 @@ export function generateWorkout({ date, profile, sessions, checkIn, trainerRuleS
     selectedIds.add(candidate.id);
     if (candidate.movementPattern) selectedPatterns.add(candidate.movementPattern);
   }
+
+  if (focusUsed) generationReasons.push(`Your focus is ${FOCUS_OPTIONS.find((option) => option.id === profile.focusArea)?.label.toLowerCase()}: moves that train it get one extra set.`);
 
   if (!exercises.length) {
     return recoveryPlan(date, trainingAttempts, phase, [...generationReasons, "No safe exercises matched the verified equipment and movement-pattern constraints."], false, settings, trainerRuleRevision);

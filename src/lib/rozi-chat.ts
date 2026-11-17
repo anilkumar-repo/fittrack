@@ -5,10 +5,12 @@
  */
 export type RoziIntent =
   | "TODAY_WORKOUT" | "NEXT_WORKOUT" | "LAST_WORKOUT" | "WEEKLY_WORKOUT_COUNT" | "STREAK_STATUS"
-  | "PROGRESS_CHECK" | "MOBILITY_RECOMMENDATION" | "WATER" | "BODY_GOAL_PROGRESS" | "HELLO" | "UNKNOWN";
+  | "PROGRESS_CHECK" | "MOBILITY_RECOMMENDATION" | "WATER" | "BODY_GOAL_PROGRESS" | "WEEKLY_REPORT" | "MUSCLE_RECOVERY" | "HELLO" | "UNKNOWN";
 
 // Checked in order: the first intent with a matching phrase wins, so more specific ones come first.
 const DICTIONARY: Array<[RoziIntent, RegExp]> = [
+  ["WEEKLY_REPORT", /\b(summar|report|recap|review)\w*\b.*\bweek\b|\bmy week\b/],
+  ["MUSCLE_RECOVERY", /\b(recover|recovered|recovery|rested|ready|sore)\b/],
   ["LAST_WORKOUT", /\b(last|previous|yesterday'?s?|recent)\b.*\b(workout|session|train|trained|training)\b|what did i (do|train)/],
   ["NEXT_WORKOUT", /\b(next|tomorrow'?s?|upcoming)\b.*\b(workout|session|train|training|day)\b/],
   ["TODAY_WORKOUT", /\b(today'?s?|now)\b.*\b(workout|session|train|plan)\b|what('?s| is) my workout|what am i training|what should i (do|train)/],

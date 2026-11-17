@@ -5,6 +5,10 @@ import type { BodyWeightEntry, EquipmentKey, ExerciseLog, FitTrackState, MissedR
 import { createExerciseLog, normalizeWorkoutSession, persistWorkoutSession, type WorkoutPersistencePort } from "./workout-tracking";
 import { DEFAULT_TRAINER_RULE_SETTINGS, normalizeTrainerRuleSettings, validateTrainerRuleSettings } from "./trainer-rules";
 import { EQUIPMENT_OPTIONS } from "./templates";
+import { FOCUS_OPTIONS, GYM_OPTIONS, type FocusArea, type GymType } from "./onboarding";
+
+const FOCUS_IDS = new Set<string>(FOCUS_OPTIONS.map((option) => option.id));
+const GYM_IDS = new Set<string>(GYM_OPTIONS.map((option) => option.id));
 
 type AuthUser = { id: string; email?: string; app_metadata?: Record<string, unknown> };
 type DbRow = Record<string, unknown>;
@@ -34,6 +38,8 @@ export function newAccountProfileDefaults(user: AuthUser, seed?: NewAccountSeed)
     ...(local?.birthYear ? { birthYear: local.birthYear } : {}),
     ...(local?.sex ? { sex: local.sex } : {}),
     ...(local?.why ? { why: local.why } : {}),
+    ...(local?.focusArea ? { focusArea: local.focusArea } : {}),
+    ...(local?.gymType ? { gymType: local.gymType } : {}),
     ...(local?.avatar && !local.avatar.startsWith("photo:data:") ? { avatar: local.avatar } : {}),
     deadliftEnabled: false,
     trainerRole: false,
@@ -71,6 +77,8 @@ function mapProfile(row: DbRow, id: string, trainerRole: boolean, deadliftEnable
     ...(row.birth_year !== null && row.birth_year !== undefined ? { birthYear: Number(row.birth_year) } : {}),
     ...(row.sex === "female" || row.sex === "male" || row.sex === "other" ? { sex: row.sex } : {}),
     ...(typeof row.why === "string" && row.why ? { why: row.why } : {}),
+    ...(typeof row.focus_area === "string" && FOCUS_IDS.has(row.focus_area) ? { focusArea: row.focus_area as FocusArea } : {}),
+    ...(typeof row.gym_type === "string" && GYM_IDS.has(row.gym_type) ? { gymType: row.gym_type as GymType } : {}),
   };
 }
 
@@ -152,7 +160,7 @@ function createSupabaseWorkoutPort(client: SupabaseClient): WorkoutPersistencePo
     },
     async upsertSets(ownerId, sessionId, exerciseLogId, log) {
       if (!log.sets.length) return;
-      const { error } = await client.from("workout_set_logs").upsert(log.sets.map((set, index) => ({
+      const rows = log.sets.map((set, index) => ({
         exercise_log_id: exerciseLogId,
         session_id: sessionId,
         user_id: ownerId,
@@ -162,8 +170,14 @@ function createSupabaseWorkoutPort(client: SupabaseClient): WorkoutPersistencePo
         load_kg: set.loadKg,
         completed: set.completed,
         is_extra: set.extra,
+        set_type: set.kind ?? "normal",
         updated_at: new Date().toISOString(),
-      })), { onConflict: "exercise_log_id,set_number" });
+      }));
+      let { error } = await client.from("workout_set_logs").upsert(rows, { onConflict: "exercise_log_id,set_number" });
+      // Before the Phase 4 migration there is no set_type column: save the sets without it.
+      if (error && (error.code === "PGRST204" || error.code === "42703")) {
+        ({ error } = await client.from("workout_set_logs").upsert(rows.map(({ set_type: _type, ...rest }) => { void _type; return rest; }), { onConflict: "exercise_log_id,set_number" }));
+      }
       if (error) throw error;
     },
     async upsertReview(ownerId, sessionId, review) {
@@ -220,6 +234,7 @@ function createSupabaseWorkoutPort(client: SupabaseClient): WorkoutPersistencePo
             loadKg: set.load_kg === null ? null : Number(set.load_kg),
             completed: set.completed === true,
             extra: set.is_extra === true,
+            ...(set.set_type === "warmup" || set.set_type === "drop" || set.set_type === "failure" ? { kind: set.set_type } : {}),
           })),
         };
         const key = String(row.session_id);
@@ -362,7 +377,7 @@ export async function saveCloudBodyWeightEntry(client: SupabaseClient, userId: s
 }
 
 export async function saveCloudProfile(client: SupabaseClient, profile: Profile): Promise<void> {
-  const { error } = await client.from("profiles").upsert({
+  const row: Record<string, unknown> = {
     id: profile.id,
     display_name: profile.displayName,
     experience: profile.experience,
@@ -382,7 +397,18 @@ export async function saveCloudProfile(client: SupabaseClient, profile: Profile)
     // A device-only photo (data URL) is never sent to the account; cloud photos are stored as links.
     avatar: profile.avatar && !profile.avatar.startsWith("photo:data:") ? profile.avatar : "",
     updated_at: new Date().toISOString(),
-  }, { onConflict: "id" });
+    ...(profile.focusArea ? { focus_area: profile.focusArea } : {}),
+    ...(profile.gymType ? { gym_type: profile.gymType } : {}),
+  };
+  const { error } = await client.from("profiles").upsert(row, { onConflict: "id" });
+  // Before the Phase 2 migration adds focus_area / gym_type, save everything else rather than fail.
+  if (error && (error.code === "PGRST204" || error.code === "42703") && (row.focus_area || row.gym_type)) {
+    const { focus_area: _focus, gym_type: _gym, ...rest } = row;
+    void _focus; void _gym;
+    const { error: retryError } = await client.from("profiles").upsert(rest, { onConflict: "id" });
+    if (retryError) throw retryError;
+    return;
+  }
   if (error) throw error;
 }
 

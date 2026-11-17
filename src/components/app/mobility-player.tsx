@@ -2,9 +2,9 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import Image from "next/image";
 import { Check, ChevronLeft, Pause, Play, SkipForward, Video, X } from "lucide-react";
-import { markRoutineDone, moveVideo, routineMinutes, routineSteps, sideSeconds, stretchPicture, type MobilityRoutine } from "@/lib/mobility";
+import { markRoutineDone, moveVideo, routineMinutes, routineSteps, sideSeconds, type MobilityRoutine } from "@/lib/mobility";
+import { MoveLoop } from "./move-loop";
 import { Rozi } from "./rozi";
 import { useScrollLock } from "./use-scroll-lock";
 
@@ -86,7 +86,7 @@ export function MobilityPlayer({ routine, date, onClose }: { routine: MobilityRo
           </div>
         ) : step && <>
           <div className="player-picture">
-            <Image src={stretchPicture(step.move.id)} alt={step.move.name} width={840} height={420} priority sizes="(max-width: 700px) 100vw, 640px" />
+            <MoveLoop id={step.move.id} alt={step.move.name} priority paused={paused} sizes="(max-width: 700px) 100vw, 640px" />
             {step.side && <span className="player-side">{step.side === "left" ? "Left side" : "Right side"}</span>}
           </div>
           <div className="player-info">

@@ -3,14 +3,18 @@
 import { AccountCard, DataCard, TrainerInviteCard, TrainerLinkCard } from "@/components/app/account-cards";
 import { useFitTrack } from "@/components/app/fit-track-provider";
 import { NotificationsCard } from "@/components/app/notifications-card";
-import { AvatarPicker } from "@/components/app/avatar";
+import { Avatar } from "@/components/app/avatar";
 import { replayTour } from "@/components/app/tour-guide";
 import { TrainerControls } from "@/components/trainer-controls";
-import { CalendarDays, Moon, Palette, QrCode, ShieldCheck, Smartphone, Sun } from "lucide-react";
+import { Bell, CalendarDays, Check, ChevronLeft, ChevronRight, Database, Info, KeyRound, MessageCircle, Moon, Palette, QrCode, ShieldCheck, Smartphone, Sparkles, Sun, UserRound, Users } from "lucide-react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
+import { SettingsMenu, type MenuItem } from "@/components/app/settings-menu";
 import { GOAL_OPTIONS, goalOf } from "@/lib/program";
+import { equipmentPicture, FOCUS_OPTIONS, GYM_OPTIONS, gymPreset } from "@/lib/onboarding";
+import Image from "next/image";
 import { LEVEL_OPTIONS, levelOf } from "@/lib/levels";
-import { MAX_TRAINING_DAYS, MIN_TRAINING_DAYS, shortDate, trainingDaysValid, WEEKDAY_LABELS } from "@/lib/dates";
+import { MAX_TRAINING_DAYS, MIN_TRAINING_DAYS, trainingDaysValid, WEEKDAY_LABELS } from "@/lib/dates";
 import { FIGURE_OPTIONS } from "@/lib/figure";
 import { EQUIPMENT_OPTIONS, RULE_VERSION, TEMPLATE_VERSION } from "@/lib/templates";
 import type { Profile } from "@/lib/types";
@@ -43,6 +47,7 @@ export function SettingsScreen() {
   const { state, currentDate, recordedSessions, updateState, isDemo, browserClient, updateProfile, refreshTrainerClients, setNotice, weightUnit, setWeightUnit, theme, setTheme, figure, setFigure, saveError, savingSession } = useFitTrack();
   // "Your plan" changes are held as a draft until Save; Discard drops them.
   const [draft, setDraft] = useState<Partial<Profile>>({});
+  const params = useSearchParams();
   const saved = state.profile;
   const profile: Profile = { ...saved, ...draft };
   const dirty = Object.keys(draft).length > 0;
@@ -82,22 +87,41 @@ export function SettingsScreen() {
 
   const workouts = recordedSessions.filter((session) => session.status === "completed").length;
 
-  return (
-    <section className="settings">
-      {dirty && <SaveBar onSave={saveDraft} onDiscard={() => setDraft({})} disabled={nameMissing} note={nameMissing ? "Add your name to save" : undefined} />}
-      <article className="panel profile-card">
-        <AvatarPicker />
-        <div className="profile-id"><h2>{saved.displayName}</h2><p>{isDemo ? "Saved on this device only" : state.userEmail ?? "Signed in"}{profile.trainerRole && !isDemo ? " · Trainer" : ""}</p>
-          <span className={`sync-pill ${isDemo ? "local" : saveError ? "error" : "ok"}`}><span className="save-dot" />{isDemo ? "Not synced — sign in to keep your data safe" : saveError ? "Sync needs attention" : savingSession ? "Saving…" : "Synced to your account"}</span></div>
-        <dl className="profile-stats">
-          <div><dd>{workouts}</dd><dt>workouts</dt></div>
-          <div><dd>{saved.trainingDays.length}</dd><dt>days a week</dt></div>
-          <div><dd>{shortDate(saved.trainingStartDate)}</dd><dt>started</dt></div>
-        </dl>
-      </article>
+  const section = params.get("section");
+  const themeLabel = THEME_OPTIONS.find((option) => option.id === theme)?.label ?? "Auto";
+  const items: MenuItem[] = [
+    { group: "Account", id: "profile", href: "/profile", icon: UserRound, color: "#ef7d5c", label: "Your profile", note: "Picture, name, stats", keywords: "avatar photo picture name" },
+    { group: "Account", id: "account", icon: KeyRound, color: "#5b9bd5", label: "Account", note: isDemo ? "Not signed in" : state.userEmail ?? "Signed in", keywords: "sign in sign out email login delete" },
+    { group: "Account", id: "data", icon: Database, color: "#7a8a99", label: "Your data", note: "Export or delete", keywords: "export download delete backup" },
+    { group: "Preferences", id: "plan", icon: CalendarDays, color: "#3fae8c", label: "Your plan", note: "Goal, level, days, equipment", value: `${saved.trainingDays.length} days · ${saved.preferredSessionMinutes} min`, keywords: "goal level days session length equipment body height weight bmi why name" },
+    { group: "Preferences", id: "notifications", icon: Bell, color: "#e5a33b", label: "Notifications", note: "Reminders, water, nudges", keywords: "push reminder morning evening water comeback nudge weigh" },
+    { group: "Preferences", id: "appearance", icon: Palette, color: "#9b7be0", label: "Appearance", note: "Theme, figure, units", value: themeLabel, keywords: "dark light theme figure male female units kg lb pounds" },
+    { group: "Trainers & safety", id: "safety", icon: ShieldCheck, color: "#3fae8c", label: profile.trainerRole && !isDemo ? "Your clients" : "Safety rules", note: profile.trainerRole && !isDemo ? "Rules for each client" : "Deadlifts, pain = recovery", keywords: "deadlift pain trainer clients rules" },
+    { group: "Trainers & safety", id: "trainers", icon: Users, color: "#5b9bd5", label: "Trainers", note: "Codes and links", keywords: "trainer code coach link" },
+    { group: "Help", id: "tour", icon: Sparkles, color: "#ef7d5c", label: "Show the app tour", note: "A quick walk through", onClick: replayTour, keywords: "help tour guide" },
+    { group: "Help", id: "install", href: "/install", icon: QrCode, color: "#16181a", label: "Install / share", note: "Home Screen app and QR code", keywords: "install qr share phone" },
+    { group: "Help", id: "rozi", href: "/rozi", icon: MessageCircle, color: "#ef7d5c", label: "Ask Rozi", note: "Questions about your training", keywords: "help chat question rozi" },
+    { group: "Help", id: "about", icon: Info, color: "#7a8a99", label: "About this plan", note: `Rules ${RULE_VERSION}`, keywords: "about version rules templates" },
+  ];
 
-      <div className="settings-columns">
-        <div className="settings-column">
+  if (!section || !items.some((item) => item.id === section && !item.href && !item.onClick)) {
+    return <SettingsMenu items={items} profileCard={(
+      <Link href="/profile" className="settings-me" aria-label="Open your profile">
+        <Avatar value={saved.avatar} name={saved.displayName} size={56} />
+        <span><strong>{saved.displayName}</strong><small>{isDemo ? "Saved on this device only" : state.userEmail ?? "Signed in"}{profile.trainerRole && !isDemo ? " · Trainer" : ""} · {workouts} workouts</small>
+          <span className={`sync-pill ${isDemo ? "local" : saveError ? "error" : "ok"}`}><span className="save-dot" />{isDemo ? "Not synced — sign in to keep your data safe" : saveError ? "Sync needs attention" : savingSession ? "Saving…" : "Synced to your account"}</span></span>
+        <ChevronRight aria-hidden="true" />
+      </Link>
+    )} />;
+  }
+
+  const current = items.find((item) => item.id === section)!;
+  return (
+    <section className="settings settings-detail">
+      <Link href="/settings" className="settings-back"><ChevronLeft aria-hidden="true" /> Settings</Link>
+      <h2>{current.label}</h2>
+      {dirty && <SaveBar onSave={saveDraft} onDiscard={() => setDraft({})} disabled={nameMissing} note={nameMissing ? "Add your name to save" : undefined} />}
+      {section === "plan" && <>
           <article className="panel settings-group">
             <h3><CalendarDays aria-hidden="true" /> Your plan</h3>
             <label className="settings-field">Your name<input type="text" maxLength={80} autoComplete="given-name" value={profile.displayName} onChange={(event) => edit({ displayName: event.target.value })} /></label>
@@ -109,6 +133,14 @@ export function SettingsScreen() {
             <div className="settings-field"><span>Level</span>
               <div className="segmented level-switch">{LEVEL_OPTIONS.map((option) => <button key={option.id} type="button" className={levelOf(profile) === option.id ? "selected" : ""} aria-pressed={levelOf(profile) === option.id} onClick={() => edit({ experience: option.id, levelSince: currentDate })}>{option.title}</button>)}</div>
               <small>{LEVEL_OPTIONS.find((option) => option.id === levelOf(profile))?.note}. RozFit moves you up by itself as you train; see Progress → Your level.</small>
+            </div>
+            <div className="settings-field"><span>Focus muscle</span>
+              <div className="onb-chips">{FOCUS_OPTIONS.map((option) => <button key={option.id} type="button" className={(profile.focusArea ?? "balanced") === option.id ? "selected" : ""} aria-pressed={(profile.focusArea ?? "balanced") === option.id} onClick={() => edit({ focusArea: option.id })}>{option.label}</button>)}</div>
+              <small>A focus muscle gets one extra set when it’s trained. Balanced keeps everything even.</small>
+            </div>
+            <div className="settings-field"><span>Where you train</span>
+              <div className="onb-chips">{GYM_OPTIONS.map((option) => <button key={option.id} type="button" className={profile.gymType === option.id ? "selected" : ""} aria-pressed={profile.gymType === option.id} onClick={() => edit({ gymType: option.id, equipmentAvailability: option.id === "bodyweight" ? "unknown" : "verified", availableEquipment: gymPreset(option.id) })}>{option.label}</button>)}</div>
+              <small>Choosing a place fills in its usual equipment below; adjust it if yours is different.</small>
             </div>
             <div className="settings-field"><span>Training days</span>
               <div className="onb-days">{WEEKDAY_LABELS.map((label, day) => <button key={label} type="button" className={profile.trainingDays.includes(day) ? "selected" : ""} aria-pressed={profile.trainingDays.includes(day)} onClick={() => {
@@ -122,13 +154,19 @@ export function SettingsScreen() {
             </div>
             <div className="settings-field"><span>Equipment</span>
               <div className="segmented"><button type="button" className={profile.equipmentAvailability === "unknown" ? "selected" : ""} aria-pressed={profile.equipmentAvailability === "unknown"} onClick={() => setEquipmentAvailability("unknown")}>None / not sure</button><button type="button" className={profile.equipmentAvailability === "verified" ? "selected" : ""} aria-pressed={profile.equipmentAvailability === "verified"} onClick={() => setEquipmentAvailability("verified")}>I’ll tick what I have</button></div>
-              {profile.equipmentAvailability === "verified" && <div className="onb-chips">{EQUIPMENT_OPTIONS.map((item) => <button key={item.id} type="button" className={profile.availableEquipment.includes(item.id) ? "selected" : ""} aria-pressed={profile.availableEquipment.includes(item.id)} onClick={() => toggleAvailableEquipment(item.id)}>{item.label}</button>)}</div>}
+              {profile.equipmentAvailability === "verified" && <div className="equip-tiles">{EQUIPMENT_OPTIONS.map((item) => {
+                const on = profile.availableEquipment.includes(item.id);
+                return <button key={item.id} type="button" className={`equip-tile ${on ? "selected" : ""}`} aria-pressed={on} onClick={() => toggleAvailableEquipment(item.id)}>
+                  <Image src={equipmentPicture(item.id)} alt="" width={96} height={96} sizes="72px" /><span>{item.label}</span>{on && <i className="equip-tile-check"><Check aria-hidden="true" /></i>}
+                </button>;
+              })}</div>}
               <small>{profile.equipmentAvailability === "verified" ? (profile.availableEquipment.length ? "Your plan uses only what is ticked." : "Nothing ticked yet, so your plan uses bodyweight movements.") : "Your plan uses bodyweight movements only."}</small>
             </div>
           </article>
 
-          <NotificationsCard />
-
+      </>}
+      {section === "notifications" && <NotificationsCard />}
+      {section === "appearance" && <>
           <article className="panel settings-group">
             <h3><Palette aria-hidden="true" /> Appearance</h3>
             <div className="settings-field"><span>Theme</span>
@@ -142,9 +180,8 @@ export function SettingsScreen() {
               <div className="segmented"><button type="button" className={weightUnit === "kg" ? "selected" : ""} aria-pressed={weightUnit === "kg"} onClick={() => setWeightUnit("kg")}>Kilograms</button><button type="button" className={weightUnit === "lb" ? "selected" : ""} aria-pressed={weightUnit === "lb"} onClick={() => setWeightUnit("lb")}>Pounds</button></div>
             </div>
           </article>
-        </div>
-
-        <div className="settings-column">
+      </>}
+      {section === "safety" && <>
           {profile.trainerRole && !isDemo
             ? <TrainerControls client={browserClient} trainerId={profile.id} trainerRole={profile.trainerRole} clients={state.trainerClients ?? []} refresh={refreshTrainerClients} />
             : <article className="panel settings-group">
@@ -157,19 +194,17 @@ export function SettingsScreen() {
                 </div>
                 <div className="settings-row"><div><strong>Pain always means recovery</strong><small>If you tick pain in a check-in, that day switches to gentle recovery. This cannot be turned off.</small></div><span className="settings-status ok">On</span></div>
               </article>}
-          <TrainerInviteCard onLinked={refreshTrainerClients} />
-          <TrainerLinkCard />
-          <AccountCard />
-          <DataCard />
-          <button type="button" className="button button-subtle replay-tour" onClick={replayTour}>Show the app tour again</button>
-          <Link className="button button-subtle replay-tour" href="/install"><QrCode aria-hidden="true" /> Install on a phone / share QR code</Link>
-          <details className="why-plan">
+      </>}
+      {section === "trainers" && <><TrainerInviteCard onLinked={refreshTrainerClients} /><TrainerLinkCard /></>}
+      {section === "account" && <AccountCard />}
+      {section === "data" && <DataCard />}
+      {section === "about" && <>
+          <details className="why-plan" open>
             <summary>About this plan</summary>
             <p>Workouts are built by fixed, written rules from your schedule, equipment, check-ins and logged results. No AI service is involved.</p>
             <small>Exercise templates {TEMPLATE_VERSION} · Planning rules {RULE_VERSION}</small>
           </details>
-        </div>
-      </div>
+      </>}
     </section>
   );
 }

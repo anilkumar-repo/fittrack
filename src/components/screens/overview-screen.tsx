@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowRight, CalendarDays, Check, ChevronRight, Clock, Flame, ListChecks, Moon, Repeat, Sparkles, Trophy } from "lucide-react";
 import { motivationFor } from "@/lib/motivation";
@@ -18,6 +19,8 @@ import { sessionForDate, useFitTrack } from "@/components/app/fit-track-provider
 import { DEFAULT_CHECK_IN, useWorkoutDay } from "@/components/app/use-workout-day";
 import { dateLabel, hourIn, nextTrainingDate, shortDate, todayHref, weekDates, weekdayOf } from "@/lib/dates";
 import { REGION_LABELS, regionsForExercises } from "@/lib/figure";
+import { CountUp } from "@/components/ui/count-up";
+import { RecoveryCarousel } from "@/components/app/recovery-carousel";
 
 const DAY_INITIALS = ["S", "M", "T", "W", "T", "F", "S"];
 
@@ -26,11 +29,14 @@ function GoalRing({ done, goal }: { done: number; goal: number }) {
   const radius = 42;
   const length = 2 * Math.PI * radius;
   const share = goal > 0 ? Math.min(1, done / goal) : 0;
+  // The ring fills from empty when Home opens.
+  const [grown, setGrown] = useState(0);
+  useEffect(() => { const timer = window.setTimeout(() => setGrown(share), 80); return () => window.clearTimeout(timer); }, [share]);
   return (
     <svg viewBox="0 0 100 100" className="goal-ring" role="img" aria-label={`${done} of ${goal} sessions completed this week`}>
       <circle cx="50" cy="50" r={radius} className="goal-ring-track" />
-      <circle cx="50" cy="50" r={radius} className="goal-ring-value" strokeDasharray={`${share * length} ${length}`} transform="rotate(-90 50 50)" />
-      <text x="50" y="49" className="goal-ring-number">{done}/{goal}</text>
+      <circle cx="50" cy="50" r={radius} className="goal-ring-value" strokeDasharray={`${grown * length} ${length}`} transform="rotate(-90 50 50)" />
+      <text x="50" y="49" className="goal-ring-number"><CountUp value={done} />/{goal}</text>
       <text x="50" y="64" className="goal-ring-caption">this week</text>
     </svg>
   );
@@ -90,6 +96,8 @@ export function OverviewScreen() {
       <SessionLiveCard />
 
       <WeighInCard />
+
+      <RecoveryCarousel />
 
       <NudgeBanner />
 

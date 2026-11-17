@@ -15,6 +15,8 @@ import { displayToKg, formatWeight, kgToDisplay } from "@/lib/logging";
 import { bodyWeightTrend, buildExercisePerformance, buildProgressTimeline, calculateConsistency, calculatePersonalRecords, calculateRecoveryMetrics, createProgressDateRange, recordedSessionStatus, upsertBodyWeightEntry, validateBodyWeightEntry } from "@/lib/progress";
 import { saveCloudBodyWeightEntry } from "@/lib/supabase-repository";
 import type { WorkoutSession } from "@/lib/types";
+import { CountUp } from "@/components/ui/count-up";
+import { EmptyState } from "@/components/ui/empty-state";
 
 const BADGE_ICONS: Record<AchievementId, LucideIcon> = {
   "first-workout": Sparkles, "full-week": CalendarCheck, "five-workouts": Medal, "two-weeks": Flame,
@@ -96,9 +98,9 @@ export function ProgressScreen() {
     <>
       <section className="progress">
         <div className="stat-row">
-          <article className="panel stat"><span className="stat-ico"><Target aria-hidden="true" /></span><strong>{consistency?.percent === null || consistency?.percent === undefined ? "—" : `${consistency.percent}%`}</strong><small>Consistency</small><em>{consistency?.completedScheduledDays ?? 0} of {consistency?.scheduledDays ?? 0} planned days · 4 weeks</em></article>
-          <article className="panel stat"><span className="stat-ico"><CalendarCheck aria-hidden="true" /></span><strong>{completedRecentSessions}</strong><small>Workouts</small><em>Finished in the last 4 weeks</em></article>
-          <article className="panel stat"><span className="stat-ico"><Trophy aria-hidden="true" /></span><strong>{personalRecords.length}</strong><small>Personal records</small><em>Heaviest logged set per exercise</em></article>
+          <article className="panel stat"><span className="stat-ico"><Target aria-hidden="true" /></span><strong>{consistency?.percent === null || consistency?.percent === undefined ? "—" : <><CountUp value={consistency.percent} />%</>}</strong><small>Consistency</small><em>{consistency?.completedScheduledDays ?? 0} of {consistency?.scheduledDays ?? 0} planned days · 4 weeks</em></article>
+          <article className="panel stat"><span className="stat-ico"><CalendarCheck aria-hidden="true" /></span><strong><CountUp value={completedRecentSessions} /></strong><small>Workouts</small><em>Finished in the last 4 weeks</em></article>
+          <article className="panel stat"><span className="stat-ico"><Trophy aria-hidden="true" /></span><strong><CountUp value={personalRecords.length} /></strong><small>Personal records</small><em>Heaviest logged set per exercise</em></article>
         </div>
 
         <BodyPanel />
@@ -152,7 +154,7 @@ export function ProgressScreen() {
                 </>}
                 <div className="progress-table-scroll"><table className="progress-table performance-table"><thead><tr><th scope="col">Date</th><th scope="col">Prescribed target</th><th scope="col">Completed actual</th><th scope="col">Recorded loads</th></tr></thead><tbody>{performanceRecords.slice().reverse().map((record) => <tr key={record.date}><th scope="row">{shortDate(record.date)}</th><td>{record.plannedSets} × {record.plannedReps} reps</td><td>{record.completedSets} sets · {record.completedReps} reps</td><td>{record.sets.filter((set) => set.completed && set.loadKg !== null).map((set) => formatWeight(set.loadKg as number, weightUnit)).join(", ") || "No load recorded"}</td></tr>)}</tbody></table></div>
               </> : <div className="empty-inline">No completed set performance is recorded for this exercise yet.</div>}
-            </> : <div className="empty-state compact-empty"><h3>No exercise results yet</h3><p>Actual set and rep trends will appear after you save workout logs.</p></div>}
+            </> : <EmptyState mood="upper-body" title="No exercise results yet" text="Your set and rep trends appear here after you log workouts." />}
           </article>
           <article className="panel progress-panel">
             <div className="section-heading"><div><h3>Personal records</h3><p>Record = highest positive load on a completed set with actual reps recorded in the loaded history.</p></div></div>
@@ -201,7 +203,7 @@ export function ProgressScreen() {
                 <ChevronRight aria-hidden="true" />
               </button>
             );
-          })}</div> : <p className="recent-empty">Workouts appear here after you save a session.</p>}
+          })}</div> : <EmptyState mood="workout" title="No workouts yet" text="Finish your first session and it shows up here with every set." action={{ label: "Go to Train", href: "/today" }} />}
         </article>
 
         <details className="why-plan">

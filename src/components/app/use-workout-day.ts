@@ -45,13 +45,15 @@ export function useWorkoutDay(date: string, checkIn: CheckIn | undefined, checkI
       ? preserveManualExerciseChoices(generated, session.plan, planningProfile)
       : generated;
   }, [date, extra, state.profile, recordedSessions, session, checkIn, trainerRuleSettings, state.trainerRuleRevision, planningProfile]);
-  const savedPlanCompatible = session?.status !== "planned" || date < currentDate || workoutPlanMatchesProfile(session.plan, planningProfile);
-  const plan = session?.status === "planned" && (checkInEdited || !savedPlanCompatible) ? generatedPlan : session?.plan ?? generatedPlan;
+  // A routine you built yourself is never swapped for the generated plan.
+  const ownRoutine = session?.plan.focus === "Your routine";
+  const savedPlanCompatible = ownRoutine || session?.status !== "planned" || date < currentDate || workoutPlanMatchesProfile(session.plan, planningProfile);
+  const plan = session?.status === "planned" && !ownRoutine && (checkInEdited || !savedPlanCompatible) ? generatedPlan : session?.plan ?? generatedPlan;
 
   useEffect(() => {
     if (!ready || !generatedPlan || date < currentDate) return;
     if (session?.status === "planned") {
-      if (workoutPlanMatchesProfile(session.plan, planningProfile)) return;
+      if (session.plan.focus === "Your routine" || workoutPlanMatchesProfile(session.plan, planningProfile)) return;
       const adapted = { ...session, plan: generatedPlan };
       const planKey = JSON.stringify(generatedPlan.exercises.map((exercise) => [exercise.id, exercise.sets, exercise.reps]));
       const equipmentKey = state.profile.availableEquipment.slice().sort().join(",");
