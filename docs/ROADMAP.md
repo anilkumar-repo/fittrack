@@ -179,7 +179,11 @@ The quickest way to make the whole app feel new; everything after builds on thes
 - **Build your own routine** + "My routines" cards with a "Ready" bar (v1, v2).
 - 💡 **Plate calculator + warm-up builder** (idea 5).
 
-### Phase 5 — Motion · ongoing · no DB
+### Phase 5 — Motion · ✅ first part done 2026-11-17 · no DB
+Done: Rozi micro-animations by mood, pulsing muscle highlight, staggered recovery colours, frame player with 6 moving
+stretches (cat-cow, glute bridge, arm swings, 90/90, kneeling hip extension, adductor rock-back), thumbnails match.
+Still open: frames for the other ~125 stretches (3-panel strips), moving pictures for strength exercises (need new
+pictures first: they only have muscle maps today), and short real clips.
 - 🎨 Moving exercise pictures: first 2–4 frame loops from our own pictures, then short clips (v3 recording).
 - 🎨 Animated muscle highlight on the body; Rozi micro-animations (wave in the morning, yawn at night, cheer on finish).
 

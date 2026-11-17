@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Download, Trash2 } from "lucide-react";
 import { buildDataExport, isCompleteInviteCode, normalizeInviteCode } from "@/lib/account-data";
 import { dateLabel } from "@/lib/dates";
+import { sharesLifts } from "@/lib/friends";
 import { hasSupabaseConfig } from "@/lib/supabase-browser";
 import { acceptTrainerInvite, createClientShareCode, createTrainerInvite, deleteMyWorkoutData, loadMyTrainers, removeMyTrainer, removeMyTrainers, trainerAddClientByCode, type MyTrainer } from "@/lib/supabase-repository";
 import { useFitTrack } from "./fit-track-provider";
@@ -177,6 +178,21 @@ export function TrainerInviteCard({ onLinked }: { onLinked: () => Promise<void> 
 }
 
 /** Download everything RozFit holds, or delete the workout history. */
+/** Settings → Your data: whether friends see your best set of each exercise (the exercise "Friends" tab). */
+export function LiftSharingCard() {
+  const { state, updateProfile, currentDate, isDemo } = useFitTrack();
+  const on = sharesLifts(state.profile, currentDate);
+  return (
+    <article className="panel">
+      <div className="settings-toggle-row">
+        <span><strong>Share best lifts with friends</strong><small>{on ? "Friends see your best set of each exercise and can compare on the exercise’s Friends tab." : "Off: friends don’t see your lifts. Your streak and workouts this week are still shared."}</small></span>
+        <button type="button" role="switch" aria-checked={on} aria-label="Share best lifts with friends" className={`toggle ${on ? "on" : ""}`} onClick={() => updateProfile({ shareLifts: !on })}><span /></button>
+      </div>
+      {isDemo && <p className="card-note">Sign in to share with friends.</p>}
+    </article>
+  );
+}
+
 export function DataCard() {
   const { state, getState, updateState, isDemo, browserClient, currentDate, setNotice } = useFitTrack();
   const [confirming, setConfirming] = useState(false);

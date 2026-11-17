@@ -18,7 +18,8 @@ async function raw(file) {
 
 let made = 0;
 for (const figure of FIGURES) {
-  for (const side of ["front", "back"]) {
+  // "side" only exists for figures that have side pictures (build-figures.mjs); missing ones are skipped.
+  for (const side of ["front", "back", "side"]) {
     const baseFile = `${SRC}/${figure}-base-${side}.webp`;
     if (!existsSync(baseFile)) continue;
     const base = await raw(baseFile);

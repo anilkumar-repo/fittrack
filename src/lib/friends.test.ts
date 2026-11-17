@@ -58,3 +58,47 @@ test("last workout labels read naturally", () => {
   assert.equal(lastWorkoutLabel("2026-11-12", "2026-11-13"), "Trained yesterday");
   assert.equal(lastWorkoutLabel("2026-11-09", "2026-11-13"), "Last trained 4 days ago");
 });
+
+const lifted = (date: string, sets: Array<{ kg: number | null; reps: number; kind?: "warmup" | "drop" }>, exerciseId = "goblet-squat"): WorkoutSession => ({
+  ...done(date),
+  exerciseLogs: [{ exerciseId, status: "completed", plannedSets: sets.length, plannedReps: 8, substitutionName: "", formQuality: "not_rated", notes: "",
+    sets: sets.map((set) => ({ extra: false, plannedReps: 8, actualReps: set.reps, loadKg: set.kg, completed: true, ...(set.kind ? { kind: set.kind } : {}) })) }],
+} as WorkoutSession);
+
+test("best lifts: the highest estimated one-rep max, never a warm-up; bodyweight counts reps", async () => {
+  const { liftBests } = await import("./friends.ts");
+  const bests = liftBests([
+    lifted("2026-11-10", [{ kg: 60, reps: 10, kind: "warmup" }, { kg: 40, reps: 8 }, { kg: 45, reps: 5 }]),
+    lifted("2026-11-12", [{ kg: 42.5, reps: 8 }]),
+    lifted("2026-11-11", [{ kg: null, reps: 12 }, { kg: null, reps: 15 }], "push-up"),
+  ]);
+  // 42.5 × 8 (≈ 53.8) beats 45 × 5 (52.5) and 40 × 8; the 60 kg warm-up is ignored.
+  assert.equal(bests["goblet-squat"].kg, 42.5);
+  assert.equal(bests["goblet-squat"].reps, 8);
+  assert.equal(bests["goblet-squat"].date, "2026-11-12");
+  assert.deepEqual(bests["push-up"], { kg: 0, reps: 15, e1rm: null, date: "2026-11-11" });
+});
+
+test("lift leaderboard: strongest first, ties share a rank, loaded above bodyweight", async () => {
+  const { liftLeaderboard } = await import("./friends.ts");
+  const rows = liftLeaderboard("squat", [
+    { userId: "me", name: "Me", bests: { squat: { kg: 60, reps: 5, e1rm: 70, date: "2026-11-01" } } },
+    { userId: "a", name: "Asha", bests: { squat: { kg: 80, reps: 5, e1rm: 93.3, date: "2026-11-02" } } },
+    { userId: "b", name: "Ben", bests: { squat: { kg: 60, reps: 5, e1rm: 70, date: "2026-11-03" } } },
+    { userId: "c", name: "Cy", bests: { squat: { kg: 0, reps: 30, e1rm: null, date: "2026-11-03" } } },
+    { userId: "d", name: "Dee", bests: {} },
+  ], "me");
+  assert.deepEqual(rows.map((row) => `${row.rank}:${row.name}`), ["1:Asha", "2:Me", "2:Ben", "4:Cy"]);
+  assert.equal(rows[1].you, true);
+});
+
+test("sharing best lifts: on by default, off under 18, and the person's choice always wins", async () => {
+  const { sharesLifts, computeFriendStats } = await import("./friends.ts");
+  assert.equal(sharesLifts({}, "2026-11-17"), true);
+  assert.equal(sharesLifts({ birthYear: 2010 }, "2026-11-17"), false);
+  assert.equal(sharesLifts({ birthYear: 2010, shareLifts: true }, "2026-11-17"), true);
+  assert.equal(sharesLifts({ birthYear: 1990, shareLifts: false }, "2026-11-17"), false);
+  const sessions = [lifted("2026-11-12", [{ kg: 40, reps: 8 }])];
+  assert.ok(computeFriendStats(profile, sessions, "2026-11-13").liftBests?.["goblet-squat"]);
+  assert.deepEqual(computeFriendStats({ ...profile, shareLifts: false }, sessions, "2026-11-13").liftBests, {});
+});

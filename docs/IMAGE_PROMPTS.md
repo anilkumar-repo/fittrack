@@ -592,3 +592,9 @@ Frame 2 pose: *Same position, hips halfway between the heel and the hands.*
 Frame 3 pose: *Same position, hips forward with the shoulders above the wrists; the straight leg stays out to the side.*
 Save as `adductor-rock-back-1.png`, `-2.png`, `-3.png`. The hands, the kneeling knee and the foot of the straight leg
 must stay in exactly the same place in all three.
+
+---
+
+> **2026-11-17: all open picture work is now in `prompt.md` (project root):** the recovery side view (33), moving
+> stretches (124 strips) and moving strength exercises (74 strips). It's generated from the app's own move and exercise
+> data, so names and descriptions always match the app.

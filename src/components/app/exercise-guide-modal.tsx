@@ -11,6 +11,7 @@ import { Clock, Dumbbell, Play, Repeat, ShieldCheck, X } from "lucide-react";
 import { getDemoVideoLink } from "@/lib/exercise-media";
 import { REGION_LABELS, regionsForExercises } from "@/lib/figure";
 import { TurnableFigure } from "./turnable-figure";
+import { ExerciseLeaderboard } from "./exercise-leaderboard";
 import { MuscleThumb } from "./muscle-thumb";
 import { sessionForDate, useFitTrack } from "./fit-track-provider";
 import { SheetGrip } from "@/components/ui/sheet-grip";
@@ -97,7 +98,7 @@ export function ExerciseGuideModal({ exercise, workout, onOpen, onClose }: Exerc
   const ready = exerciseEquipmentIsAvailable(exercise, state.profile);
   const regions = regionsForExercises([exercise]);
   const [shownRegion, setShownRegion] = useState(regions[0]);
-  const [tab, setTab] = useState<"about" | "how" | "history" | "charts" | "records">("about");
+  const [tab, setTab] = useState<"about" | "how" | "history" | "charts" | "records" | "friends">("about");
 
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => { if (event.key === "Escape") onClose(); };
@@ -121,12 +122,13 @@ export function ExerciseGuideModal({ exercise, workout, onOpen, onClose }: Exerc
         {!ready && !restricted && <p className="guide-note warn">This needs equipment that is not ticked in your Settings. Confirm you have it before using this movement.</p>}
 
         {!restricted && <div className="segmented guide-tabs" role="tablist" aria-label="Exercise details">
-          {([["about", "About"], ["how", "How to"], ["history", "History"], ["charts", "Charts"], ["records", "Records"]] as const).map(([id, label]) => (
+          {([["about", "About"], ["how", "How to"], ["history", "History"], ["charts", "Charts"], ["records", "Records"], ["friends", "Friends"]] as const).map(([id, label]) => (
             <button key={id} type="button" role="tab" aria-selected={tab === id} className={tab === id ? "selected" : ""} onClick={() => setTab(id)}>{label}</button>
           ))}
         </div>}
 
         {!restricted && (tab === "history" || tab === "charts" || tab === "records") && <ExerciseStats exerciseId={exercise.id} view={tab} />}
+        {!restricted && tab === "friends" && <ExerciseLeaderboard exerciseId={exercise.id} />}
 
         {!restricted && tab === "how" && <>
           <ol className="guide-steps big">{instructions.map((instruction, index) => <li key={`${index}-${instruction}`}><span>{index + 1}</span><p>{instruction}</p></li>)}</ol>
