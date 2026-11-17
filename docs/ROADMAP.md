@@ -137,17 +137,85 @@ It's a strong plan and matches the code. My changes:
 
 ---
 
-## 9. Phases (recommended order)
+## 9. All phases (updated 2026-11-16; you pick the order)
 
-| Phase | What | Database? | Size |
-|---|---|---|---|
-| **0 — Fixes (this change)** ✅ | Wrong-date workouts, rest-day training, BMI asked twice, notifications RLS, Progress cut, mobility scroll lock, Rozi by time of day, Profile + Rozi dock, install sheet, A–Z strip, Rozi chat v0, CI branches | 1 migration (push claim) + 1 data repair | — |
-| **A — Onboarding v2 + Settings + Trainers** | Wheel/ruler pickers, focus muscle, gym-type presets, "building your plan", first-workout day, notification ask at the end. Settings regrouped. Trainer from Friends + QR. New loading style | 1 migration (trainer requests) | ~1 week |
-| **B — Recovery** | Home recovery carousel, `/recovery` body map, weekly Rozi report | none (computed from logs) | ~1 week |
-| **C — Community** | Feed, Discover, follows, likes/comments, chats | 1 large migration + Storage bucket | ~2 weeks |
-| **D — Pro tracking** | Set types W/D/F, previous column, ±10 s timer, exercise tabs (About/History/Charts/Records/How to), estimated 1RM, build your own routine with the A–Z picker | small migration (set type) | ~1–2 weeks |
-| **E — Motion** | Exercise loops (flip frames first, then clips), Rozi micro-animations | none | ongoing |
-| **F — Native + Health + Watch** | Capacitor iOS/Android, Apple Health / Health Connect, Watch companion | small (health samples) | ~3–4 weeks |
-| **G — Nutrition + Voice** | Protein/calorie targets and logging; voice Rozi | 1 migration | ~2 weeks |
+Phase 0 (fixes, Profile, Rozi dock, Ask Rozi v0, install sheet, A–Z strip, CI) is ✅ done.
+Every phase below includes **UI work taken from your reference screenshots**, not only features.
+The 🎨 lines are what you'll *see* change; references are the screenshot numbers in `Downloads/Refer`.
+Size is rough calendar time for me to build + check; DB = needs a database migration (shown to you first).
 
-Each phase goes `feature/*` → `develop` (dev URL) → `main`, with tests, a preview check and a docs entry (see `BRANCHES_AND_ENVIRONMENTS.md`).
+### Phase 1 — Liquid Glass 2: the look upgrade (UI only) · ✅ done 2026-11-17 · no DB
+The quickest way to make the whole app feel new; everything after builds on these pieces.
+- 🎨 **Glass system v2:** clearer frosted glass with a light edge highlight; the dock gets a sliding "lens" under the active tab (like iOS); sheets slide up with a grab handle and swipe down to close (v3 recording, 8015).
+- 🎨 **Big titles that shrink on scroll**, with a frosted header (8056, 8082).
+- 🎨 **Filter pills with counts** ("Stretching 90 · Core 55 · Cardio 25") and an orange active pill (8015, v3).
+- 🎨 **List rows** with round picture, small orange badge, info button; **segmented controls** (Front / Side / Back) (v1, 8015).
+- 🎨 **Rings and big numbers** for stats (6/6 ready, 0/3 train) with a fill animation; numbers count up (v2 recording).
+- 🎨 **Micro-motion:** buttons press in, cards lift, confetti on finish, Rozi bounces/waves; respects "reduce motion".
+- 🎨 **Settings regrouped** iOS-style: Account · Preferences · Health · Guides · Help · Follow us, with icons and a search (8082–8086, v1).
+- 🎨 **Empty states with Rozi** everywhere ("No shared workouts" style, v1).
+- 🎨 Dark mode pass on every screen.
+
+### Phase 2 — Onboarding v2 · ✅ done 2026-11-17 (migration applied) · small DB (focus muscle, gym type)
+- 🎨 **Wheel pickers** for birthday and height, **ruler slider** for weight, kg/lb and cm/ft toggles (8035–8037).
+- 🎨 Option cards with radio dots, "Recommended" tags, step progress bar, Skip (8038–8041, 8060–8068).
+- **Focus muscle** with body icons; **where you train** (large gym / small gym / home / bodyweight) → equipment preset; equipment list with pictures and toggles + search (8042–8051, 8066–8067).
+- "**Did you know**" fact card and "**You've come to the right place**" with Rozi (8061, 8064).
+- 🎨 "**Building your plan… 21% → 100%**" animated screen with Rozi assembling the plan (8076–8078).
+- "**Your personalized program**" summary card: goal, equipment, level bars, workouts/week bars (8052).
+- "**When's your first workout?** Today / Tomorrow / Not sure" and the **notification ask with a preview card** at the end (8073, 8075).
+- Stats check with "Your BMI is 24.4" toast (8071). Welcome slides before sign-in (8053–8055).
+
+### Phase 3 — Recovery · ✅ done 2026-11-17 · no DB
+- 🎨 **Home "Recovery status" carousel** (swipe, dots): rings (muscles ready / train / water) → "This week" radar → "Stretch & recover" with the move animating → readiness body (v2 recording).
+- 🎨 **`/recovery` body map** front / side / back, colour by status, tap a muscle for last trained, sets, soreness, matching stretch (8014, v1).
+- **Weekly Rozi report** (every Monday): workouts, best lifts, muscles trained, recovery, next week.
+
+### Phase 4 — Pro workout tracking · ✅ done 2026-11-17 (migration applied) · small DB (set type, routines)
+- 🎨 **Exercise picker sheet**: search, category pills, A–Z strip, multi-select with "Start (3)" button, info sheet per move (8015, v3).
+- 🎨 **Logger like Strong/Hevy**: set types (W warm-up, D drop set, F failure), **Previous** column, weight × reps, check marks turning green, "+ Add set" (8029, 8053).
+- 🎨 **Rest timer ring** with −10 s / +10 s / Skip, and a Rest on/off switch (8030, v3).
+- 🎨 **Exercise detail tabs**: About · How to (numbered steps) · History · Charts · Records (est. 1RM table, best set, volume) · Friends leaderboard (8016, 8031–8034, 8058–8059).
+- **Build your own routine** + "My routines" cards with a "Ready" bar (v1, v2).
+- 💡 **Plate calculator + warm-up builder** (idea 5).
+
+### Phase 5 — Motion · ongoing · no DB
+- 🎨 Moving exercise pictures: first 2–4 frame loops from our own pictures, then short clips (v3 recording).
+- 🎨 Animated muscle highlight on the body; Rozi micro-animations (wave in the morning, yawn at night, cheer on finish).
+
+### Phase 6 — Trainers v2 · ~1 week · DB
+- Several trainers per person; **"Ask to be my trainer" from Friends**, trainer code (kept), **QR at the gym** (section 2).
+- Per-trainer sharing switches; 💡 **trainer broadcast** to all clients (idea 7).
+- 🎨 Trainer dashboard with client cards (streak, last workout, flags).
+
+### Phase 7 — Community · ~2 weeks · large DB + photo storage
+- 🎨 **Feed** of workout posts: muscle-map card, moves with sets × reps × kg, photo, likes, comments, share (v1 recording, 8056–8057).
+- 🎨 **Discover / Search** with Follow buttons, suggested people, "Invite friends" (v1).
+- 🎨 **Profile**: posts / followers / following, "Complete your profile 1/9" checklist, Overview · Routines · Media tabs (v1).
+- 🎨 **Chats** 1:1 and groups with the 17 Rozi faces as stickers and "share my workout" cards.
+- 💡 **Gym-buddy live mode** (idea 2), 💡 **gym check-in QR** (idea 9), 💡 **monthly report card** to share on Instagram (idea 8).
+- Report / block, private by default for under-18s.
+
+### Phase 8 — Rozi grows with you + motivation · ~1 week · small DB
+- 💡 **Rozi evolves**: outfits, accessories, a little gym unlocked by streak and level (idea 1).
+- 💡 **Rest-day missions** with a "rest streak" (idea 3); 💡 **Streak shield** earned every 7 days (idea 4); 💡 **"Why" wall** photo card (idea 6).
+- **Ask Rozi v1**: saved chats, follow-up questions ("what about last month?"), more answers.
+
+### Phase 9 — Native app + Apple Health + Apple Watch · ~3–4 weeks · small DB
+- App Store / Play Store app (Capacitor wrapper around the same code).
+- Apple Health / Health Connect: steps, sleep, heart rate, weight in; workouts out.
+- 🎨 Watch companion: today's list, tick sets, rest timer, heart rate (8081, 8083).
+- Needs Apple Developer (USD 99/yr) and Google Play (USD 25 once).
+
+### Phase 10 — Nutrition + Voice · ~2 weeks · DB
+- Daily calorie and protein targets (8072), quick food log, weekly trend.
+- Voice Rozi: ask by voice, Rozi reads answers and counts reps.
+- 💡 Form-check video for trainers (idea 10).
+
+### My recommendation
+1. **Phase 1 (Liquid Glass 2)** first: you'll see the difference on every screen within a week, and phases 2–4 reuse its sheets, rings, pills and lists.
+2. Then **Phase 3 (Recovery)** and **Phase 4 (Pro tracking)**: the features your recordings showed most.
+3. **Phase 2 (Onboarding v2)** before you invite many new people.
+4. Community, native app and nutrition after that.
+
+Each phase: `feature/*` branch → dev site → `main`, with tests, phone/desktop light/dark checks, and a history entry.

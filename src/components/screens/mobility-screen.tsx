@@ -12,6 +12,7 @@ import { MobilitySuggestion } from "@/components/app/mobility-suggestion";
 import { Rozi } from "@/components/app/rozi";
 import { MoveVideo } from "@/components/app/move-video";
 import { useScrollLock } from "@/components/app/use-scroll-lock";
+import { SheetGrip } from "@/components/ui/sheet-grip";
 
 /** Stretch & mobility: today's pick, every routine, and every move by body area. "?routine=id" opens a routine. */
 export function MobilityScreen() {
@@ -66,6 +67,7 @@ function MoveSheet({ move, onClose }: { move: MobilityMove; onClose: () => void 
   return (
     <div className="modal-backdrop" role="dialog" aria-modal="true" aria-label={move.name} onClick={onClose}>
       <section className="modal move-sheet" onClick={(event) => event.stopPropagation()}>
+        <SheetGrip onClose={onClose} />
         <button type="button" className="modal-close" aria-label="Close" onClick={onClose}>×</button>
         <Image src={stretchPicture(move.id)} alt={move.name} width={840} height={420} sizes="(max-width: 700px) 100vw, 560px" />
         <h2>{move.name}</h2>

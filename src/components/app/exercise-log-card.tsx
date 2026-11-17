@@ -1,8 +1,12 @@
 "use client";
 
+import { useState } from "react";
+import { Calculator, Check } from "lucide-react";
 import { shortDate } from "@/lib/dates";
+import { setKind, setLabels, SET_KINDS } from "@/lib/pro-tracking";
+import { PlatesSheet } from "./plates-sheet";
 import { MuscleThumb } from "./muscle-thumb";
-import { describeLastPerformance, displayToKg, kgToDisplay, lastLoadKg, type LastPerformance, type WeightUnit } from "@/lib/logging";
+import { describeLastPerformance, displayToKg, formatWeight, kgToDisplay, lastLoadKg, type LastPerformance, type WeightUnit } from "@/lib/logging";
 import type { ExerciseDefinition, ExerciseLog } from "@/lib/types";
 import { statusForSets } from "@/lib/workout-tracking";
 
@@ -27,6 +31,9 @@ type SetLog = ExerciseLog["sets"][number];
 export function ExerciseLogCard({ exercise, index, log, substitutedForName, last, unit, onUpdate, onAddSet, onOpenGuide, onSetCompleted }: ExerciseLogCardProps) {
   const skipped = log.status === "skipped";
   const hintLoad = lastLoadKg(last);
+  const labels = setLabels(log.sets);
+  const [menu, setMenu] = useState<number | null>(null);
+  const [plates, setPlates] = useState(false);
 
   function updateSet(setIndex: number, change: (set: SetLog, current: ExerciseLog) => SetLog) {
     onUpdate((current) => ({ ...current, sets: current.sets.map((item, i) => i === setIndex ? change(item, current) : item) }));
@@ -49,29 +56,55 @@ export function ExerciseLogCard({ exercise, index, log, substitutedForName, last
       <button type="button" className="exercise-visual" onClick={onOpenGuide} aria-label={`Open the guide for ${exercise.name}`}><span className="exercise-visual-thumb"><MuscleThumb exercise={exercise} /></span><span className="exercise-visual-text"><strong>How to do it</strong><small>{exercise.targetMuscles.join(" · ")}</small></span></button>
       {exercise.progressionAdvice && <div className="progression-note"><strong>{exercise.progressionAction === "consider_small_load_step" ? "Progression check" : exercise.progressionAction === "hold_load_add_reps" ? "Rep target" : "Load guidance"}</strong><p>{exercise.progressionAdvice} {exercise.loadGuidance}</p></div>}
 
-      <div className="set-grid set-grid-phase2">
-        <span>SET</span><span>PLAN</span><span>ACTUAL REPS</span><span>LOAD ({unit.toUpperCase()})</span><span>DONE</span>
-        {log.sets.map((set, setIndex) => (
-          <div className="set-row" key={setIndex}>
-            {set.extra
-              ? <strong className="set-number-extra">{String(setIndex + 1).padStart(2, "0")}<small>extra</small></strong>
-              : <strong>{String(setIndex + 1).padStart(2, "0")}</strong>}
-            <span className="planned-reps">{set.plannedReps ?? "—"}</span>
-            <input aria-label={`${exercise.name} set ${setIndex + 1} actual reps`} type="number" inputMode="numeric" min="1" max="1000" value={set.actualReps ?? ""} disabled={skipped}
-              onChange={(event) => updateSet(setIndex, (item) => ({ ...item, actualReps: event.target.value === "" ? null : Number(event.target.value), completed: event.target.value === "" ? false : item.completed }))} />
-            <input aria-label={`${exercise.name} set ${setIndex + 1} load in ${unit === "lb" ? "pounds" : "kilograms"}`} type="number" inputMode="decimal" min="0" max={unit === "lb" ? 4400 : 2000} step="0.5"
-              placeholder={hintLoad === null ? "—" : String(kgToDisplay(hintLoad, unit))} value={set.loadKg === null ? "" : kgToDisplay(set.loadKg, unit)} disabled={skipped}
-              onChange={(event) => updateSet(setIndex, (item) => ({ ...item, loadKg: event.target.value === "" ? null : displayToKg(Number(event.target.value), unit) }))} />
-            <input className="set-complete" type="checkbox" aria-label={`Mark ${exercise.name} set ${setIndex + 1} complete`} checked={set.completed} disabled={skipped}
-              onChange={(event) => {
-                const checked = event.target.checked;
-                updateSet(setIndex, (item, current) => ({ ...item, completed: checked, actualReps: checked ? item.actualReps ?? item.plannedReps ?? current.plannedReps : item.actualReps }));
-                if (checked) onSetCompleted();
-              }} />
-          </div>
-        ))}
+      <div className="pro-sets" role="table" aria-label={`${exercise.name} sets`}>
+        <div className="pro-set-head" role="row"><span role="columnheader">Set</span><span role="columnheader">Previous</span><span role="columnheader">{unit}</span><span role="columnheader">Reps</span><span role="columnheader" aria-label="Done"><Check aria-hidden="true" /></span></div>
+        {log.sets.map((set, setIndex) => {
+          const kind = setKind(set);
+          const previous = last?.sets[setIndex] ?? null;
+          const planned = set.plannedReps ?? log.plannedReps;
+          return (
+            <div key={setIndex} className={`pro-set ${set.completed ? "done" : ""} kind-${kind}`} role="row">
+              <span className="pro-set-cell">
+                <button type="button" className="pro-set-label" aria-haspopup="menu" aria-expanded={menu === setIndex} disabled={skipped}
+                  aria-label={`Set ${labels[setIndex]}, ${SET_KINDS.find((item) => item.id === kind)?.label}. Change set type`} onClick={() => setMenu(menu === setIndex ? null : setIndex)}>{labels[setIndex]}</button>
+                {menu === setIndex && <span className="pro-kind-menu" role="menu">
+                  {SET_KINDS.map((item) => <button key={item.id} type="button" role="menuitemradio" aria-checked={kind === item.id} className={`kind-${item.id}`} onClick={() => { updateSet(setIndex, (current) => { const { kind: _old, ...rest } = current; void _old; return item.id === "normal" ? rest : { ...rest, kind: item.id }; }); setMenu(null); }}>
+                    <b>{item.id === "normal" ? "1" : item.letter}</b><span><strong>{item.label}</strong><small>{item.note}</small></span>
+                  </button>)}
+                  {log.sets.length > 1 && <button type="button" role="menuitem" className="pro-kind-remove" onClick={() => { onUpdate((current) => ({ ...current, sets: current.sets.filter((_, i) => i !== setIndex) })); setMenu(null); }}><b>×</b><span><strong>Remove this set</strong></span></button>}
+                </span>}
+              </span>
+              <button type="button" className="pro-prev" disabled={!previous || skipped} aria-label={previous ? `Use last time: ${previous.reps} reps${previous.loadKg ? ` at ${formatWeight(previous.loadKg, unit)}` : ""}` : "No previous set"}
+                onClick={() => previous && updateSet(setIndex, (item) => ({ ...item, actualReps: previous.reps, loadKg: previous.loadKg }))}>
+                {previous ? `${previous.loadKg ? `${kgToDisplay(previous.loadKg, unit)} × ` : ""}${previous.reps}` : "—"}
+              </button>
+              <input aria-label={`${exercise.name} set ${labels[setIndex]} weight in ${unit === "lb" ? "pounds" : "kilograms"}`} type="number" inputMode="decimal" min="0" max={unit === "lb" ? 4400 : 2000} step="0.5"
+                placeholder={previous?.loadKg ? String(kgToDisplay(previous.loadKg, unit)) : hintLoad === null ? "—" : String(kgToDisplay(hintLoad, unit))} value={set.loadKg === null ? "" : kgToDisplay(set.loadKg, unit)} disabled={skipped}
+                onChange={(event) => updateSet(setIndex, (item) => ({ ...item, loadKg: event.target.value === "" ? null : displayToKg(Number(event.target.value), unit) }))} />
+              <input aria-label={`${exercise.name} set ${labels[setIndex]} reps`} type="number" inputMode="numeric" min="1" max="1000" placeholder={planned ? String(planned) : "—"} value={set.actualReps ?? ""} disabled={skipped}
+                onChange={(event) => updateSet(setIndex, (item) => ({ ...item, actualReps: event.target.value === "" ? null : Number(event.target.value), completed: event.target.value === "" ? false : item.completed }))} />
+              <button type="button" className="pro-tick" aria-pressed={set.completed} disabled={skipped} aria-label={`Mark ${exercise.name} set ${labels[setIndex]} ${set.completed ? "not done" : "done"}`}
+                onClick={() => {
+                  const checked = !set.completed;
+                  // Ticking an empty row takes the numbers shown in grey (planned reps, last weight).
+                  const fallbackLoad = previous?.loadKg ?? hintLoad;
+                  updateSet(setIndex, (item, current) => ({ ...item, completed: checked,
+                    actualReps: checked ? item.actualReps ?? item.plannedReps ?? current.plannedReps : item.actualReps,
+                    loadKg: checked && item.loadKg === null && kind !== "warmup" ? fallbackLoad : item.loadKg }));
+                  if (checked) onSetCompleted();
+                }}><Check aria-hidden="true" /></button>
+            </div>
+          );
+        })}
       </div>
-      <button className="add-set" disabled={skipped} onClick={onAddSet}>＋ Add set</button>
+      <div className="pro-set-actions">
+        <button className="add-set" disabled={skipped} onClick={onAddSet}>＋ Add set</button>
+        <button type="button" className="text-button pro-plates-open" disabled={skipped} onClick={() => setPlates(true)}><Calculator aria-hidden="true" /> Warm-up & plates</button>
+      </div>
+      {plates && <PlatesSheet exerciseName={exercise.name} barbell={/barbell|smith/i.test(`${exercise.equipment} ${exercise.name}`)} unit={unit}
+        workKg={log.sets.find((item) => setKind(item) !== "warmup" && item.loadKg)?.loadKg ?? hintLoad}
+        onAddWarmUps={(sets) => onUpdate((current) => ({ ...current, sets: [...sets.map((item) => ({ plannedReps: item.reps, actualReps: null, loadKg: item.loadKg, completed: false, extra: true, kind: "warmup" as const })), ...current.sets.filter((item) => !(setKind(item) === "warmup" && !item.completed))] }))}
+        onClose={() => setPlates(false)} />}
 
       <details className="exercise-more">
         <summary>Notes, form, and why this exercise</summary>

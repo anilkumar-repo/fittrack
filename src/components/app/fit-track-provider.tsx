@@ -360,7 +360,7 @@ export function FitTrackProvider({ children }: { children: React.ReactNode }) {
     const current = stateRef.current;
     const hasHistory = current.sessions.some((session) => !session.sampleData && session.status !== "planned");
     // Day one of training is the day the plan is set up, unless workouts were already logged.
-    const profile = { ...current.profile, ...patch, ...(hasHistory ? {} : { trainingStartDate: todayInTimeZone(current.profile.timeZone) }) };
+    const profile = { ...current.profile, ...patch, ...(hasHistory ? {} : { trainingStartDate: patch.trainingStartDate ?? todayInTimeZone(current.profile.timeZone) }) };
     const today = todayInTimeZone(profile.timeZone);
     const entry = startingWeightKg ? { id: `weight-${profile.id}-${today}`, measuredOn: today, weightKg: startingWeightKg } : null;
     const bodyWeightEntries = entry ? [...current.bodyWeightEntries.filter((item) => item.measuredOn !== today), entry] : current.bodyWeightEntries;
@@ -377,7 +377,7 @@ export function FitTrackProvider({ children }: { children: React.ReactNode }) {
     const current = stateRef.current;
     if (current.mode !== "demo") return;
     const hasHistory = current.sessions.some((session) => !session.sampleData && session.status !== "planned");
-    const profile = { ...current.profile, ...patch, ...(hasHistory ? {} : { trainingStartDate: todayInTimeZone(current.profile.timeZone) }) };
+    const profile = { ...current.profile, ...patch, ...(hasHistory ? {} : { trainingStartDate: patch.trainingStartDate ?? todayInTimeZone(current.profile.timeZone) }) };
     const today = todayInTimeZone(profile.timeZone);
     const bodyWeightEntries = startingWeightKg
       ? [...current.bodyWeightEntries.filter((item) => item.measuredOn !== today), { id: `weight-local-${today}`, measuredOn: today, weightKg: startingWeightKg }]

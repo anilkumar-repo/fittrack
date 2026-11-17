@@ -438,6 +438,8 @@ Solid flat background in the colour given below, filling the whole square, no gr
 
 ## Part F — Home Rozi for every time of day (comment 6, 2026-11-16)
 
+> **Received 2026-11-17 — all 8 are in the app.**
+
 Home's big Rozi now follows the clock on **every** day. The app already does this with the pictures it has: morning stretch, afternoon water, evening rest and night sleep on rest days; morning, afternoon and evening on training days; and sleep after a finished workout at night. These 8 new pictures make each moment unique. Save them as `design/rozi-incoming/<file name>.png` and I'll cut them in (transparent background, 480 px, like the others).
 
 **Base description (paste first):** the same as Part D:
@@ -455,3 +457,80 @@ Cute round fluffy coral-orange mascot named Rozi (#EF7D5C), soft fluffy fur (not
 | `train-evening.png` | Training day, 17:00–21:00 | Rozi with a small gym bag over the shoulder, waving goodbye, a crescent moon sticker on the bag, "let's go" smile. |
 | `done-night.png` | Workout finished, after 21:00 | Rozi tucked under a tiny peach blanket hugging a small gold medal, eyes closed, peaceful smile, a few "z z" letters above. |
 | `done-day.png` | Workout finished, before 21:00 | Rozi jumping with both arms up, a small gold medal bouncing on its chest, coral and mint confetti around. |
+
+---
+
+## Part G — New pictures for Phases 1–3 (so no screen reuses the same picture) · 2026-11-17
+
+> **Received 2026-11-17 — all groups are in the app.** `barbell.png` was redone with a transparent background the same day.
+
+Work through these one group at a time; send each group when it's ready and I'll cut them in (same pipeline as before:
+transparent background, trimmed, sized, versioned folder). File names matter — please keep them.
+
+### G1. Equipment (15) — onboarding "Check your equipment" and Settings → Your plan
+
+> **`barbell.png` redone 2026-11-17** with a true transparent background. It's in the app.
+Today every row shows the same dumbbell icon. Save as `design/equipment-incoming/<file name>.png`.
+
+**Base description (paste first):**
+```
+Clean 3D product render of a single piece of gym equipment, soft studio lighting, matte charcoal-grey metal and black
+rubber with small coral accents (#EF7D5C), 3/4 front view, centred, the whole object visible with space around it,
+transparent background, no people, no text, no logo, no floor, soft contact shadow only. 1024 x 1024.
+```
+| File name | Add this line |
+|---|---|
+| `dumbbells.png` | A pair of hexagonal dumbbells, one lying flat, one standing on end. |
+| `bench.png` | A flat weight bench with a padded black seat. |
+| `cable_machine.png` | A single-stack cable machine with a pulley and a D-handle. |
+| `leg_press.png` | A 45-degree leg press machine with a padded back rest and foot plate. |
+| `leg_curl_machine.png` | A lying leg curl machine with roller pads. |
+| `rack.png` | A squat rack (power rack) with J-hooks and safety bars. |
+| `mat.png` | A rolled-up exercise mat, partly unrolled, mint green (#BFE6DC). |
+| `chair.png` | A sturdy wooden kitchen chair, simple and stable. |
+| `barbell.png` | An Olympic barbell with two plates on each side, plus an EZ curl bar in front. |
+| `smith_machine.png` | A Smith machine with the bar on guided rails. |
+| `gym_machines.png` | A chest press machine (selectorised, pin-loaded weight stack). |
+| `pullup_bar.png` | A wall-mounted pull-up bar with foam grips. |
+| `step.png` | An aerobic step platform with risers. |
+| `back_extension.png` | A 45-degree hyperextension bench. |
+| `cardio_machine.png` | A treadmill and an exercise bike side by side. |
+
+### G2. Where you train (4) — onboarding "Where do you work out?" and the program summary
+Save as `design/gyms-incoming/<file name>.png`, wide cards.
+```
+Soft 3D isometric diorama, warm and friendly, pastel palette (mint #BFE6DC, peach #FCE3D6, coral #EF7D5C accents),
+clean lighting, no people, no text, no logo, transparent background. 1536 x 1024.
+```
+| File name | Add this line |
+|---|---|
+| `large_gym.png` | A bright big gym floor: racks, cable machines, treadmills in a row, dumbbell rack. |
+| `small_gym.png` | A compact neighbourhood gym corner: one rack, a bench, a dumbbell rack, two machines. |
+| `home.png` | A cosy living-room corner with a mat, a pair of dumbbells and a chair. |
+| `bodyweight.png` | An open park patch of grass with a single mat and a water bottle. |
+
+### G3. Rozi for chat (3) — Ask Rozi screen and the round corner button
+Save as `design/rozi-incoming/<file name>.png`. **Base description:** the same Rozi base as Part D (full body, transparent).
+| File name | Where | Add this line |
+|---|---|---|
+| `chat-hello.png` | Top of Ask Rozi | Rozi waving with one hand, a small speech bubble with three dots floating next to its head. |
+| `chat-thinking.png` | While Rozi "types" | Rozi with one tiny hand on its chin, eyes looking up, a small thought cloud. |
+| `chat-idea.png` | Answers with a tip | Rozi pointing up happily, a small glowing light bulb above its head. |
+
+### G4. Intro slides (3) — the three slides after "Get started"
+Rozi base as Part D, but **1536 x 1024, transparent**, with a small scene:
+| File name | Add this line |
+|---|---|
+| `slide-log.png` | Rozi holding a tiny clipboard with ticked boxes, a small dumbbell at its feet. |
+| `slide-progress.png` | Rozi standing next to a big rising coral bar chart, pointing at the tallest bar, sparkles. |
+| `slide-friends.png` | Rozi high-fiving a second, smaller mint-coloured Rozi friend, confetti. |
+
+### G5. Recovery and report Rozi (3)
+Rozi base as Part D (1024 x 1024, transparent):
+| File name | Where | Add this line |
+|---|---|---|
+| `recovery-roller.png` | Recovery map header | Rozi lying on a mint foam roller, relaxed smile, eyes half closed. |
+| `recovery-ice.png` | When something is sore | Rozi holding a small blue ice pack against its leg, brave little smile. |
+| `report-card.png` | "Your week with Rozi" | Rozi holding up a report card with a big gold star, proud face. |
+
+**Order I suggest:** G1 (most visible: every new user sees it) → G3 → G5 → G2 → G4. Part F (time-of-day Rozi) can come any time.

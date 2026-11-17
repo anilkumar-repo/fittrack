@@ -202,6 +202,7 @@ export function normalizeWorkoutSession(raw: WorkoutSession | Record<string, unk
           loadKg: typeof set.loadKg === "number" ? set.loadKg : null,
           completed: set.completed === true,
           extra: set.extra === true,
+          ...(set.kind === "warmup" || set.kind === "drop" || set.kind === "failure" ? { kind: set.kind as "warmup" | "drop" | "failure" } : {}),
         };
       }
       const reps = typeof set.reps === "number" ? set.reps : null;

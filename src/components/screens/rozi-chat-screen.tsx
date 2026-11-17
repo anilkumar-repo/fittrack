@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { ArrowRight, SendHorizontal } from "lucide-react";
 import { useFitTrack } from "@/components/app/fit-track-provider";
 import { DEFAULT_CHECK_IN, useWorkoutDay } from "@/components/app/use-workout-day";
@@ -10,9 +11,10 @@ import { calculatePersonalRecords } from "@/lib/progress";
 import { calculateStreak } from "@/lib/rozi";
 import { suggestionForDay } from "@/lib/mobility";
 import { BMI_BAND_LABEL, bmi, bmiBand } from "@/lib/body";
+import { muscleRecovery, readyCount, recoveryLine, weeklyReport } from "@/lib/recovery";
 import { detectIntent, MAX_MESSAGE_LENGTH, SUGGESTED_QUESTIONS, type RoziIntent } from "@/lib/rozi-chat";
 
-interface Message { from: "me" | "rozi"; text: string; link?: { href: string; label: string } }
+interface Message { from: "me" | "rozi"; text: string; link?: { href: string; label: string }; tip?: boolean }
 
 /**
  * Ask Rozi (version 0): questions answered from the person's own saved workouts on this device.
@@ -24,8 +26,9 @@ export function RoziChatScreen() {
   const name = state.profile.displayName;
   const [messages, setMessages] = useState<Message[]>([{ from: "rozi", text: `Hey ${name}! I’m Rozi. Ask me about your workouts, streak, progress or stretches — I answer from what you’ve logged.` }]);
   const [draft, setDraft] = useState("");
+  const [thinking, setThinking] = useState(false);
   const end = useRef<HTMLDivElement>(null);
-  useEffect(() => { end.current?.scrollIntoView({ block: "end" }); }, [messages]);
+  useEffect(() => { end.current?.scrollIntoView({ block: "end" }); }, [messages, thinking]);
 
   const completed = recordedSessions.filter((item) => item.status === "completed" && item.date <= currentDate).sort((a, b) => a.date.localeCompare(b.date));
 
@@ -64,9 +67,17 @@ export function RoziChatScreen() {
       }
       case "MOBILITY_RECOMMENDATION": {
         const pick = suggestionForDay({ hour: hourIn(state.profile.timeZone), restDay: !plan, discomfort: false }) ?? suggestionForDay({ hour: 9, restDay: true });
-        return pick ? { from: "rozi", text: `Try “${pick.routine.title}”. ${pick.reason}`, link: { href: `/mobility?routine=${pick.routine.id}`, label: "Open routine" } } : { from: "rozi", text: "Have a look at the stretch routines.", link: { href: "/mobility", label: "Stretch & mobility" } };
+        return pick ? { from: "rozi", tip: true, text: `Try “${pick.routine.title}”. ${pick.reason}`, link: { href: `/mobility?routine=${pick.routine.id}`, label: "Open routine" } } : { from: "rozi", text: "Have a look at the stretch routines.", link: { href: "/mobility", label: "Stretch & mobility" } };
       }
-      case "WATER": return { from: "rozi", text: "Your water card on Home shows today’s target and how much you’ve had. Little sips through the day work best.", link: { href: "/", label: "Go to Home" } };
+      case "WEEKLY_REPORT": {
+        const report = weeklyReport(state.profile, recordedSessions, weekDates(currentDate)[0], currentDate);
+        return { from: "rozi", text: `This week: ${report.completed} of ${report.planned} planned workouts, ${report.sets} sets${report.newRecords.length ? `, ${report.newRecords.length} new ${report.newRecords.length === 1 ? "record" : "records"}` : ""}. ${report.rozi}`, link: { href: "/report", label: "Open your week" } };
+      }
+      case "MUSCLE_RECOVERY": {
+        const recovery = muscleRecovery(recordedSessions, currentDate);
+        return { from: "rozi", text: `${readyCount(recovery)} of 6 muscle groups are ready. ${recoveryLine(recovery)}`, link: { href: "/recovery", label: "Open recovery map" } };
+      }
+      case "WATER": return { from: "rozi", tip: true, text: "Your water card on Home shows today’s target and how much you’ve had. Little sips through the day work best.", link: { href: "/", label: "Go to Home" } };
       case "BODY_GOAL_PROGRESS": {
         const entries = state.bodyWeightEntries;
         const latest = entries.at(-1);
@@ -83,24 +94,33 @@ export function RoziChatScreen() {
 
   function ask(text: string) {
     const question = text.trim().slice(0, MAX_MESSAGE_LENGTH);
-    if (!question) return;
-    setMessages((current) => [...current, { from: "me", text: question }, answer(detectIntent(question))]);
+    if (!question || thinking) return;
+    setMessages((current) => [...current, { from: "me", text: question }]);
     setDraft("");
+    // A short "thinking" moment with Rozi, so the answer feels like a reply (the answer itself is instant).
+    setThinking(true);
+    const reply = answer(detectIntent(question));
+    window.setTimeout(() => { setMessages((current) => [...current, reply]); setThinking(false); }, 650);
   }
 
   return (
     <section className="rozi-chat">
+      <div className="chat-hero" aria-hidden="true"><Image src="/rozi/chat-hello.webp" alt="" width={480} height={480} sizes="150px" priority /></div>
       <div className="chat-log" aria-live="polite">
         {messages.map((message, index) => (
           <div key={index} className={`chat-row ${message.from}`}>
             {/* eslint-disable-next-line @next/next/no-img-element -- small static Rozi face */}
-            {message.from === "rozi" && <img src="/rozi/faces/v1/happy.webp" alt="" width={34} height={34} className="chat-face" />}
+            {message.from === "rozi" && <img src={message.tip ? "/rozi/chat-idea.webp" : "/rozi/faces/v1/happy.webp"} alt="" width={34} height={34} className={`chat-face ${message.tip ? "tip" : ""}`} />}
             <div className="chat-bubble">
               <p>{message.text}</p>
               {message.link && <Link href={message.link.href} className="chat-link">{message.link.label} <ArrowRight aria-hidden="true" /></Link>}
             </div>
           </div>
         ))}
+        {thinking && <div className="chat-row rozi chat-thinking" role="status" aria-label="Rozi is thinking">
+          <Image src="/rozi/chat-thinking.webp" alt="" width={480} height={480} sizes="46px" className="chat-face tip" />
+          <div className="chat-bubble"><span className="typing-dots"><i /><i /><i /></span></div>
+        </div>}
         <div ref={end} />
       </div>
       <div className="chat-suggestions">{SUGGESTED_QUESTIONS.map((question) => <button key={question} type="button" className="chip" onClick={() => ask(question)}>{question}</button>)}</div>

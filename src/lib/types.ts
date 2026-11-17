@@ -7,7 +7,7 @@ export type WorkoutFocus =
   | "Lower A" | "Upper A" | "Lower B" | "Upper B"
   | "Conditioning circuit" | "Core and cardio"
   | "Burn A" | "Cardio and core" | "Burn B" | "Intervals and core"
-  | "Return to training" | "Recovery";
+  | "Return to training" | "Recovery" | "Your routine";
 /** What the client wants from training; it picks the weekly split. */
 export type TrainingGoal = "general" | "muscle" | "tone" | "fatloss";
 export type TrainingPhase = "foundation_1" | "foundation_2" | "return";
@@ -44,6 +44,10 @@ export interface Profile {
   sex?: "female" | "male" | "other";
   /** Why the person started; quoted in comeback reminders. */
   why?: string;
+  /** Optional muscle group to give a little extra attention ("balanced" = none). */
+  focusArea?: import("./onboarding").FocusArea;
+  /** Where the person usually trains; sets the starting equipment list. */
+  gymType?: import("./onboarding").GymType;
   /** Profile picture: "photo:<url>", "rozi:<mood>" or "color:<hex>". */
   avatar?: string;
 }
@@ -124,6 +128,8 @@ export interface ExerciseLog {
     loadKg: number | null;
     completed: boolean;
     extra: boolean;
+    /** Set type (Phase 4): warm-up, drop set or to failure. Missing means a normal working set. */
+    kind?: "warmup" | "drop" | "failure";
   }>;
   notes: string;
 }

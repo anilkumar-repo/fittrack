@@ -14,6 +14,7 @@ import { BODY_AREAS, type BodyArea, exerciseEquipmentIsAvailable, filterExercise
 import type { RoziMood } from "@/lib/rozi";
 import { EXERCISE_LIBRARY } from "@/lib/templates";
 import type { ExerciseDefinition } from "@/lib/types";
+import { EmptyState } from "@/components/ui/empty-state";
 
 const AREA_MOODS: Record<BodyArea, RoziMood> = { full: "full-body", upper: "upper-body", lower: "lower-body", core: "stretch" };
 
@@ -39,6 +40,11 @@ export function LibraryScreen() {
     area: libraryArea,
   });
 
+  // How many exercises each category pill would show with the other filters kept ("Strength 34").
+  const categoryCount = (category: string) => filterExerciseLibrary(EXERCISE_LIBRARY, planningProfile, {
+    query: librarySearch, category, muscleGroup: libraryMuscleFilter, movementPattern: libraryPatternFilter,
+    equipment: libraryEquipmentFilter, difficulty: libraryDifficultyFilter, area: libraryArea,
+  }).length;
   // A–Z order, so the side letter strip can jump straight to a letter.
   const sortedResults = [...libraryResults].sort((a, b) => a.name.localeCompare(b.name));
   const letters = [...new Set(sortedResults.map((exercise) => firstLetter(exercise.name)))];
@@ -64,7 +70,7 @@ export function LibraryScreen() {
             <Rozi mood="mobility" size={96} className="area-rozi" />
           </Link>
         </div>
-        <div className="library-chips" role="group" aria-label="Category">{["All", "Strength", "Core", "Conditioning"].map((filter) => <button key={filter} type="button" className={libraryFilter === filter ? "selected" : ""} aria-pressed={libraryFilter === filter} onClick={() => setLibraryFilter(filter)}>{filter}</button>)}</div>
+        <div className="library-chips" role="group" aria-label="Category">{["All", "Strength", "Core", "Conditioning"].map((filter) => <button key={filter} type="button" className={libraryFilter === filter ? "selected" : ""} aria-pressed={libraryFilter === filter} onClick={() => setLibraryFilter(filter)}>{filter}<span className="chip-count">{categoryCount(filter)}</span></button>)}</div>
         <details className="library-more">
           <summary><SlidersHorizontal aria-hidden="true" /> More filters{extraFilters > 0 ? ` (${extraFilters})` : ""}</summary>
           <div className="library-selects">
@@ -76,20 +82,21 @@ export function LibraryScreen() {
         </details>
         <div className="library-count"><span>{libraryResults.length} {libraryResults.length === 1 ? "exercise" : "exercises"}</span>{anyFilter && <button type="button" className="text-button" onClick={clearFilters}>Clear filters</button>}</div>
 
-        {libraryResults.length ? <ul className="library-list has-alpha">{sortedResults.map((exercise, index) => {
+        {libraryResults.length ? <ul className="library-list grouped has-alpha">{sortedResults.flatMap((exercise, index) => {
           const equipmentReady = exerciseEquipmentIsAvailable(exercise, planningProfile);
           const letter = firstLetter(exercise.name);
           const startsLetter = index === 0 || firstLetter(sortedResults[index - 1].name) !== letter;
-          return (
-            <li key={exercise.id} id={startsLetter ? letterAnchorId("lib", letter) : undefined} data-letter={startsLetter ? letter : undefined}>
+          const head = startsLetter ? [<li key={`head-${letter}`} className="letter-head" id={letterAnchorId("lib", letter)} data-letter={letter} aria-hidden="true">{letter}</li>] : [];
+          return [...head, (
+            <li key={exercise.id}>
               <button className="exercise-row" onClick={() => setGuideExercise(toGuideExercise(exercise))}>
                 <span className="exercise-thumb"><MuscleThumb exercise={exercise} /></span>
                 <span className="exercise-text"><strong>{exercise.name}</strong><small>{exercise.targetMuscles.slice(0, 2).join(" · ")}</small><small className={`library-ready ${equipmentReady ? "ok" : "warn"}`}>{equipmentReady ? (exercise.requiredEquipment?.length ? "You have the equipment" : "No equipment needed") : `Needs ${exercise.equipment.toLowerCase()}`}</small></span>
                 <ChevronRight aria-hidden="true" />
               </button>
             </li>
-          );
-        })}</ul> : <div className="panel train-rest"><span className="train-rest-icon"><Search aria-hidden="true" /></span><h3>No matching exercises</h3><p>Try a different word or clear the filters.</p><button type="button" className="button button-primary" onClick={clearFilters}>Clear filters</button></div>}
+          )];
+        })}</ul> : <div className="panel"><EmptyState mood="grumpy" title="No matching exercises" text="Rozi looked everywhere. Try a different word or clear the filters." action={{ label: "Clear filters", onClick: clearFilters }} /></div>}
         {libraryResults.length > 0 && <AlphabetIndex letters={letters} prefix="lib" />}
       </section>
       {guideExercise && <ExerciseGuideModal exercise={guideExercise} workout={{ date: currentDate, session: todaySession, plan }} onOpen={(exercise) => setGuideExercise(toGuideExercise(exercise))} onClose={() => setGuideExercise(null)} />}

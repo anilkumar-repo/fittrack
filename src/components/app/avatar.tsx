@@ -6,6 +6,7 @@ import { createPortal } from "react-dom";
 import { Camera, X } from "lucide-react";
 import { ROZI_MOODS, type RoziMood } from "@/lib/rozi";
 import { useFitTrack } from "./fit-track-provider";
+import { SheetGrip } from "@/components/ui/sheet-grip";
 
 /**
  * A person's picture. The saved value is one of:
@@ -110,6 +111,7 @@ export function AvatarPicker() {
       </button>
       {open && typeof document !== "undefined" && createPortal(<div className="avatar-sheet-backdrop" onClick={() => setOpen(false)}>
         <section className="avatar-sheet panel" role="dialog" aria-modal="true" aria-labelledby="avatar-title" onClick={(event) => event.stopPropagation()}>
+          <SheetGrip onClose={() => setOpen(false)} />
           <div className="avatar-sheet-head"><h3 id="avatar-title">Your picture</h3><button type="button" className="icon-button" aria-label="Close" onClick={() => setOpen(false)}><X /></button></div>
           <input ref={fileInput} type="file" accept="image/*" hidden onChange={(event) => void savePhoto(event.target.files?.[0])} />
           <button type="button" className="button button-primary full-width" disabled={busy} onClick={() => fileInput.current?.click()}><Camera aria-hidden="true" /> {busy ? "Saving photo…" : "Upload a photo"}</button>
