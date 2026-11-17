@@ -9,12 +9,17 @@
 import sharp from "sharp";
 import fs from "node:fs";
 import path from "node:path";
+import { pathToFileURL } from "node:url";
 
 const SOURCE = "design/stretches-incoming";
 const OUT = "public/stretches/v1";
-const W = 840, H = 420, PAD = 14;
+export const W = 840, H = 420, PAD = 14;
 
-async function build(file) {
+/**
+ * Removes the black background from one picture. Returns the RGBA pixels and the box around the figure,
+ * so the frame script (build-move-frames.mjs) can crop every frame of a move with one shared box.
+ */
+export async function cutOut(file) {
   const { data, info } = await sharp(file).removeAlpha().raw().toBuffer({ resolveWithObject: true });
   const { width: w, height: h } = info;
   const bright = (i) => Math.max(data[i * 3], data[i * 3 + 1], data[i * 3 + 2]);
@@ -58,6 +63,11 @@ async function build(file) {
     rgba[i * 4] = Math.min(255, Math.round(r * k)); rgba[i * 4 + 1] = Math.min(255, Math.round(g * k)); rgba[i * 4 + 2] = Math.min(255, Math.round(b * k)); rgba[i * 4 + 3] = a;
     if (a > 10) { const x = i % w, y = (i - x) / w; x0 = Math.min(x0, x); x1 = Math.max(x1, x); y0 = Math.min(y0, y); y1 = Math.max(y1, y); }
   }
+  return { rgba, w, h, box: { x0, y0, x1, y1 } };
+}
+
+/** Crops to the box, fits it in the 840×420 canvas (centred) and returns a WebP pipeline. */
+export async function place({ rgba, w, h }, { x0, y0, x1, y1 }) {
   const trimmed = await sharp(rgba, { raw: { width: w, height: h, channels: 4 } })
     .extract({ left: x0, top: y0, width: x1 - x0 + 1, height: y1 - y0 + 1 })
     .resize({ width: W - PAD * 2, height: H - PAD * 2, fit: "inside" })
@@ -68,7 +78,15 @@ async function build(file) {
     .webp({ quality: 78, alphaQuality: 85, effort: 6 });
 }
 
-fs.mkdirSync(OUT, { recursive: true });
-const files = fs.readdirSync(SOURCE).filter((name) => name.endsWith(".png"));
-for (const name of files) await (await build(path.join(SOURCE, name))).toFile(path.join(OUT, name.replace(/\.png$/, ".webp")));
-console.log(`Wrote ${files.length} pictures (${W}×${H}) to ${OUT}.`);
+async function build(file) {
+  const cut = await cutOut(file);
+  return place(cut, cut.box);
+}
+
+// Runs only when called directly (node scripts/build-stretches.mjs), not when imported.
+if (import.meta.url === pathToFileURL(process.argv[1]).href) {
+  fs.mkdirSync(OUT, { recursive: true });
+  const files = fs.readdirSync(SOURCE).filter((name) => name.endsWith(".png"));
+  for (const name of files) await (await build(path.join(SOURCE, name))).toFile(path.join(OUT, name.replace(/\.png$/, ".webp")));
+  console.log(`Wrote ${files.length} pictures (${W}×${H}) to ${OUT}.`);
+}

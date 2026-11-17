@@ -10,6 +10,7 @@ import { useFitTrack } from "@/components/app/fit-track-provider";
 import { MobilityPlayer } from "@/components/app/mobility-player";
 import { MobilitySuggestion } from "@/components/app/mobility-suggestion";
 import { Rozi } from "@/components/app/rozi";
+import { MoveLoop } from "@/components/app/move-loop";
 import { MoveVideo } from "@/components/app/move-video";
 import { useScrollLock } from "@/components/app/use-scroll-lock";
 import { SheetGrip } from "@/components/ui/sheet-grip";
@@ -69,7 +70,7 @@ function MoveSheet({ move, onClose }: { move: MobilityMove; onClose: () => void 
       <section className="modal move-sheet" onClick={(event) => event.stopPropagation()}>
         <SheetGrip onClose={onClose} />
         <button type="button" className="modal-close" aria-label="Close" onClick={onClose}>×</button>
-        <Image src={stretchPicture(move.id)} alt={move.name} width={840} height={420} sizes="(max-width: 700px) 100vw, 560px" />
+        <MoveLoop id={move.id} alt={move.name} sizes="(max-width: 700px) 100vw, 560px" />
         <h2>{move.name}</h2>
         <p>{move.how}</p>
         <div className="chip-row"><span className="chip">{doseLabel(move)}</span><span className="chip">{move.works}</span></div>

@@ -2945,3 +2945,104 @@ html:not(.scroll-locked), html:not(.scroll-locked) body { overflow-x: clip; }
 .typing-dots i { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); animation: typing-dot 1s ease-in-out infinite; }
 .typing-dots i:nth-child(2) { animation-delay: .15s; } .typing-dots i:nth-child(3) { animation-delay: .3s; }
 @keyframes typing-dot { 0%, 100% { opacity: .3; transform: translateY(0); } 50% { opacity: 1; transform: translateY(-4px); } }
+
+/* ===================== PHASE 5 · MOTION ===================== */
+
+/* Rozi micro-animations. The mood picks the motion (roziMotion in src/lib/rozi.ts). The keyframes use the separate
+   translate / rotate / scale properties, so they add on top of any entrance animation that uses transform. */
+img[data-motion] { transform-origin: 50% 92%; }
+img[data-motion="wave"] { --rozi-motion: rozi-wave 4.2s ease-in-out infinite; }
+img[data-motion="yawn"] { --rozi-motion: rozi-yawn 5s ease-in-out infinite; }
+img[data-motion="sleep"] { --rozi-motion: rozi-sleep 4.8s ease-in-out infinite; }
+img[data-motion="cheer"] { --rozi-motion: rozi-cheer 2.4s cubic-bezier(.3, 0, .3, 1) infinite; }
+img[data-motion="think"] { --rozi-motion: rozi-think 5.2s ease-in-out infinite; }
+img[data-motion="pop"] { --rozi-motion: rozi-aha 3.4s ease-out infinite; }
+img[data-motion="float"] { --rozi-motion: rozi-float 3.6s ease-in-out infinite; }
+/* Zero specificity: a screen that already animates its Rozi in a special way (thirsty wiggle) keeps it. */
+:where(img[data-motion]) { animation: var(--rozi-motion); }
+/* Screens whose Rozi used the plain bob now use the mood's motion instead. */
+.rozi-greet img.rozi[data-motion], .streak-hero img.rozi[data-motion], img.day-rozi[data-motion], img.live-rozi[data-motion] { animation: var(--rozi-motion); }
+/* The finish card pops Rozi in first, then the motion carries on. */
+.done-card img.rozi[data-motion] { animation: rozi-pop .6s cubic-bezier(.2, 1.4, .4, 1) both, var(--rozi-motion); }
+
+/* Wave: a little lean side to side (a hello), then a rest. */
+@keyframes rozi-wave {
+  0%, 52%, 100% { rotate: 0deg; translate: 0 0; }
+  8% { rotate: -6deg; translate: -2px -3px; }
+  18% { rotate: 6deg; translate: 2px -4px; }
+  28% { rotate: -5deg; translate: -1px -3px; }
+  38% { rotate: 4deg; translate: 1px -2px; }
+  76% { translate: 0 -4px; }
+}
+/* Yawn: a slow stretch up, a hold, then settling back. */
+@keyframes rozi-yawn {
+  0%, 100% { scale: 1 1; translate: 0 0; }
+  30%, 46% { scale: .97 1.06; translate: 0 -3px; }
+  60% { scale: 1.03 .97; translate: 0 0; }
+  72% { scale: 1 1; }
+}
+/* Sleep: slow, deep breathing. */
+@keyframes rozi-sleep {
+  0%, 100% { scale: 1 1; }
+  45% { scale: 1.035 1.025; }
+}
+/* Cheer: crouch, hop, squash on landing, then a pause. */
+@keyframes rozi-cheer {
+  0%, 62%, 100% { translate: 0 0; scale: 1 1; rotate: 0deg; }
+  8% { scale: 1.07 .92; translate: 0 2px; }
+  22% { translate: 0 -18px; scale: .96 1.05; rotate: -3deg; }
+  34% { translate: 0 -20px; rotate: 3deg; }
+  46% { translate: 0 0; scale: 1.08 .92; rotate: 0deg; }
+  54% { scale: .98 1.03; }
+}
+/* Think: a slow head tilt one way and the other. */
+@keyframes rozi-think {
+  0%, 100% { rotate: 0deg; translate: 0 0; }
+  25% { rotate: -4deg; translate: -1px -2px; }
+  55% { rotate: 3deg; translate: 1px -2px; }
+}
+/* Aha: a quick bounce, then calm. */
+@keyframes rozi-aha {
+  0%, 30%, 100% { scale: 1 1; translate: 0 0; }
+  8% { scale: 1.08 .93; }
+  16% { scale: .96 1.06; translate: 0 -8px; }
+  24% { scale: 1.02 .98; translate: 0 0; }
+}
+/* Float: the gentle everyday bob. */
+@keyframes rozi-float {
+  0%, 100% { translate: 0 0; }
+  50% { translate: 0 -5px; }
+}
+
+/* Animated muscle highlight: the worked muscle "breathes" over the plain body, like it's contracting. */
+.turn-face > img { grid-area: 1 / 1; }
+.turn-face > img.turn-glow { animation: muscle-work 2.6s ease-in-out infinite; }
+@keyframes muscle-work {
+  0%, 100% { opacity: .45; filter: saturate(.9); }
+  50% { opacity: 1; filter: saturate(1.25) brightness(1.05); }
+}
+/* Recovery and week maps: each muscle colour fades in one after another; sore muscles pulse gently. */
+.real-body-tint { animation: tint-in .7s ease-out both; animation-delay: calc(var(--i, 0) * 70ms + 150ms); }
+.real-body-tint.tone-sore:not(.picked) { animation: tint-in .7s ease-out both, tint-sore 2.8s 1s ease-in-out infinite; animation-delay: calc(var(--i, 0) * 70ms + 150ms), 1.2s; }
+@keyframes tint-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes tint-sore { 0%, 100% { opacity: 1; } 50% { opacity: .6; } }
+
+/* Moving exercise pictures: 2–3 frames cross-fading back and forth (MoveLoop). */
+.move-loop { position: relative; display: grid; }
+.move-loop > img { grid-area: 1 / 1; width: 100%; height: auto; transition: opacity .32s ease; }
+.move-loop > img.off { opacity: 0; }
+/* In the guided player and the move sheet the wrapper carries the entrance and the background, not each frame. */
+.player-picture .move-loop { animation: glass-pop-in .35s ease both; }
+.player-picture .move-loop > img { animation: none; }
+.move-sheet .move-loop { border-radius: 18px; background: linear-gradient(160deg, rgba(255, 255, 255, .75), var(--tint-soft)); }
+.move-sheet .move-loop > img { background: none; }
+:root[data-theme="dark"] .move-sheet .move-loop { background: linear-gradient(160deg, rgba(255, 255, 255, .12), rgba(255, 255, 255, .04)); }
+:root[data-theme="dark"] .move-sheet .move-loop > img { background: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  img[data-motion] { --rozi-motion: none; }
+  .done-card img.rozi[data-motion] { animation: none; }
+  .turn-face > img.turn-glow { animation: none; opacity: 1; }
+  .real-body-tint, .real-body-tint.tone-sore:not(.picked) { animation: none; }
+  .move-loop > img { transition: none; }
+}

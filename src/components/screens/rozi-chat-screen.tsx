@@ -105,7 +105,7 @@ export function RoziChatScreen() {
 
   return (
     <section className="rozi-chat">
-      <div className="chat-hero" aria-hidden="true"><Image src="/rozi/chat-hello.webp" alt="" width={480} height={480} sizes="150px" priority /></div>
+      <div className="chat-hero" aria-hidden="true"><Image src="/rozi/chat-hello.webp" alt="" width={480} height={480} sizes="150px" priority data-motion="wave" /></div>
       <div className="chat-log" aria-live="polite">
         {messages.map((message, index) => (
           <div key={index} className={`chat-row ${message.from}`}>

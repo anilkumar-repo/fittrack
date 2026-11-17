@@ -81,9 +81,10 @@ export function RealBody({ figure, side, tone, selected = [], onPick, label, pri
   return (
     <div ref={box} className={`real-body ${onPick ? "pickable" : ""}`} onClick={onPick ? (event) => void pick(event) : undefined} role={label ? "img" : undefined} aria-label={label}>
       <Image src={`/figures/v3/${figure}-base-${side}.webp`} alt="" width={W} height={H} sizes={sizes} priority={priority} className="real-body-base" />
-      {visible.map((region) => {
+      {visible.map((region, index) => {
         const url = maskUrl(figure, region, side);
-        return <span key={region} aria-hidden="true" className={`real-body-tint tone-${tone[region]} ${selected.includes(region) ? "picked" : ""}`} style={{ WebkitMaskImage: `url(${url})`, maskImage: `url(${url})` }} />;
+        // --i staggers the fade-in, so the colours appear muscle by muscle (globals.css, Phase 5).
+        return <span key={region} aria-hidden="true" className={`real-body-tint tone-${tone[region]} ${selected.includes(region) ? "picked" : ""}`} style={{ WebkitMaskImage: `url(${url})`, maskImage: `url(${url})`, "--i": index } as React.CSSProperties} />;
       })}
     </div>
   );

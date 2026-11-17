@@ -1,3 +1,4 @@
+import { MOVE_FRAMES } from "./move-frames.ts";
 import { MOBILITY_MOVES, MOBILITY_ROUTINES, type MobilityArea, type MobilityMove, type MobilityRoutine } from "./mobility-data.ts";
 
 export { MOBILITY_MOVES, MOBILITY_ROUTINES };
@@ -20,6 +21,22 @@ export function mobilityRoutine(id: string): MobilityRoutine | undefined {
 
 export function stretchPicture(id: string): string {
   return `/stretches/v1/${id}.webp`;
+}
+
+/**
+ * The frames of a move's moving picture (Phase 5), or [] when it only has the still picture.
+ * Frames are made by scripts/build-move-frames.mjs and listed in move-frames.ts.
+ */
+export function moveFrames(id: string): string[] {
+  const count = MOVE_FRAMES[id] ?? 0;
+  return count >= 2 ? Array.from({ length: count }, (_, i) => `/stretches/frames/v1/${id}-${i + 1}.webp`) : [];
+}
+
+/** Back-and-forth order for a loop: 3 frames play 1 2 3 2 1 2 3 …, 2 frames simply alternate. */
+export function loopOrder(count: number): number[] {
+  if (count < 2) return [0];
+  const forward = Array.from({ length: count }, (_, i) => i);
+  return [...forward, ...forward.slice(1, -1).reverse()];
 }
 
 /** "40 s", "10 reps", "5 slow breaths" (+ "each side"). */

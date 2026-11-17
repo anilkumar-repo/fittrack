@@ -152,3 +152,25 @@ export function energyMood(level: number): RoziMood {
   const clamped = Math.min(5, Math.max(1, Math.round(level)));
   return `energy-${clamped}` as RoziMood;
 }
+
+// ---------- Motion (Phase 5) ----------
+
+/**
+ * How Rozi moves in each picture: a small loop that matches the moment, never a distraction.
+ * wave = hello / morning, yawn = waking up, sleep = slow breathing at night, cheer = a happy hop,
+ * think = a slow head tilt, pop = a quick "aha" bounce, float = a gentle bob (everything else).
+ */
+export type RoziMotion = "wave" | "yawn" | "sleep" | "cheer" | "think" | "pop" | "float";
+
+const MOTIONS: Partial<Record<RoziMood, RoziMotion>> = {
+  hello: "wave", signin: "wave", "chat-hello": "wave", morning: "wave", "train-morning": "wave", "train-evening": "wave",
+  "rest-morning": "yawn", stretch: "yawn", mobility: "yawn",
+  night: "sleep", "done-night": "sleep", rest: "sleep", "rest-evening": "sleep", "recovery-roller": "sleep", evening: "sleep",
+  cheer: "cheer", trophy: "cheer", "done-day": "cheer", milestone: "cheer", "personal-record": "cheer", comeback: "cheer", "energy-5": "cheer",
+  "chat-thinking": "think", grumpy: "think", "streak-risk": "think", "energy-1": "think",
+  "chat-idea": "pop", "report-card": "pop", "recovery-ice": "pop",
+};
+
+export function roziMotion(mood: RoziMood): RoziMotion {
+  return MOTIONS[mood] ?? "float";
+}

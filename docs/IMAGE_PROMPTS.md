@@ -534,3 +534,43 @@ Rozi base as Part D (1024 x 1024, transparent):
 | `report-card.png` | "Your week with Rozi" | Rozi holding up a report card with a big gold star, proud face. |
 
 **Order I suggest:** G1 (most visible: every new user sees it) → G3 → G5 → G2 → G4. Part F (time-of-day Rozi) can come any time.
+
+---
+
+## Part H — Moving stretch pictures (Phase 5) · 2026-11-17
+
+The app can now play a move as a short loop: frame 1 → 2 → 3 → 2 → 1 …, cross-fading, holding a little longer at
+each end. Frame 1 is the picture already in the app; you make **frames 2 and 3 by editing that same picture**, so
+the man, the camera and the lighting stay identical (that's what makes it look like one clip, not three pictures).
+
+**How to make them (one move at a time, in one chat):**
+1. Upload the original picture of the move (`<id>.png`, black background; I'll send you the six pilot ones).
+2. Paste the edit prompt below with the frame-2 pose → download → save as `<id>-2.png`.
+3. Upload the *original* again, paste the prompt with the frame-3 pose → save as `<id>-3.png`.
+4. Keep the picture the same size and shape as the original (don't crop or change to square).
+
+**Edit prompt (paste, then add the pose line):**
+```
+Edit this picture. Keep everything exactly the same: the same man, the same light-grey skin and muscle detail, the same orange glow on the working muscles, the same orange arrows, the same camera angle, zoom and position, the same solid black background and the same picture size. Change ONLY the body position to the pose below. Feet, hands and body stay in the same place on the floor wherever they don't move. No text, no extra objects.
+Pose:
+```
+
+**Pilot set (6 moves, 12 new pictures):** the morning routine and the most-used reps moves.
+
+| Move (id) | Frame 1 (already in the app) | Frame 2 pose | Frame 3 pose |
+|---|---|---|---|
+| Cat-cow (`cat-cow`) | Back rounded up (cat) | On hands and knees with a flat, level back, head in line with the spine, looking at the floor. | On hands and knees with the back gently arched down (cow): belly lowered toward the floor, chest forward, head lifted to look ahead. |
+| Glute bridge (`glute-bridge`) | Hips lifted | Lying on the back, knees bent, feet flat, hips lifted halfway up. | Lying on the back, knees bent, feet flat, hips and lower back resting on the floor, arms by the sides. |
+| Arm swings (`arm-circles`) | Arms swinging | Standing tall, both arms crossed in front of the chest, hands near the opposite shoulders. | Standing tall, both arms swung wide open to the sides and slightly back, chest open. |
+| 90/90 hip switch (`90-90-hip-switch`) | Knees down to one side | Sitting on the floor, hands behind for support, both knees bent and pointing straight up, feet flat and wide apart. | The mirror of frame 1: both knees lowered to the OTHER side in a 90/90 position. |
+| Kneeling hip extension (`bird-dog-knee`) | Heel lifted to the ceiling | On hands and knees, the same leg lifted halfway: knee bent 90 degrees, thigh level with the floor's halfway point. | On hands and knees, both knees on the floor under the hips, back flat. |
+| Adductor rock-back (`adductor-rock-back`) | Hips rocked back | Same position, hips halfway between the hands and the heel. | Same position, hips forward over the hands, shoulders above the wrists, the straight leg still out to the side. |
+
+**Send them to me** as before (a folder is fine). I'll put them in `design/stretches-incoming/frames/` and run
+`node scripts/build-move-frames.mjs`. The script cuts the black background exactly like the stills and crops all
+frames of a move with one shared box so the body never jumps. If a frame came out a different shape, the script
+says which one.
+
+**After the pilot:** if the six look good, the same table can be filled in for the other moves, then strength
+exercises (those need new pictures first; they only have muscle maps today). Short real clips (the v3 recording
+idea) can come after that.

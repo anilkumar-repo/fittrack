@@ -695,3 +695,28 @@ a real transparent background; it replaced the original in `design/art-incoming/
 **Checked:** 152 tests, typecheck, lint, build. In the preview: onboarding (slides, gym cards, equipment list in light
 and dark, program header), Settings → Your plan tiles, Ask Rozi (typing dots, tip picture), Recovery, Your week and
 Home (desktop, dark).
+
+### 2026-11-17 — Phase 5: Motion (same branch, no database change)
+
+| What you see | How it works | Files |
+|---|---|---|
+| **Rozi moves with the moment** (pictures 72 px and up): waves hello and in the morning, yawns on a rest-day morning, breathes slowly asleep at night, hops when cheering (finish, trophy, records), tilts its head while thinking, gives a quick "aha" bounce for tips and the report card, and floats gently otherwise. The finish card still pops Rozi in first. Small avatars and the energy slider faces stay still | `roziMotion(mood)` in `rozi.ts` picks the motion; the `Rozi` component sets `data-motion`; the keyframes use the separate translate / rotate / scale properties so they add on top of entrance animations | `rozi.ts`, `rozi.tsx`, `rozi-chat-screen.tsx`, `globals.css` |
+| **Muscle highlight that works:** in the exercise guide the worked muscle slowly "breathes" (fades between the plain body and the highlight), like it's contracting. The plain body stays sharp underneath | Two pictures stacked per side; the highlighted one animates | `turnable-figure.tsx` |
+| **Recovery and week maps:** muscle colours fade in one after another; a sore muscle pulses gently | `--i` on each tint staggers the fade | `real-body.tsx`, `globals.css` |
+| **Moving stretch pictures:** in the guided player and the move sheet, a move with frames plays 1 → 2 → 3 → 2 …, cross-fading and holding longer at the ends; Pause holds the frame; a move without frames shows its still picture as before | `MoveLoop` component, `moveFrames()` and `loopOrder()` in `mobility.ts`, list in `move-frames.ts` (made by the script) | `move-loop.tsx`, `mobility-player.tsx`, `mobility-screen.tsx` |
+
+**Frames pipeline:** `scripts/build-move-frames.mjs` reads `design/stretches-incoming/frames/{id}-2.png` (and -3, -4),
+uses the original still as frame 1, cuts the black background with the same code as the stills (the stretch script
+was split into `cutOut` + `place`; its output was checked to be byte-for-byte identical), crops every frame of a move
+with one shared box, writes `public/stretches/frames/v1/{id}-{n}.webp` and `src/lib/move-frames.ts`. No frames are in
+the app yet: the prompts for a pilot of 6 moves are in IMAGE_PROMPTS.md, Part H.
+
+**Reduced motion:** people who turn on "Reduce motion" on their phone get still Rozi, a steady highlight and the
+first frame only.
+
+**Checked:** 154 tests (2 new: Rozi motion for every mood; frame list and loop order), typecheck, lint (only the old
+notification-icon warning), build. In the preview (375 px and desktop, light and dark): the computed motion for Home
+(morning wave), Ask Rozi (wave), Recovery (ice-pack "aha", staggered colours, pulsing sore muscle), the exercise
+guide (plain body + pulsing highlight, layers exactly aligned). The frame player was tested with temporary
+cat-cow frames (sequence 1 1 2 2 3 3 3 2 2 1 1 …, holds on Pause, next move falls back to the still); the test frames
+were deleted afterwards. The preview can't play animations, so the motion itself is best judged on your phone.

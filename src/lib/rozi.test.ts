@@ -91,3 +91,16 @@ test("the energy slider maps 1–5 to Rozi's energy pictures", () => {
   assert.equal(energyMood(5), "energy-5");
   assert.equal(energyMood(9), "energy-5");
 });
+
+test("Rozi moves to match the moment: wave hello, sleep at night, cheer on a finish", async () => {
+  const { roziMotion } = await import("./rozi.ts");
+  assert.equal(roziMotion("hello"), "wave");
+  assert.equal(roziMotion("train-morning"), "wave");
+  assert.equal(roziMotion("rest-morning"), "yawn");
+  assert.equal(roziMotion("done-night"), "sleep");
+  assert.equal(roziMotion("done-day"), "cheer");
+  assert.equal(roziMotion("trophy"), "cheer");
+  assert.equal(roziMotion("chat-thinking"), "think");
+  assert.equal(roziMotion("water"), "float");
+  for (const mood of ROZI_MOODS) assert.match(roziMotion(mood), /^(wave|yawn|sleep|cheer|think|pop|float)$/);
+});
