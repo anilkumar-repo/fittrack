@@ -325,7 +325,7 @@ function decorate(id: string): ExerciseDefinition {
 
 export const EXERCISE_LIBRARY: ExerciseDefinition[] = Object.keys(sourceLibrary).map(decorate);
 
-export type TemplateFocus = Exclude<WorkoutFocus, "Return to training" | "Recovery">;
+export type TemplateFocus = Exclude<WorkoutFocus, "Return to training" | "Recovery" | "Your routine">;
 /** One exercise in a session template; sets and reps override the library default when given. */
 type Slot = string | [id: string, sets: number, reps: string];
 

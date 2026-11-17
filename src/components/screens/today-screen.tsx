@@ -57,7 +57,13 @@ function WorkoutDayView({ date, extraDay = false, startAtReview = false }: { dat
   const isFuture = date > currentDate;
   /** True while a saved session is reopened to correct its entries. */
   const [editing, setEditing] = useState(false);
-  const [rest, setRest] = useState<{ endsAt: number; exerciseName: string } | null>(null);
+  const [rest, setRest] = useState<{ endsAt: number; total: number; exerciseName: string } | null>(null);
+  // Rest timer on/off, remembered on this device.
+  const [restOn, setRestOn] = useState(true);
+  useEffect(() => {
+    const timer = window.setTimeout(() => { try { if (window.localStorage.getItem("rozfit-rest-on") === "0") setRestOn(false); } catch { /* default on */ } }, 0);
+    return () => window.clearTimeout(timer);
+  }, []);
   // On a phone the logger starts with one exercise on screen at a time.
   const [oneAtATime, setOneAtATime] = useState(() => typeof window !== "undefined" && window.matchMedia("(max-width: 700px)").matches);
   const [focusIndex, setFocusIndex] = useState<number | null>(null);
@@ -88,7 +94,9 @@ function WorkoutDayView({ date, extraDay = false, startAtReview = false }: { dat
 
   function startWorkout() {
     if (isFuture) return;
-    const generatedForStart = todaySession?.status === "planned"
+    // Your own routine stays as you built it — unless the check-in reports pain, which always means recovery.
+    const ownRoutine = todaySession?.plan.focus === "Your routine" && !checkIn.pain;
+    const generatedForStart = todaySession?.status === "planned" && !ownRoutine
       ? generateWorkout({ date, profile: state.profile, sessions: recordedSessions, checkIn, trainerRuleSettings, trainerRuleRevision: state.trainerRuleRevision ?? 1 })
       : null;
     const startPlan = generatedForStart && todaySession?.status === "planned"
@@ -202,6 +210,7 @@ function WorkoutDayView({ date, extraDay = false, startAtReview = false }: { dat
           <p>No workout is planned for this day. Your next session is {describeNextDay(state.profile, date)}.</p>
           {date === currentDate && <button className="button button-primary" onClick={() => router.push("/today?extra=1")}>Train today anyway <Play aria-hidden="true" /></button>}
           <button className={`button ${date === currentDate ? "button-subtle" : "button-primary"}`} onClick={openNextWorkout}>See next session <ArrowRight aria-hidden="true" /></button>
+          <button type="button" className="text-button" onClick={() => router.push("/routines")}>Or start one of your own routines</button>
         </article>}
 
         {plan && preStart && displayFlowStep === "preview" && <>
@@ -295,6 +304,7 @@ function WorkoutDayView({ date, extraDay = false, startAtReview = false }: { dat
           </div>
           <div className="logger-mode">
             <span>{oneAtATime ? `Exercise ${shownIndex + 1} of ${exerciseCount}` : `${exerciseCount} exercises`}</span>
+            <button type="button" role="switch" aria-checked={restOn} className="rest-switch" onClick={() => { const next = !restOn; setRestOn(next); if (!next) setRest(null); try { window.localStorage.setItem("rozfit-rest-on", next ? "1" : "0"); } catch { /* remembered for this visit */ } }}><span className={`switch ${restOn ? "on" : ""}`} aria-hidden="true" /> Rest timer</button>
             <button type="button" className="text-button" onClick={() => setOneAtATime((value) => !value)}>{oneAtATime ? "Show all exercises" : "One at a time"}</button>
           </div>
           {oneAtATime && <div className="logger-steps" role="tablist" aria-label="Exercises in this workout">{todaySession.plan.exercises.map((exercise, index) => {
@@ -311,7 +321,7 @@ function WorkoutDayView({ date, extraDay = false, startAtReview = false }: { dat
                 onUpdate={(updater) => updateExercise(exercise.id, updater)}
                 onAddSet={() => addSet(exercise.id)}
                 onOpenGuide={() => setGuideExercise(toGuideExercise(exercise))}
-                onSetCompleted={() => { if (!editing && exercise.restSeconds > 0) setRest({ endsAt: Date.now() + exercise.restSeconds * 1000, exerciseName: exercise.name }); }} />;
+                onSetCompleted={() => { if (!editing && restOn && exercise.restSeconds > 0) setRest({ endsAt: Date.now() + exercise.restSeconds * 1000, total: exercise.restSeconds, exerciseName: exercise.name }); }} />;
             })}
           </div>
           <div className="logger-nav">
@@ -335,7 +345,8 @@ function WorkoutDayView({ date, extraDay = false, startAtReview = false }: { dat
           <button className="button button-primary flow-cta" disabled={savingSession} onClick={completeWorkout}>{savingSession ? "Saving…" : "Save my session"} <Check aria-hidden="true" /></button>
         </article>}
       </section>
-      {rest && logging && displayFlowStep === "workout" && <RestTimer key={rest.endsAt} endsAt={rest.endsAt} exerciseName={rest.exerciseName} onAddTime={() => setRest((current) => current ? { ...current, endsAt: Math.max(current.endsAt, Date.now()) + 15_000 } : current)} onDismiss={dismissRest} />}
+      {rest && logging && displayFlowStep === "workout" && <RestTimer key={rest.total + rest.exerciseName} endsAt={rest.endsAt} totalSeconds={rest.total} exerciseName={rest.exerciseName}
+        onAdjust={(seconds) => setRest((current) => current ? { ...current, endsAt: Math.max(Date.now() + 1000, current.endsAt + seconds * 1000), total: Math.max(1, current.total + seconds) } : current)} onDismiss={dismissRest} />}
       {guideExercise && <ExerciseGuideModal exercise={guideExercise} workout={{ date, session: todaySession, plan }} onOpen={(exercise) => setGuideExercise(toGuideExercise(exercise))} onClose={() => setGuideExercise(null)} />}
     </>
   );

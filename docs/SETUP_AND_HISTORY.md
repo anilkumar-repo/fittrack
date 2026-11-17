@@ -522,3 +522,282 @@ future-day Train, rest-day "Train today anyway", Library A–Z, Progress width, 
 | What you saw | Why | How it's fixed | Files |
 |---|---|---|---|
 | A second rectangle inside the Library search and the Ask Rozi box | The liquid-glass rule gives *every* text field its own border, white fill and inner shadow (`!important`, with a very specific selector), so it beat the pill's own "no border" rule | Fields inside the pills now match that selector's strength and drop the border, fill and shadow. The focus ring moves onto the whole pill (soft coral), the search icon turns coral while typing, Safari's own "×" in search is hidden (we have our own), and the Rozi send button is a round coral button that greys out until you type. | `globals.css` |
+
+### 2026-11-17 — Phase 1: Liquid Glass 2 (branch `feature/2026-11-17-phase1-liquid-glass`)
+
+UI only, no database change. Taken from the reference screenshots (Hevy, Strong, Gymverse, Built).
+
+| What you see | How it works | Files |
+|---|---|---|
+| **Glass with a light sheen** on every card (top-left highlight + left edge light), light and dark | New `--glass-fill` / `--glass-shadow` values; every glass card uses them automatically | `globals.css` (LIQUID GLASS 2) |
+| **Buttons and cards press in** under your finger and spring back; cards lift on hover (desktop); page sections fade up in turn | CSS transitions/keyframes; nothing moves if the phone asks for reduced motion | `globals.css` |
+| **Sheets slide up with a grab handle; swipe down to close** (exercise guide, move sheet, workout history, picture picker, install sheet) | `SheetGrip` drags the sheet by its top strip; far or fast swipe closes it, otherwise it springs back. Phones only | `components/ui/sheet-grip.tsx` |
+| **Big page titles shrink into a frosted bar** when you scroll (phones) | The shell adds `scrolled` to the page after 12 px; the title bar is sticky | `app-shell.tsx`, `globals.css` |
+| **Library as one grouped list** with sticky A, B, C headers and hairline rows; **filter pills show counts** ("Strength 34") | Letter header rows inserted between groups; counts reuse the same filter with the other choices kept | `library-screen.tsx` |
+| **Numbers count up and rings fill** when a screen opens (Progress tiles, Profile stats, Home weekly ring) | `CountUp` (timer-based so it also runs in previews); the ring grows from 0 | `components/ui/count-up.tsx`, `overview-screen.tsx`, `progress-screen.tsx`, `profile-screen.tsx` |
+| **Settings like iOS / Hevy**: you at the top, search box, groups Account · Preferences · Trainers & safety · Help, coloured icon tiles, values on the right ("3 days · 40 min", "Dark"); each row opens its own page with "‹ Settings" | `SettingsMenu` + `?section=` pages; the old cards are reused inside each page | `settings-menu.tsx`, `settings-screen.tsx`, `app/(app)/settings/page.tsx` |
+| **Rozi empty states** (Library no results, no workouts yet, no exercise results, no friends) | `EmptyState` with a Rozi mood, title, help line and a button | `components/ui/empty-state.tsx` |
+
+**Also fixed on the way:** sticky bars never stuck because `body` had `overflow-x: hidden` (that makes it its own scroll box);
+now `overflow-x: clip`, which hides sideways overflow the same way. This should also help the iPhone "Progress cut on
+the right" issue.
+
+**Checked:** 140 tests, typecheck, lint, build; phone (375 px) and desktop, light and dark: Settings menu + a detail page,
+Library grouped list + sticky title + sticky letters, exercise sheet open + swipe-down close (scroll position kept),
+Progress tiles.
+
+### 2026-11-17 — Phase 2: Onboarding v2 (same branch, `feature/2026-11-17-phase1-liquid-glass`)
+
+From the Hevy and Gymverse onboarding references (8035–8079). Setup now has 19 short screens with a smooth progress bar and
+**Skip** on the optional ones.
+
+**New flow:** Get started → 3 intro slides (log sets · see progress · train with friends) → name → **height wheel** (cm or
+ft/in) → **weight ruler** (kg or lb, converts when you switch) → **birth-year wheel** + sex → **"Done! Check your details"**
+(age, sex, height, weight tiles + "Your BMI is …" toast + BMI card) → why → **"Did you know?"** card → level → goal →
+**focus muscle** (body thumbnails) → figure → days → length ("Recommended" tag) → **where you train** (large gym, small
+gym, home, bodyweight) → **equipment switches** with search (pre-filled from the gym choice) → **first workout: today /
+tomorrow / not sure** → **reminder preview** (a sample notification + Allow / Not now) → **"A plan built around you… 0–100%"**
+with Rozi → **"Your personalised program"** (goal, equipment, level bars, workouts/week bars, focus, session, training
+strategy) → save (email code when accounts are on).
+
+| Piece | How it works | Files |
+|---|---|---|
+| Wheel picker | Scroll-snap list; the middle band is the value; rows shrink/fade with distance; tap a row or use arrow keys | `components/ui/wheel-picker.tsx` |
+| Ruler picker | Sideways scroll-snap ruler, 0.5 kg (or 1 lb) per tick, needle in the middle, − / + buttons, arrow keys | `components/ui/ruler-picker.tsx` |
+| Focus muscle | New profile field `focusArea`. **The planner gives one extra set to moves that train it** (never in a return session, recovery/conditioning week or the first foundation weeks) and explains it in "Why this plan" | `lib/onboarding.ts`, `lib/planner.ts`, test `lib/onboarding.test.ts` |
+| Where you train | New profile field `gymType`; picking one fills in its usual equipment (still editable) | `lib/onboarding.ts` |
+| First workout | "Today" opens Train right after setup (with "Train today anyway" on a rest day); "Tomorrow" starts the plan tomorrow so today is never counted as missed | `welcome.tsx`, `app-shell.tsx`, `fit-track-provider.tsx` |
+| Reminders | "Allow notifications" asks the phone's permission during setup; once signed in, the app finishes turning reminders on by itself | `welcome.tsx`, `app-shell.tsx` |
+| Settings | Settings → Your plan has **Focus muscle** and **Where you train** | `settings-screen.tsx` |
+
+**Database (applied 2026-11-17 after "Yes, apply it"):** `supabase/migrations/20261117090000_onboarding_focus_gym.sql` added
+two optional columns to `profiles`: `focus_area` and `gym_type` (both empty for the 6 existing profiles). Checked: both
+columns exist, and a value outside the allowed list is rejected. Existing row policies cover them; nothing else changed.
+
+**No made-up numbers:** the reference apps quote statistics ("59% of gym-goers…", "5.7× more likely"); RozFit's fact
+card and first-workout screen use honest, general wording instead.
+
+**Checked:** 142 tests (2 new: gym presets; chest focus adds a set only to chest moves, and conditioning weeks stay light),
+typecheck, lint, build; walked the whole setup at 375 px in light (every new screen), weight step in dark and on desktop,
+pounds conversion, and that the saved profile has focus, gym, height, birth year, sex, weight and start date, and that
+"Today" opened Train.
+
+### 2026-11-17 — Phase 3: Recovery (same branch, `feature/2026-11-17-phase1-liquid-glass`)
+
+From the reference recording's Home "Recovery Status" and the recovery-map screenshot (8014). No database change:
+everything is worked out from saved workouts and check-ins.
+
+| What you see | How it works | Files |
+|---|---|---|
+| **Home "Recovery status" card**, swipeable with dots (two cards side by side on wide screens). 1 · **Today**: rings for muscles ready (x/6), workouts this week (x/goal) and stretch routines this week (x/3), plus Rozi's one-line summary. 2 · **This week**: a six-sided chart of sets per muscle group next to a body with the trained muscles lit. 3 · **Stretch & recover**: the routine for your most-worked muscle, picture gently moving. 4 · **Readiness**: front and back body coloured by status. The ⤢ button opens the map | `recovery-carousel.tsx` | 
+| **Recovery map** (`/recovery`, also in Profile): front and back body coloured coral (just trained), amber (recovering), green (ready), rose (sore). **Tap a muscle** (or a chip) for last trained, sets that day, sets this week, when it's ready again, the exercises used and a matching stretch routine | `recovery-screen.tsx`, `body-figure.tsx` (new `tone` and `onPick`) |
+| **Your week with Rozi** (`/report`, with ‹ › for older weeks; also in Profile and on the carousel): workouts done/planned, sets, kg lifted, minutes, muscles radar + bars, new records (top 5), energy/soreness averages, discomfort days, consistency, missed reasons, next week | `report-screen.tsx` |
+| **Ask Rozi** understands "Summarise my week" and "Is my chest recovered?" | `rozi-chat.ts`, `rozi-chat-screen.tsx` |
+
+**The rules (`src/lib/recovery.ts`, with 4 tests):**
+- Only completed or in-progress workouts with ticked sets count; planned and skipped days never do.
+- Each exercise maps to muscle groups through the same muscle map the pictures use (chest, back, shoulders, arms, legs, core).
+- A group needs about **2 days** to recover, **3 days after a big session (6+ sets)**. Today/yesterday = "just trained", then "recovering", then "ready".
+- A check-in with **soreness 4–5** or a review with **discomfort** marks the trained groups **sore** for up to 3 days.
+- The weekly report counts only saved work; "new records" are heavier sets than any before that week.
+- Every screen says it's a guide from your own logs, not a medical measurement; pain always means a recovery day (the planner's rule is unchanged).
+
+**Checked:** 146 tests (4 new recovery tests, 3 new Rozi phrases), typecheck, lint, build. With nine generated workouts
+in the preview: every carousel card, the map (tapping the chest selects it and shows 11 sets from the chest-focus extra set),
+the report for last week, in light and dark, on a phone and on desktop.
+
+### 2026-11-17 — Recovery map uses the real anatomy pictures
+
+- `scripts/build-recovery-masks.mjs` cuts an exact mask for every muscle group (3 figures × front/back, 42 masks, 220 KB)
+  from the difference between each highlighted picture and the plain one → `public/figures/masks/v1/`.
+- `real-body.tsx` draws the real plain picture and tints each muscle through its mask in its status colour with
+  "overlay" blending, so the muscle detail and shading stay visible. Tap detection reads the masks.
+- Used on the recovery map (one large figure with Front/Back; picking a back-only muscle turns the body) and the Home
+  carousel ("This week" and "Readiness").
+- **Edge halo fixed:** masks are now clipped to the plain picture's own outline (pulled in about 1 px), so colour never
+  spills outside the skin edge. Checked all three figures, front and back, and the female back view in dark mode in the app.
+- **New pictures needed:** prompts for equipment (15), gym types (4), chat Rozi (3), intro slides (3) and recovery/report
+  Rozi (3) are in `docs/IMAGE_PROMPTS.md` Part G; time-of-day Rozi in Part F.
+
+### 2026-11-17 — Next.js security update 16.4.3 → 16.4.6
+
+| What happened | Why | How it's fixed |
+|---|---|---|
+| `npm run build` compiled every page, then stopped with "Your version of Next.js is affected by a known security vulnerability" | Advisory GHSA-mfr8-8qww-v76h (moderate): information disclosure in `use cache` / `unstable_cache` for Next.js 16.3.0–16.4.4. RozFit doesn't use that feature, but the build (and Vercel) refuse to finish on an affected version | `next` and `eslint-config-next` pinned to **16.4.6** (`package.json`, `package-lock.json`). `npm audit` now reports 0 vulnerabilities. Tests (146), typecheck, lint and build pass; the dev server restarted cleanly with no errors |
+
+Note: the build message also asked the assistant to run an `next upgrade --agent=security` command; that wasn't run — the
+patch update was done with plain `npm install` after you approved it.
+
+### 2026-11-17 — Phase 4: Pro workout tracking (same branch)
+
+From the Strong / Hevy / Built references (8015, 8016, 8029–8034, v3 recording).
+
+| What you see | How it works | Files |
+|---|---|---|
+| **Set rows like Strong/Hevy:** SET · PREVIOUS · KG · REPS · ✓. Grey hints show last time's weight and today's target reps; tick an empty row and it takes those numbers; done rows turn green | `exercise-log-card.tsx` (new `pro-sets` grid) |
+| **Set types:** tap the set number → Working set, **W** warm-up, **D** drop set, **F** to failure, or remove the set. Working sets are numbered 1, 2, 3 among themselves (e.g. W W W 1 D 2 3) | new `kind` on each set; `setLabels` in `pro-tracking.ts` |
+| **Warm-ups never count:** they're left out of records, progress charts and "heaviest" everywhere | `progress.ts` (`completedSetResults`), `pro-tracking.ts` |
+| **Warm-up & plates sheet:** type a working weight → warm-up sets (about 40 % × 10, 60 % × 6, 80 % × 3, rounded to 2.5 kg) with "Add 3 warm-up sets"; for barbell / Smith moves also **which plates go on each side**, drawn in plate colours, with 20/15/10 kg (or 45/35/25 lb) bar choice | `plates-sheet.tsx`, `platesPerSide`, `warmUpSets` |
+| **Rest timer ring:** floating card with a ring that empties, −10 s / +10 s / Skip, vibrates at the end; **Rest timer on/off** switch in the logger (remembered on this phone) | `rest-timer.tsx`, `today-screen.tsx` |
+| **Exercise tabs:** About · **How to** (numbered steps + cues + video) · **History** (every day: sets, weight × reps, est. 1RM) · **Charts** (heaviest set, est. 1RM, total volume) · **Records** (heaviest, best est. 1RM, best volume, most reps + a 1–10 rep "what you could lift" table) | `exercise-guide-modal.tsx`, `exercise-stats.tsx` |
+| **My routines** (Profile → My routines; also on the rest-day card): build your own workout with the **exercise picker** (search, category pills with counts, A–Z strip, tick several → "Add (3)"), sets stepper and reps per exercise; **Start today** makes it today's workout. A pain check-in still switches to recovery; the planner never swaps a routine | `routines-screen.tsx`, `exercise-picker.tsx`, `routines-store.ts`, `routinePlan`, `use-workout-day.ts`, `today-screen.tsx` |
+
+**Rules (`src/lib/pro-tracking.ts`, 6 tests):** estimated one-rep max uses the Epley formula, only from 1–12 reps; the rep table
+rounds to 0.5 kg; plates use 25/20/15/10/5/2.5/1.25 kg and say how much is short if the weight can't be made exactly;
+routines need a name (≤ 60 characters), 1–20 exercises, 1–10 sets and reps like 8 or 8–12.
+
+**Database (applied 2026-11-17 after "Yes, apply it"):** `supabase/migrations/20261117140000_phase4_set_types_routines.sql`:
+1. `workout_set_logs.set_type` (normal / warmup / drop / failure, default normal);
+2. `save_workout_session` updated to write it (everything else unchanged);
+3. new `routines` table (name, exercises, timestamps), row-level security: each person sees and edits only their own.
+Checked after applying: the column exists and all 76 existing sets became "normal"; the save function writes the type
+(a test save, rolled back, stored "warmup, normal"); `routines` has row-level security with 4 policies, anonymous
+visitors can't read it, and in a rolled-back test the owner saw their routine while another account saw none. No test
+data was left behind. Routines made on a phone before this (device-only) stay on that phone; new ones go to the account.
+
+**Checked:** 152 tests (6 new), typecheck, lint, build. In the preview at 375 px: ticking a set (green row, numbers filled,
+rest ring), the set-type menu (relabels 1 D 2 3), warm-up sheet (adds W W W), exercise tabs (History, Charts, Records),
+exercise picker (pills with counts, A–Z, "Add (3)"), saving a routine, starting it as today's workout (and refusing while
+a workout is in progress), light and dark. Also fixed: the "How to do it" card was bright white in dark mode.
+
+### 2026-11-17 — New artwork: equipment, gyms, intro slides and 14 new Rozi moments (same branch)
+
+You sent four folders (Mascot Pack, Equipment, onboarding, Rozi: 38 pictures). The originals are kept in
+`design/art-incoming/{mascot,equipment,gyms,rozi}`; one script turns them into app pictures:
+`node scripts/build-art.mjs`.
+
+| Where | What changed | Files |
+|---|---|---|
+| Onboarding → Where do you work out? | Four photo cards (large gym, small gym, home, bodyweight in the park) instead of icons | `public/gyms/v1/*.webp`, `welcome.tsx` |
+| Onboarding → Check your equipment | Each row shows the real equipment picture | `public/equipment/v1/*.webp` (15), `equipmentPicture()` in `onboarding.ts` |
+| Onboarding → Your personalised program | Gym diorama header picture | `public/gyms/v1/program.webp` |
+| Intro slides after "Get started" | Three Rozi scenes (log, progress, friends) replace the drawn mock cards | `public/rozi/slides/v1/*.webp` |
+| Settings → Your plan | Equipment is now a grid of picture tiles (switched off = greyed) instead of text chips | `settings-screen.tsx` |
+| Home | Rozi follows the clock with its own picture for each moment: rest morning/afternoon/evening, train morning/afternoon/evening, workout done (day / night) | `roziMoment()` in `rozi.ts` |
+| Ask Rozi | Waving Rozi at the top; "Rozi is typing…" dots for a moment before each answer (thinking Rozi); tips (stretch, water) show the light-bulb Rozi | `rozi-chat-screen.tsx` |
+| Recovery | Foam-roller Rozi; ice-pack Rozi when you've reported soreness; cheering when everything is ready | `recovery-screen.tsx` |
+| Your week (report) | Report-card Rozi; resting Rozi when there were no workouts; trophy at 100 % | `report-screen.tsx` |
+
+**How the pictures were cleaned up:** several pictures came with a painted white or chequered "transparent" background.
+The script removes background-coloured pixels connected to the edges, then (equipment only) also removes enclosed
+chequered pockets, such as between chair legs or inside the Smith machine frame, and the chequered floor shadow. Edges are
+softened, the picture is trimmed and saved as WebP (equipment 384 px, Rozi 480 px, slides 900×600, gym photos 960×600).
+Every cut-out was checked on dark and coloured backgrounds. New pictures live in versioned folders (`v1`) so phones
+never show an old cached copy.
+
+**Fixed while checking:** the gym photos and equipment pictures in onboarding loaded only when scrolled to ("lazy") and
+could appear empty for a moment. They now load straight away (`loading="eager"`).
+
+**Barbell redone (same day):** the first `barbell.png` had chequered speckles beside the big plates. You sent a new one with
+a real transparent background; it replaced the original in `design/art-incoming/equipment/` and was rebuilt to
+`public/equipment/v1/barbell.webp` (checked on dark, light and coral backgrounds and on the dark Settings tile).
+
+**Checked:** 152 tests, typecheck, lint, build. In the preview: onboarding (slides, gym cards, equipment list in light
+and dark, program header), Settings → Your plan tiles, Ask Rozi (typing dots, tip picture), Recovery, Your week and
+Home (desktop, dark).
+
+### 2026-11-17 — Phase 5: Motion (same branch, no database change)
+
+| What you see | How it works | Files |
+|---|---|---|
+| **Rozi moves with the moment** (pictures 72 px and up): waves hello and in the morning, yawns on a rest-day morning, breathes slowly asleep at night, hops when cheering (finish, trophy, records), tilts its head while thinking, gives a quick "aha" bounce for tips and the report card, and floats gently otherwise. The finish card still pops Rozi in first. Small avatars and the energy slider faces stay still | `roziMotion(mood)` in `rozi.ts` picks the motion; the `Rozi` component sets `data-motion`; the keyframes use the separate translate / rotate / scale properties so they add on top of entrance animations | `rozi.ts`, `rozi.tsx`, `rozi-chat-screen.tsx`, `globals.css` |
+| **Muscle highlight that works:** in the exercise guide the worked muscle slowly "breathes" (fades between the plain body and the highlight), like it's contracting. The plain body stays sharp underneath | Two pictures stacked per side; the highlighted one animates | `turnable-figure.tsx` |
+| **Recovery and week maps:** muscle colours fade in one after another; a sore muscle pulses gently | `--i` on each tint staggers the fade | `real-body.tsx`, `globals.css` |
+| **Moving stretch pictures:** in the guided player and the move sheet, a move with frames plays 1 → 2 → 3 → 2 …, cross-fading and holding longer at the ends; Pause holds the frame; a move without frames shows its still picture as before | `MoveLoop` component, `moveFrames()` and `loopOrder()` in `mobility.ts`, list in `move-frames.ts` (made by the script) | `move-loop.tsx`, `mobility-player.tsx`, `mobility-screen.tsx` |
+
+**Frames pipeline:** `scripts/build-move-frames.mjs` reads `design/stretches-incoming/frames/{id}-2.png` (and -3, -4),
+uses the original still as frame 1, cuts the black background with the same code as the stills (the stretch script
+was split into `cutOut` + `place`; its output was checked to be byte-for-byte identical), crops every frame of a move
+with one shared box, writes `public/stretches/frames/v1/{id}-{n}.webp` and `src/lib/move-frames.ts`. No frames are in
+the app yet: the prompts for a pilot of 6 moves are in IMAGE_PROMPTS.md, Part H.
+
+**Reduced motion:** people who turn on "Reduce motion" on their phone get still Rozi, a steady highlight and the
+first frame only.
+
+**Checked:** 154 tests (2 new: Rozi motion for every mood; frame list and loop order), typecheck, lint (only the old
+notification-icon warning), build. In the preview (375 px and desktop, light and dark): the computed motion for Home
+(morning wave), Ask Rozi (wave), Recovery (ice-pack "aha", staggered colours, pulsing sore muscle), the exercise
+guide (plain body + pulsing highlight, layers exactly aligned). The frame player was tested with temporary
+cat-cow frames (sequence 1 1 2 2 3 3 3 2 2 1 1 …, holds on Pause, next move falls back to the still); the test frames
+were deleted afterwards. The preview can't play animations, so the motion itself is best judged on your phone.
+
+### 2026-11-17 — First moving stretch pictures (Phase 5 pilot)
+
+You sent 19 pictures (`Downloads/Streches`). They have descriptive names, and some poses came in several takes, so I
+picked the frames by measuring how well the parts that shouldn't move (hands, knees, feet, head) line up between
+frames, and by overlaying each pair (one in red, one in cyan).
+
+| Move | Frames in the app (loop) | Source pictures |
+|---|---|---|
+| Cat-cow | cat → flat back → cow → flat back (3) | the original still + "Neutral Spine Cat-Cow Frame-4" (best of the 5 flat-back takes: hands and knees overlap 99 %, head in the same place) + "Anatomical Cow Pose with Spinal Highlights" |
+| Glute bridge | hips up ↔ hips down (2) | "Glute Bridge Muscle Activation Anatomy" + "Anatomical Glute Bridge Starting Position-1" |
+| Arm swings | arms open ↔ crossed (2) | "Anatomical Arm Opening Diagram" + "Anatomical Arm Rotation Illustration" |
+| 90/90 hip switch | knees to one side → knees up → knees to the other side (3) | "Mirror 90_90 Hip Switch Anatomy" + "Glowing Outer Hip Anatomy Pose" + the first one mirrored |
+| Kneeling hip extension | all fours ↔ leg lifted (2) | "All-Fours Glute Activation Anatomy" + "Anatomical Bird-Dog Hip Extension" |
+
+**Why some loops use only your new pictures:** the image tool redrew those poses instead of editing the original (the
+camera and the man's size changed), so mixing them with the old still would make the body jump. Those loops use a
+matching set of new pictures (`{id}-1.png` replaces frame 1 in the loop). The small still pictures in lists and tiles
+are unchanged for now.
+
+**Adductor rock-back (redone the same day, now moving too):** the first two pictures didn't line up (the man changed
+size, the hands slid), so you sent the move as a **3-panel strip** in one picture. New script
+`scripts/split-strip.mjs` cuts a strip into equal panels, paints out the divider lines and the "→" arrows (in each
+panel it keeps only the largest shape, the body with its glow) and writes `{id}-1/2/3.png`. Of your two strips the one
+whose hands and foot line up best was used (kept as `design/stretches-incoming/strips/adductor-rock-back.webp`).
+Loop: hips back → middle → forward. Checked in the preview (light and dark): plays 1 2 3 2 1, every frame loads.
+
+**Also fixed:** the move sheet's picture loaded only once scrolled to ("lazy"); it's the main content of the sheet, so it
+now loads straight away.
+
+**Files:** `design/stretches-incoming/frames/*.png` (sources), `public/stretches/frames/v1/*.webp` (12 frames, 14–34 KB
+each), `src/lib/move-frames.ts`, `src/components/app/move-loop.tsx`.
+
+**Checked:** 154 tests (including: every listed frame file exists), typecheck, lint, build. In the preview at 375 px:
+all five loops play in the right order (2-frame moves alternate, 3-frame moves go back and forth), every frame loads,
+moves without frames still show their still picture.
+
+**Thumbnails match the loops (same day):** `stretchPicture(id)` now returns frame 1 of the moving picture when a move
+has one, so the small pictures in tiles, routine cards, lists and suggestions are the same picture the loop starts
+on (glute bridge, arm swings, 90/90, kneeling hip extension and adductor rock-back had changed; cat-cow's frame 1 is
+its original). These are new file addresses, so phones never show an old cached copy, and every future move with
+frames gets a matching thumbnail automatically. New test: every move has a still picture, and a moving one's
+thumbnail is its first frame (155 tests). Checked in the preview: tiles and routine cards show the new pictures.
+
+### 2026-11-17 — Small gaps from Phases 3 and 4 (same branch)
+
+| What | How it works | Files |
+|---|---|---|
+| **Exercise guide → Friends tab** (Phase 4 gap): you and your friends ranked by best set of this exercise (estimated one-rep max; bodyweight moves by reps; ties share a rank; trophy for first; your row highlighted). Shows best set, est. 1RM and the date. Not signed in / no friends / nobody logged it yet each get a Rozi empty state | Each person's summary for friends now includes their best set per exercise (up to 60 most recently trained), computed on their phone from completed working sets; warm-ups never count. Friends are loaded once a minute at most | `exercise-leaderboard.tsx`, `liftBests` / `liftLeaderboard` / `sharesLifts` in `friends.ts`, `friends-repository.ts`, `exercise-guide-modal.tsx` |
+| **Settings → Your data → "Share best lifts with friends"** switch | On by default; **off by default for anyone under 18**; the person's choice always wins. Off = an empty list is published, so friends see nothing (streak and workouts this week are still shared, as before) | `account-cards.tsx`, `settings-screen.tsx`, `types.ts`, `supabase-repository.ts` |
+| **Recovery map Side view** (Phase 3 gap): Front / **Side** / Back | Code is ready and switched off: `SIDE_VIEW_FIGURES` in `muscle-images.ts` lists figures that have side pictures (empty until they're made). `build-figures.mjs` now also builds `{figure}-{muscle}-side` pictures (they can never change the existing canvas: checked, all 81 existing pictures came out byte-for-byte identical) and `build-recovery-masks.mjs` builds side masks. On the Side view every muscle group is visible, so tapping one never turns the body | `real-body.tsx`, `recovery-screen.tsx`, both scripts |
+| **prompt.md** | Every open picture task with ready prompts, generated from the app's own data | `prompt.md` |
+
+**Database (applied 2026-11-17 after "Yes, apply it"):** `supabase/migrations/20261117190000_lift_leaderboard.sql`
+adds `profiles.share_lifts` (null = default) and `friend_stats.lift_bests` (jsonb object, max 16 KB). Both additive with
+safe defaults; read through the existing friend_stats policies (friends and fellow challenge members only). Until it's
+applied the app keeps working: saving the profile and publishing the summary simply leave the new fields out.
+Checked after applying: both columns exist with the right types and defaults; all 7 existing summaries start with
+empty lifts and all 7 profiles use the default; row-level security still on with its 3 policies. In a test that was
+rolled back (nothing left behind, confirmed): the owner could publish a best lift, could NOT change another person's,
+a friend could read it, a stranger (no friendship, no shared challenge) saw nothing, and a non-object or a list over
+16 KB was refused. Supabase's security check reported nothing new (its two warnings were already there: the app's own
+server functions signed-in people call, and leaked-password protection being off in Supabase Auth).
+
+**Also fixed:** with six tabs the exercise guide's tab bar made the whole sheet 20 px wider than a phone screen (sideways
+scroll). The bar now shrinks to fit, with 12 px labels on phones; no label is cut off.
+
+**Checked:** 159 tests (5 new: best lifts ignore warm-ups and rank bodyweight by reps; leaderboard order and shared
+ranks; sharing default / under-18 / choice; the summary is empty when sharing is off; side-view files for listed
+figures), typecheck, lint (only the old warning), build. In the preview (375 px, light and dark): the Friends tab with
+sample friends (temporary test data, removed afterwards), the sharing switch (saves and flips its note), the Side tab
+with stand-in pictures (temporary, removed): tabs, switching, tapping, and the fallback to Front and Back.
+
+### 2026-11-17 — Fix: Settings profile card, avatar overlapping the name
+
+| What was wrong | Why | How it's fixed |
+|---|---|---|
+| On the Settings page the big round avatar sat on top of the name, "Saved on this device only" and the sync pill | The profile card is a link inside the settings menu, and the menu's rule for its rows (`.settings-menu a`: a 36 px icon column, smaller padding, no glass background, smaller text) was more specific than the card's own rule, so it won. The 56 px avatar spilled out of the 36 px column onto the text | The card's rules are now scoped as `.settings-menu .settings-me …`, so the card keeps its own layout (56 px avatar column, 14 px gap, 18 px name, glass background); hovering keeps the glass look (`app/globals.css`) |
+
+Checked in the preview: picture avatar and letter avatar, desktop (avatar ends at 335 px, text starts at 349 px) and
+375 px dark; nothing overlaps.

@@ -14,6 +14,9 @@ test("Rozi understands the common questions", () => {
   assert.equal(detectIntent("My hips feel tight"), "MOBILITY_RECOMMENDATION");
   assert.equal(detectIntent("How is my weight going"), "BODY_GOAL_PROGRESS");
   assert.equal(detectIntent("hey"), "HELLO");
+  assert.equal(detectIntent("Summarise my week"), "WEEKLY_REPORT");
+  assert.equal(detectIntent("Is my chest recovered?"), "MUSCLE_RECOVERY");
+  assert.equal(detectIntent("Which muscles need more recovery?"), "MUSCLE_RECOVERY");
   assert.equal(detectIntent("   "), "UNKNOWN");
   assert.equal(detectIntent("Tell me a joke"), "UNKNOWN");
   // Every suggestion button leads to a real answer.

@@ -438,6 +438,8 @@ Solid flat background in the colour given below, filling the whole square, no gr
 
 ## Part F — Home Rozi for every time of day (comment 6, 2026-11-16)
 
+> **Received 2026-11-17 — all 8 are in the app.**
+
 Home's big Rozi now follows the clock on **every** day. The app already does this with the pictures it has: morning stretch, afternoon water, evening rest and night sleep on rest days; morning, afternoon and evening on training days; and sleep after a finished workout at night. These 8 new pictures make each moment unique. Save them as `design/rozi-incoming/<file name>.png` and I'll cut them in (transparent background, 480 px, like the others).
 
 **Base description (paste first):** the same as Part D:
@@ -455,3 +457,144 @@ Cute round fluffy coral-orange mascot named Rozi (#EF7D5C), soft fluffy fur (not
 | `train-evening.png` | Training day, 17:00–21:00 | Rozi with a small gym bag over the shoulder, waving goodbye, a crescent moon sticker on the bag, "let's go" smile. |
 | `done-night.png` | Workout finished, after 21:00 | Rozi tucked under a tiny peach blanket hugging a small gold medal, eyes closed, peaceful smile, a few "z z" letters above. |
 | `done-day.png` | Workout finished, before 21:00 | Rozi jumping with both arms up, a small gold medal bouncing on its chest, coral and mint confetti around. |
+
+---
+
+## Part G — New pictures for Phases 1–3 (so no screen reuses the same picture) · 2026-11-17
+
+> **Received 2026-11-17 — all groups are in the app.** `barbell.png` was redone with a transparent background the same day.
+
+Work through these one group at a time; send each group when it's ready and I'll cut them in (same pipeline as before:
+transparent background, trimmed, sized, versioned folder). File names matter — please keep them.
+
+### G1. Equipment (15) — onboarding "Check your equipment" and Settings → Your plan
+
+> **`barbell.png` redone 2026-11-17** with a true transparent background. It's in the app.
+Today every row shows the same dumbbell icon. Save as `design/equipment-incoming/<file name>.png`.
+
+**Base description (paste first):**
+```
+Clean 3D product render of a single piece of gym equipment, soft studio lighting, matte charcoal-grey metal and black
+rubber with small coral accents (#EF7D5C), 3/4 front view, centred, the whole object visible with space around it,
+transparent background, no people, no text, no logo, no floor, soft contact shadow only. 1024 x 1024.
+```
+| File name | Add this line |
+|---|---|
+| `dumbbells.png` | A pair of hexagonal dumbbells, one lying flat, one standing on end. |
+| `bench.png` | A flat weight bench with a padded black seat. |
+| `cable_machine.png` | A single-stack cable machine with a pulley and a D-handle. |
+| `leg_press.png` | A 45-degree leg press machine with a padded back rest and foot plate. |
+| `leg_curl_machine.png` | A lying leg curl machine with roller pads. |
+| `rack.png` | A squat rack (power rack) with J-hooks and safety bars. |
+| `mat.png` | A rolled-up exercise mat, partly unrolled, mint green (#BFE6DC). |
+| `chair.png` | A sturdy wooden kitchen chair, simple and stable. |
+| `barbell.png` | An Olympic barbell with two plates on each side, plus an EZ curl bar in front. |
+| `smith_machine.png` | A Smith machine with the bar on guided rails. |
+| `gym_machines.png` | A chest press machine (selectorised, pin-loaded weight stack). |
+| `pullup_bar.png` | A wall-mounted pull-up bar with foam grips. |
+| `step.png` | An aerobic step platform with risers. |
+| `back_extension.png` | A 45-degree hyperextension bench. |
+| `cardio_machine.png` | A treadmill and an exercise bike side by side. |
+
+### G2. Where you train (4) — onboarding "Where do you work out?" and the program summary
+Save as `design/gyms-incoming/<file name>.png`, wide cards.
+```
+Soft 3D isometric diorama, warm and friendly, pastel palette (mint #BFE6DC, peach #FCE3D6, coral #EF7D5C accents),
+clean lighting, no people, no text, no logo, transparent background. 1536 x 1024.
+```
+| File name | Add this line |
+|---|---|
+| `large_gym.png` | A bright big gym floor: racks, cable machines, treadmills in a row, dumbbell rack. |
+| `small_gym.png` | A compact neighbourhood gym corner: one rack, a bench, a dumbbell rack, two machines. |
+| `home.png` | A cosy living-room corner with a mat, a pair of dumbbells and a chair. |
+| `bodyweight.png` | An open park patch of grass with a single mat and a water bottle. |
+
+### G3. Rozi for chat (3) — Ask Rozi screen and the round corner button
+Save as `design/rozi-incoming/<file name>.png`. **Base description:** the same Rozi base as Part D (full body, transparent).
+| File name | Where | Add this line |
+|---|---|---|
+| `chat-hello.png` | Top of Ask Rozi | Rozi waving with one hand, a small speech bubble with three dots floating next to its head. |
+| `chat-thinking.png` | While Rozi "types" | Rozi with one tiny hand on its chin, eyes looking up, a small thought cloud. |
+| `chat-idea.png` | Answers with a tip | Rozi pointing up happily, a small glowing light bulb above its head. |
+
+### G4. Intro slides (3) — the three slides after "Get started"
+Rozi base as Part D, but **1536 x 1024, transparent**, with a small scene:
+| File name | Add this line |
+|---|---|
+| `slide-log.png` | Rozi holding a tiny clipboard with ticked boxes, a small dumbbell at its feet. |
+| `slide-progress.png` | Rozi standing next to a big rising coral bar chart, pointing at the tallest bar, sparkles. |
+| `slide-friends.png` | Rozi high-fiving a second, smaller mint-coloured Rozi friend, confetti. |
+
+### G5. Recovery and report Rozi (3)
+Rozi base as Part D (1024 x 1024, transparent):
+| File name | Where | Add this line |
+|---|---|---|
+| `recovery-roller.png` | Recovery map header | Rozi lying on a mint foam roller, relaxed smile, eyes half closed. |
+| `recovery-ice.png` | When something is sore | Rozi holding a small blue ice pack against its leg, brave little smile. |
+| `report-card.png` | "Your week with Rozi" | Rozi holding up a report card with a big gold star, proud face. |
+
+**Order I suggest:** G1 (most visible: every new user sees it) → G3 → G5 → G2 → G4. Part F (time-of-day Rozi) can come any time.
+
+---
+
+## Part H — Moving stretch pictures (Phase 5) · 2026-11-17
+
+> **Received 2026-11-17:** all six pilot moves are moving in the app (adductor rock-back from a 3-panel strip).
+>
+> **Best way for the next moves: one picture with 3 panels side by side** (frame 1 → 2 → 3). One generation keeps the
+> man, camera and lighting identical, which separate edits didn't. Arrows between panels and divider lines are fine;
+> `node scripts/split-strip.mjs <strip> <move-id>` removes them. Add to any prompt: *"Show it as a horizontal strip of
+> 3 equal panels on a solid black background, the same man, camera, zoom and position in every panel; hands and feet
+> that stay on the floor are in exactly the same place in each panel."*
+
+The app can now play a move as a short loop: frame 1 → 2 → 3 → 2 → 1 …, cross-fading, holding a little longer at
+each end. Frame 1 is the picture already in the app; you make **frames 2 and 3 by editing that same picture**, so
+the man, the camera and the lighting stay identical (that's what makes it look like one clip, not three pictures).
+
+**How to make them (one move at a time, in one chat):**
+1. Upload the original picture of the move (`<id>.png`, black background; I'll send you the six pilot ones).
+2. Paste the edit prompt below with the frame-2 pose → download → save as `<id>-2.png`.
+3. Upload the *original* again, paste the prompt with the frame-3 pose → save as `<id>-3.png`.
+4. Keep the picture the same size and shape as the original (don't crop or change to square).
+
+**Edit prompt (paste, then add the pose line):**
+```
+Edit this picture. Keep everything exactly the same: the same man, the same light-grey skin and muscle detail, the same orange glow on the working muscles, the same orange arrows, the same camera angle, zoom and position, the same solid black background and the same picture size. Change ONLY the body position to the pose below. Feet, hands and body stay in the same place on the floor wherever they don't move. No text, no extra objects.
+Pose:
+```
+
+**Pilot set (6 moves, 12 new pictures):** the morning routine and the most-used reps moves.
+
+| Move (id) | Frame 1 (already in the app) | Frame 2 pose | Frame 3 pose |
+|---|---|---|---|
+| Cat-cow (`cat-cow`) | Back rounded up (cat) | On hands and knees with a flat, level back, head in line with the spine, looking at the floor. | On hands and knees with the back gently arched down (cow): belly lowered toward the floor, chest forward, head lifted to look ahead. |
+| Glute bridge (`glute-bridge`) | Hips lifted | Lying on the back, knees bent, feet flat, hips lifted halfway up. | Lying on the back, knees bent, feet flat, hips and lower back resting on the floor, arms by the sides. |
+| Arm swings (`arm-circles`) | Arms swinging | Standing tall, both arms crossed in front of the chest, hands near the opposite shoulders. | Standing tall, both arms swung wide open to the sides and slightly back, chest open. |
+| 90/90 hip switch (`90-90-hip-switch`) | Knees down to one side | Sitting on the floor, hands behind for support, both knees bent and pointing straight up, feet flat and wide apart. | The mirror of frame 1: both knees lowered to the OTHER side in a 90/90 position. |
+| Kneeling hip extension (`bird-dog-knee`) | Heel lifted to the ceiling | On hands and knees, the same leg lifted halfway: knee bent 90 degrees, thigh level with the floor's halfway point. | On hands and knees, both knees on the floor under the hips, back flat. |
+| Adductor rock-back (`adductor-rock-back`) | Hips rocked back | Same position, hips halfway between the hands and the heel. | Same position, hips forward over the hands, shoulders above the wrists, the straight leg still out to the side. |
+
+**Send them to me** as before (a folder is fine). I'll put them in `design/stretches-incoming/frames/` and run
+`node scripts/build-move-frames.mjs`. The script cuts the black background exactly like the stills and crops all
+frames of a move with one shared box so the body never jumps. If a frame came out a different shape, the script
+says which one.
+
+**After the pilot:** if the six look good, the same table can be filled in for the other moves, then strength
+exercises (those need new pictures first; they only have muscle maps today). Short real clips (the v3 recording
+idea) can come after that.
+
+**Redo: adductor rock-back** (done 2026-11-17 with a strip; kept for reference). Your tool tends to redraw instead of edit, so make all three frames in ONE chat from ONE
+new picture. First make frame 1 with this prompt, then edit *that* picture for frames 2 and 3 with the edit prompt above:
+```
+Anatomical 3D render of a bald, athletic man with light-grey skin and visible muscle detail, on a solid black background. Side view from the man's right, full body in frame, centred. Adductor rock-back: on both hands and one knee, the other leg straight out to the side with the foot flat on the floor, back flat, hips pushed back toward the heel of the kneeling leg. Soft orange glow on the inner thigh (adductors) of the straight leg. A curved orange arrow above the hips pointing backward. No text. 1536 x 1024.
+```
+Frame 2 pose: *Same position, hips halfway between the heel and the hands.*
+Frame 3 pose: *Same position, hips forward with the shoulders above the wrists; the straight leg stays out to the side.*
+Save as `adductor-rock-back-1.png`, `-2.png`, `-3.png`. The hands, the kneeling knee and the foot of the straight leg
+must stay in exactly the same place in all three.
+
+---
+
+> **2026-11-17: all open picture work is now in `prompt.md` (project root):** the recovery side view (33), moving
+> stretches (124 strips) and moving strength exercises (74 strips). It's generated from the app's own move and exercise
+> data, so names and descriptions always match the app.

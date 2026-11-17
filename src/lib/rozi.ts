@@ -9,6 +9,9 @@ export const ROZI_MOODS = [
   "base", "morning", "afternoon", "evening", "night", "cheer", "streak-risk", "grumpy", "comeback", "milestone",
   "trophy", "personal-record", "rest", "care", "workout", "energy-1", "energy-2", "energy-3", "energy-4", "energy-5",
   "hello", "signin", "full-body", "upper-body", "lower-body", "stretch", "water", "mobility",
+  // 2026-11-17 time-of-day, chat and recovery moments (IMAGE_PROMPTS Part F/G)
+  "rest-morning", "rest-afternoon", "rest-evening", "train-morning", "train-afternoon", "train-evening", "done-day", "done-night",
+  "chat-hello", "chat-thinking", "chat-idea", "recovery-roller", "recovery-ice", "report-card",
 ] as const;
 export type RoziMood = (typeof ROZI_MOODS)[number];
 
@@ -110,8 +113,8 @@ export function roziMoment({ streak, todaySession, hour, name, wins, why }: Mome
     if (wins?.milestone) return { mood: "milestone", title: "Achievement unlocked!", message: "A new badge is waiting on your Progress page." };
     if (streak.repairedToday) return { mood: "cheer", title: "Streak repaired!", message: `Your streak is back: ${inARow}. ${streak.repairsLeft} ${streak.repairsLeft === 1 ? "repair" : "repairs"} left.` };
     if (streak.comebackToday) return { mood: "comeback", title: "Welcome back!", message: "You came back, and that’s what counts. New streak started." };
-    if (timeOfDay(hour) === "night") return { mood: "night", title: "Workout done. Sleep well!", message: run > 1 ? `${inARow}. Recovery happens tonight.` : "Great job today. Recovery happens tonight." };
-    return { mood: "cheer", title: "Workout done!", message: run > 1 ? `That’s ${inARow}. Keep it going!` : "Great job showing up today." };
+    if (timeOfDay(hour) === "night") return { mood: "done-night", title: "Workout done. Sleep well!", message: run > 1 ? `${inARow}. Recovery happens tonight.` : "Great job today. Recovery happens tonight." };
+    return { mood: "done-day", title: "Workout done!", message: run > 1 ? `That’s ${inARow}. Keep it going!` : "Great job showing up today." };
   }
   if (todaySession?.status === "in_progress") return { mood: "workout", title: "You’ve got this", message: "Workout in progress. Take your time between sets." };
   if (todaySession?.checkIn?.pain || todaySession?.plan.sessionType === "recovery") {
@@ -134,12 +137,12 @@ export function roziMoment({ streak, todaySession, hour, name, wins, why }: Mome
     // Rest days follow the clock too: a morning stretch, an afternoon water reminder, an evening on the sofa, then sleep.
     const safe = run > 0 ? ` Your streak is safe: ${inARow}.` : "";
     if (period === "night") return { mood: "night", title: `Good night, ${name}`, message: "Rest day done. Sleep well." };
-    if (period === "morning") return { mood: "stretch", title: `Good morning, ${name}`, message: `Rest day. A few minutes of stretching keeps you loose.${safe}` };
-    if (period === "afternoon") return { mood: "water", title: "Rest day", message: `Recharge and keep sipping water.${safe}` };
-    return { mood: "rest", title: "Rest day", message: `Your muscles grow while you rest.${safe}` };
+    if (period === "morning") return { mood: "rest-morning", title: `Good morning, ${name}`, message: `Rest day. A slow start and a few minutes of stretching keep you loose.${safe}` };
+    if (period === "afternoon") return { mood: "rest-afternoon", title: "Rest day", message: `Recharge and keep sipping water.${safe}` };
+    return { mood: "rest-evening", title: "Rest day", message: `Feet up — your muscles grow while you rest.${safe}` };
   }
   const greeting = { morning: "Good morning", afternoon: "Good afternoon", evening: "Good evening", night: "Good evening" }[period];
-  const mood: RoziMood = period;
+  const mood: RoziMood = period === "morning" ? "train-morning" : period === "afternoon" ? "train-afternoon" : "train-evening";
   return { mood, title: `${greeting}, ${name}`, message: run > 0 ? `${inARow}. Today’s workout is ready when you are.` : "Today’s workout is ready when you are." };
 }
 
@@ -148,4 +151,26 @@ export const ENERGY_LABELS = ["Drained", "Low", "Okay", "Good", "Great"] as cons
 export function energyMood(level: number): RoziMood {
   const clamped = Math.min(5, Math.max(1, Math.round(level)));
   return `energy-${clamped}` as RoziMood;
+}
+
+// ---------- Motion (Phase 5) ----------
+
+/**
+ * How Rozi moves in each picture: a small loop that matches the moment, never a distraction.
+ * wave = hello / morning, yawn = waking up, sleep = slow breathing at night, cheer = a happy hop,
+ * think = a slow head tilt, pop = a quick "aha" bounce, float = a gentle bob (everything else).
+ */
+export type RoziMotion = "wave" | "yawn" | "sleep" | "cheer" | "think" | "pop" | "float";
+
+const MOTIONS: Partial<Record<RoziMood, RoziMotion>> = {
+  hello: "wave", signin: "wave", "chat-hello": "wave", morning: "wave", "train-morning": "wave", "train-evening": "wave",
+  "rest-morning": "yawn", stretch: "yawn", mobility: "yawn",
+  night: "sleep", "done-night": "sleep", rest: "sleep", "rest-evening": "sleep", "recovery-roller": "sleep", evening: "sleep",
+  cheer: "cheer", trophy: "cheer", "done-day": "cheer", milestone: "cheer", "personal-record": "cheer", comeback: "cheer", "energy-5": "cheer",
+  "chat-thinking": "think", grumpy: "think", "streak-risk": "think", "energy-1": "think",
+  "chat-idea": "pop", "report-card": "pop", "recovery-ice": "pop",
+};
+
+export function roziMotion(mood: RoziMood): RoziMotion {
+  return MOTIONS[mood] ?? "float";
 }

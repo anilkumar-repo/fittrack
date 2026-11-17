@@ -17,6 +17,7 @@ import {
 import { goalTitle } from "@/lib/program";
 import { pushNudge } from "@/lib/push-client";
 import { shortDate } from "@/lib/dates";
+import { EmptyState } from "@/components/ui/empty-state";
 
 export function FriendsScreen() {
   const { state, isDemo, browserClient, currentDate, recordedSessions } = useFitTrack();
@@ -126,7 +127,7 @@ export function FriendsScreen() {
 
       <article className="panel">
         <div className="panel-title"><h3>Your friends</h3><span className="panel-count">{friends.length}</span></div>
-        {!data && !loadError ? <p className="loading-inline" role="status">Loading friends…</p> : friends.length === 0 ? <p className="field-hint">No friends yet. Create an invite and send it to someone you’d like to train with.</p> : <ul className="friend-list">
+        {!data && !loadError ? <p className="loading-inline" role="status">Loading friends…</p> : friends.length === 0 ? <EmptyState mood="hello" title="No friends yet" text="Training is more fun together. Create an invite above and send it to a friend." /> : <ul className="friend-list">
           {friends.map((friend) => {
             const nudged = data?.nudgedToday.has(friend.userId) ?? false;
             return (

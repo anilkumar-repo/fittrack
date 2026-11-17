@@ -1,5 +1,6 @@
 import { shiftDate, weekdayOf } from "./dates.ts";
 import { goalOf } from "./program.ts";
+import { estimateOneRepMax, exerciseHistory } from "./pro-tracking.ts";
 import { calculateStreak } from "./rozi.ts";
 import type { Profile, TrainingGoal, WorkoutSession } from "./types";
 
@@ -17,6 +18,65 @@ export interface FriendStats {
   recentDates: string[];
   /** Profile picture value, if any (see Avatar). */
   avatar?: string;
+  /** Best lift per exercise, shared only when the person allows it (Settings → Your data). */
+  liftBests?: LiftBests;
+}
+
+// ---------- Best lifts (exercise "Friends" leaderboard) ----------
+
+/** One person's best set of an exercise: the set with the highest estimated one-rep max (kg 0 = bodyweight, most reps). */
+export interface LiftBest { kg: number; reps: number; e1rm: number | null; date: string }
+export type LiftBests = Record<string, LiftBest>;
+/** Up to this many exercises are shared (the most recently trained), so the summary stays small. */
+export const MAX_SHARED_LIFTS = 60;
+
+/** Best lifts from completed working sets; warm-ups never count. */
+export function liftBests(sessions: WorkoutSession[]): LiftBests {
+  const ids = new Set<string>();
+  for (const session of sessions) if (!session.sampleData) for (const log of session.exerciseLogs) ids.add(log.exerciseId);
+  const found: Array<{ id: string; best: LiftBest; lastDate: string }> = [];
+  for (const id of ids) {
+    const history = exerciseHistory(sessions, id); // newest first
+    let best: LiftBest | null = null;
+    for (const day of history) {
+      for (const set of day.sets) {
+        if (set.kind === "warmup") continue;
+        const kg = set.loadKg && set.loadKg > 0 ? set.loadKg : 0;
+        const candidate: LiftBest = { kg, reps: set.reps, e1rm: kg ? estimateOneRepMax(kg, set.reps) : null, date: day.date };
+        if (!best || liftScore(candidate) > liftScore(best)) best = candidate;
+      }
+    }
+    if (best) found.push({ id, best, lastDate: history[0].date });
+  }
+  // Keep the most recently trained exercises.
+  found.sort((a, b) => b.lastDate.localeCompare(a.lastDate));
+  return Object.fromEntries(found.slice(0, MAX_SHARED_LIFTS).map((item) => [item.id, item.best]));
+}
+
+/**
+ * Ranking score: loaded lifts by estimated one-rep max (or the weight, for sets over 12 reps), always above
+ * bodyweight sets, which rank by reps.
+ */
+export function liftScore(best: LiftBest): number {
+  return best.kg > 0 ? 100_000 + (best.e1rm ?? best.kg) : best.reps;
+}
+
+export interface LiftRow { userId: string; name: string; avatar?: string; best: LiftBest; you: boolean; rank: number }
+
+/** Everyone (you and friends who share) with a best for this exercise, strongest first. Ties share a rank. */
+export function liftLeaderboard(exerciseId: string, people: Array<{ userId: string; name: string; avatar?: string; bests?: LiftBests }>, youId: string): LiftRow[] {
+  const rows = people.flatMap((person) => {
+    const best = person.bests?.[exerciseId];
+    return best ? [{ userId: person.userId, name: person.name, ...(person.avatar ? { avatar: person.avatar } : {}), best, you: person.userId === youId, rank: 0 }] : [];
+  }).sort((a, b) => liftScore(b.best) - liftScore(a.best) || Number(b.you) - Number(a.you));
+  rows.forEach((row, i) => { row.rank = i > 0 && liftScore(rows[i - 1].best) === liftScore(row.best) ? rows[i - 1].rank : i + 1; });
+  return rows;
+}
+
+/** Sharing best lifts is on unless the person turned it off, and off by default for anyone under 18. */
+export function sharesLifts(profile: Pick<Profile, "shareLifts" | "birthYear">, today: string): boolean {
+  if (typeof profile.shareLifts === "boolean") return profile.shareLifts;
+  return !(profile.birthYear && Number(today.slice(0, 4)) - profile.birthYear < 18);
 }
 
 export interface Challenge {
@@ -76,6 +136,7 @@ export function computeFriendStats(profile: Profile, sessions: WorkoutSession[],
     lastWorkoutDate: done.at(-1) ?? null,
     recentDates: done.filter((date) => date >= cutoff),
     ...(profile.avatar && !profile.avatar.startsWith("photo:data:") ? { avatar: profile.avatar } : {}),
+    liftBests: sharesLifts(profile, today) ? liftBests(sessions) : {},
   };
 }
 

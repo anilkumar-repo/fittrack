@@ -5,6 +5,9 @@
  * Every picture: background removed, trimmed to the figure, scaled to the same height and centred
  * on the same canvas, so switching muscle or turning front ↔ back never jumps.
  * Also writes the side-by-side front + back pictures and the one-sided muscle pictures.
+ * Side view (recovery map): {figure}-{muscle}-side.png for "base" and every muscle; built only for figures that have
+ * them. Side pictures never change the canvas width set by front/back (a wider side figure is scaled down to fit),
+ * so adding them can't move the existing pictures.
  *
  * Usage: node scripts/build-figures.mjs
  */
@@ -13,7 +16,7 @@ import fs from "node:fs";
 import path from "node:path";
 
 const SOURCE = "design/figures-incoming/singles";
-const OUT = "public/figures/v3";
+const OUT = process.env.FIGURES_OUT || "public/figures/v3";
 const HEIGHT = 820;
 const PAD_Y = 12;
 const PAD_X = 14;
@@ -21,6 +24,7 @@ const FIGURES = ["female", "male", "neutral"];
 const TWO_VIEW = ["base", "shoulders", "arms", "forearms", "calves"];
 const FRONT_ONLY = ["chest", "core", "quads"];
 const BACK_ONLY = ["back", "glutes", "hamstrings"];
+const SIDE = ["base", "shoulders", "chest", "back", "arms", "forearms", "core", "glutes", "quads", "hamstrings", "calves"];
 
 /** Black background → transparent; colours un-darkened at the soft edge. */
 async function cutOut(file) {
@@ -58,9 +62,24 @@ const webp = { quality: 80, alphaQuality: 90, effort: 6 };
     }
   }
   const width = Math.max(...Object.values(pieces).map((piece) => piece.width)) + PAD_X * 2;
+  for (const figure of FIGURES) {
+    for (const name of SIDE) {
+      const file = path.join(SOURCE, `${figure}-${name}-side.png`);
+      if (!fs.existsSync(file)) continue;
+      const piece = await cutOut(file);
+      if (piece.width > width - PAD_X * 2) {
+        // Keep the shared canvas: scale this side figure down to fit (rare; side views are usually narrower).
+        const buffer = await sharp(piece.buffer).resize({ width: width - PAD_X * 2 }).png().toBuffer();
+        pieces[`${figure}-${name}-side`] = { buffer, width: width - PAD_X * 2, scaled: true };
+      } else pieces[`${figure}-${name}-side`] = piece;
+    }
+  }
   const single = async (piece) => {
     const left = Math.round((width - piece.width) / 2);
-    return sharp(piece.buffer).extend({ top: PAD_Y, bottom: PAD_Y, left, right: width - piece.width - left, background: clear }).png().toBuffer();
+    const meta = await sharp(piece.buffer).metadata();
+    // A scaled-down side figure is shorter than the others: stand it on the same floor line.
+    const extraTop = HEIGHT - PAD_Y * 2 - meta.height;
+    return sharp(piece.buffer).extend({ top: PAD_Y + extraTop, bottom: PAD_Y, left, right: width - piece.width - left, background: clear }).png().toBuffer();
   };
   let written = 0;
   for (const [name, piece] of Object.entries(pieces)) {

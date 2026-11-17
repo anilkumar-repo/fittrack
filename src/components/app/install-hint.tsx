@@ -6,6 +6,7 @@ import Link from "next/link";
 import { Download, Share, SquarePlus, X } from "lucide-react";
 import { Rozi } from "./rozi";
 import { useScrollLock } from "./use-scroll-lock";
+import { SheetGrip } from "@/components/ui/sheet-grip";
 
 const SEEN_KEY = "rozfit-install-hint-v1";
 /** Chrome on Android offers its own install prompt. */
@@ -53,6 +54,7 @@ export function InstallHint() {
   return createPortal(
     <div className="modal-backdrop install-hint-backdrop" role="dialog" aria-modal="true" aria-labelledby="install-hint-title" onClick={close}>
       <section className="modal install-hint" onClick={(event) => event.stopPropagation()}>
+        <SheetGrip onClose={close} />
         <button type="button" className="modal-close" aria-label="Skip" onClick={close}><X aria-hidden="true" /></button>
         <Rozi mood="hello" size={96} eager />
         <h2 id="install-hint-title">Get the RozFit app</h2>

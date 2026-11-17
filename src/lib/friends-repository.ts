@@ -1,5 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { generateInviteCode, type Challenge, type FriendStats, type Nudge } from "./friends";
+import { generateInviteCode, MAX_SHARED_LIFTS, type Challenge, type FriendStats, type LiftBests, type Nudge } from "./friends";
 import type { TrainingGoal } from "./types";
 
 type Row = Record<string, unknown>;
@@ -16,12 +16,26 @@ function mapStats(row: Row): FriendStats {
     lastWorkoutDate: typeof row.last_workout_date === "string" ? row.last_workout_date : null,
     recentDates: Array.isArray(row.recent_dates) ? row.recent_dates.map(String) : [],
     ...(typeof row.avatar === "string" && row.avatar ? { avatar: row.avatar } : {}),
+    liftBests: readLiftBests(row.lift_bests),
   };
+}
+
+/** A friend's shared best lifts, checked field by field (anything malformed is skipped). */
+function readLiftBests(value: unknown): LiftBests {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return {};
+  const out: LiftBests = {};
+  for (const [id, item] of Object.entries(value as Record<string, unknown>).slice(0, MAX_SHARED_LIFTS)) {
+    if (!item || typeof item !== "object") continue;
+    const { kg, reps, e1rm, date } = item as Record<string, unknown>;
+    if (typeof kg !== "number" || kg < 0 || typeof reps !== "number" || reps <= 0 || typeof date !== "string") continue;
+    out[id] = { kg, reps, e1rm: typeof e1rm === "number" ? e1rm : null, date };
+  }
+  return out;
 }
 
 /** Shares this person's summary with friends. */
 export async function publishFriendStats(client: SupabaseClient, stats: FriendStats): Promise<void> {
-  const { error } = await client.from("friend_stats").upsert({
+  const row = {
     user_id: stats.userId,
     display_name: stats.displayName.slice(0, 80),
     goal: stats.goal,
@@ -33,7 +47,14 @@ export async function publishFriendStats(client: SupabaseClient, stats: FriendSt
     recent_dates: stats.recentDates.slice(-62),
     avatar: stats.avatar ?? "",
     updated_at: new Date().toISOString(),
-  }, { onConflict: "user_id" });
+  };
+  const { error } = await client.from("friend_stats").upsert({ ...row, lift_bests: stats.liftBests ?? {} }, { onConflict: "user_id" });
+  // Before the leaderboard migration adds lift_bests, publish the summary without it rather than fail.
+  if (error && (error.code === "PGRST204" || error.code === "42703")) {
+    const { error: retryError } = await client.from("friend_stats").upsert(row, { onConflict: "user_id" });
+    if (retryError) throw retryError;
+    return;
+  }
   if (error) throw error;
 }
 

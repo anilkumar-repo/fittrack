@@ -9,13 +9,13 @@
     "start": "next start",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
-    "test": "node --experimental-strip-types --test src/lib/planner.test.ts src/lib/workout-tracking.test.ts src/lib/exercise-library.test.ts src/lib/progress.test.ts src/lib/demo-data.test.ts src/lib/trainer-rules.test.ts src/lib/dates.test.ts src/lib/account-data.test.ts src/lib/logging.test.ts src/lib/exercise-media.test.ts src/lib/achievements.test.ts src/lib/muscle-images.test.ts src/lib/rozi.test.ts src/lib/motivation.test.ts src/lib/program.test.ts src/lib/missed-days.test.ts src/lib/friends.test.ts src/lib/notifications.test.ts src/lib/streak.test.ts src/lib/levels.test.ts src/lib/body.test.ts src/lib/mobility.test.ts src/lib/avatar-faces.test.ts src/lib/rozi-chat.test.ts"
+    "test": "node --experimental-strip-types --test src/lib/planner.test.ts src/lib/workout-tracking.test.ts src/lib/exercise-library.test.ts src/lib/progress.test.ts src/lib/demo-data.test.ts src/lib/trainer-rules.test.ts src/lib/dates.test.ts src/lib/account-data.test.ts src/lib/logging.test.ts src/lib/exercise-media.test.ts src/lib/achievements.test.ts src/lib/muscle-images.test.ts src/lib/rozi.test.ts src/lib/motivation.test.ts src/lib/program.test.ts src/lib/missed-days.test.ts src/lib/friends.test.ts src/lib/notifications.test.ts src/lib/streak.test.ts src/lib/levels.test.ts src/lib/body.test.ts src/lib/mobility.test.ts src/lib/avatar-faces.test.ts src/lib/rozi-chat.test.ts src/lib/onboarding.test.ts src/lib/recovery.test.ts src/lib/pro-tracking.test.ts"
   },
   "dependencies": {
     "@supabase/ssr": "0.10.2",
     "@supabase/supabase-js": "2.102.1",
     "lucide-react": "1.72.0",
-    "next": "16.4.3",
+    "next": "16.4.6",
     "qrcode": "1.5.4",
     "react": "19.2.4",
     "react-dom": "19.2.4",
@@ -28,7 +28,7 @@
     "@types/react-dom": "19.2.3",
     "@types/web-push": "3.6.4",
     "eslint": "9.39.1",
-    "eslint-config-next": "16.4.3",
+    "eslint-config-next": "16.4.6",
     "typescript": "6.0.2"
   },
   "engines": {

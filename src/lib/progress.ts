@@ -156,15 +156,16 @@ export function calculateConsistency(
   };
 }
 
+/** Working sets only: warm-ups (set type W) never count toward progress or records. */
 function completedSetResults(log: ExerciseLog): ActualSetResult[] {
-  return log.sets.map((set, index) => ({
+  return log.sets.flatMap((set, index) => set.kind === "warmup" ? [] : [{
     setNumber: index + 1,
     plannedReps: set.plannedReps,
     actualReps: set.actualReps,
     loadKg: set.loadKg,
     completed: set.completed,
     extra: set.extra,
-  }));
+  }]);
 }
 
 export function buildExercisePerformance(sessions: WorkoutSession[]): ExercisePerformance[] {

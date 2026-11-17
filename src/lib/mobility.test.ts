@@ -61,3 +61,29 @@ test("videos: a search for every move until a trainer picks one, which then play
   assert.equal(picked.embedUrl, "https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ?rel=0&modestbranding=1&playsinline=1");
   delete MOBILITY_VIDEOS["pigeon-stretch"];
 });
+
+test("moving pictures: every listed move is real, has 2–4 frames and every frame file exists", async () => {
+  const { MOVE_FRAMES } = await import("./move-frames.ts");
+  const { moveFrames, loopOrder, mobilityMove } = await import("./mobility.ts");
+  const { existsSync } = await import("node:fs");
+  for (const [id, count] of Object.entries(MOVE_FRAMES)) {
+    assert.ok(mobilityMove(id), `unknown move ${id}`);
+    assert.ok(count >= 2 && count <= 4, `${id} has ${count} frames`);
+    for (const url of moveFrames(id)) assert.ok(existsSync(new URL(`../../public${url}`, import.meta.url)), `missing ${url}`);
+  }
+  assert.deepEqual(moveFrames("no-such-move"), []);
+  assert.deepEqual(loopOrder(3), [0, 1, 2, 1]);
+  assert.deepEqual(loopOrder(2), [0, 1]);
+  assert.deepEqual(loopOrder(4), [0, 1, 2, 3, 2, 1]);
+  assert.deepEqual(loopOrder(1), [0]);
+});
+
+test("every move has a still picture, and a moving one's thumbnail is its first frame", async () => {
+  const { stretchPicture, moveFrames } = await import("./mobility.ts");
+  for (const move of MOBILITY_MOVES) {
+    const url = stretchPicture(move.id);
+    assert.ok(existsSync(new URL(`../../public${url}`, import.meta.url)), `missing ${url}`);
+    const frames = moveFrames(move.id);
+    if (frames.length) assert.equal(url, frames[0]);
+  }
+});

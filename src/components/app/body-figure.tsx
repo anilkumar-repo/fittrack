@@ -78,7 +78,9 @@ const BACK: Muscle[] = [
   { region: "calves", d: "M86 320 L86 362 Q92 370 95 357 Q98 336 92 318 Z" },
 ];
 
-function Half({ muscles, build, highlight }: { muscles: Muscle[]; build: Build; highlight: BodyRegion[] }) {
+interface Paint { highlight: BodyRegion[]; tone?: Partial<Record<BodyRegion, string>>; onPick?: (region: BodyRegion) => void }
+
+function Half({ muscles, build, highlight, tone, onPick }: { muscles: Muscle[]; build: Build } & Paint) {
   return (
     <>
       <path d={shape(BODY.neck, build)} className="figure-body" />
@@ -89,20 +91,21 @@ function Half({ muscles, build, highlight }: { muscles: Muscle[]; build: Build; 
       <path d={arm(ARM.hand, build)} className="figure-body" />
       {muscles.map((muscle, index) => (
         <path key={index} d={muscle.onArm ? arm(muscle.d, build) : shape(muscle.d, build)}
-          className={`figure-muscle ${muscle.region && highlight.includes(muscle.region) ? "on" : ""}`} />
+          className={`figure-muscle ${muscle.region && highlight.includes(muscle.region) ? "on" : ""} ${muscle.region && tone?.[muscle.region] ? `tone-${tone[muscle.region]}` : ""} ${onPick && muscle.region ? "pickable" : ""}`}
+          onClick={onPick && muscle.region ? () => onPick(muscle.region as BodyRegion) : undefined} />
       ))}
     </>
   );
 }
 
-function View({ side, build, highlight }: { side: "front" | "back"; build: Build; highlight: BodyRegion[] }) {
+function View({ side, build, highlight, tone, onPick }: { side: "front" | "back"; build: Build } & Paint) {
   const muscles = side === "front" ? FRONT : BACK;
   return (
     <>
       {build.hair && <path d={side === "front" ? "M83 26 Q84 6 100 5 Q116 6 117 26 Q112 14 100 14 Q88 14 83 26 Z" : "M83 30 Q82 6 100 5 Q118 6 117 30 Q112 46 100 47 Q88 46 83 30 Z"} className="figure-hair" />}
       {build.hair && <circle cx="100" cy={side === "front" ? 2 : 4} r="7" className="figure-hair" />}
-      <Half muscles={muscles} build={build} highlight={highlight} />
-      <g transform="translate(200 0) scale(-1 1)"><Half muscles={muscles} build={build} highlight={highlight} /></g>
+      <Half muscles={muscles} build={build} highlight={highlight} tone={tone} onPick={onPick} />
+      <g transform="translate(200 0) scale(-1 1)"><Half muscles={muscles} build={build} highlight={highlight} tone={tone} onPick={onPick} /></g>
       <ellipse cx="100" cy="30" rx="15.5" ry="20" className="figure-body" />
       {build.hair && side === "back" && <path d="M85 22 Q86 8 100 7 Q114 8 115 22 Q114 40 100 44 Q86 40 85 22 Z" className="figure-hair" />}
     </>
@@ -118,15 +121,19 @@ interface BodyFigureProps {
   /** Read out for screen readers; leave empty when the figure sits beside a text list. */
   label?: string;
   className?: string;
+  /** Colour each muscle group by a status name (adds `tone-<name>`), e.g. the recovery map. */
+  tone?: Partial<Record<BodyRegion, string>>;
+  /** Makes muscles tappable. */
+  onPick?: (region: BodyRegion) => void;
 }
 
-export function BodyFigure({ figure, highlight = [], view = "front", label, className }: BodyFigureProps) {
+export function BodyFigure({ figure, highlight = [], view = "front", label, className, tone, onPick }: BodyFigureProps) {
   const build = BUILD[figure];
   return (
     <svg viewBox={view === "both" ? "-4 -8 418 444" : "-4 -8 208 444"} className={`body-figure ${view === "both" ? "both" : ""} ${className ?? ""}`}
       role={label ? "img" : undefined} aria-label={label} aria-hidden={label ? undefined : true}>
-      <View side="front" build={build} highlight={highlight} />
-      {view === "both" && <g transform="translate(210 0)"><View side="back" build={build} highlight={highlight} /></g>}
+      <View side="front" build={build} highlight={highlight} tone={tone} onPick={onPick} />
+      {view === "both" && <g transform="translate(210 0)"><View side="back" build={build} highlight={highlight} tone={tone} onPick={onPick} /></g>}
     </svg>
   );
 }
