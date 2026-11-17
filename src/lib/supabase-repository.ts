@@ -47,6 +47,17 @@ export function newAccountProfileDefaults(user: AuthUser, seed?: NewAccountSeed)
   };
 }
 
+/**
+ * The profile for a signed-in account: the saved row when there is one; for a brand-new account, the answers
+ * from Get started on this device, kept whole. (Running them through mapProfile used to drop everything mapProfile
+ * only reads from a database row (height, age, sex, "why", focus, gym, goal, level), so new accounts were saved
+ * with defaults and asked for their body details again.)
+ */
+export function accountProfile(row: DbRow | null, user: AuthUser, trainerRole: boolean, deadliftEnabled: boolean, seed?: NewAccountSeed): Profile {
+  if (row) return mapProfile(row, user.id, trainerRole, deadliftEnabled);
+  return { ...newAccountProfileDefaults(user, seed), trainerRole, deadliftEnabled };
+}
+
 export interface NewAccountSeed {
   /** Settings chosen on this device before signing in. */
   profile?: Profile;
@@ -299,7 +310,7 @@ export async function loadCloudState(client: SupabaseClient, user: AuthUser, see
   if (ruleError) throw ruleError;
 
   const ownRules = normalizeTrainerRuleSettings(ruleRow?.rule_settings ?? DEFAULT_TRAINER_RULE_SETTINGS);
-  const profile = mapProfile((profileRow ?? {}) as DbRow, user.id, trainerRole, ruleRow?.deadlift_enabled === true, profileRow ? undefined : newAccountProfileDefaults(user, seed));
+  const profile = accountProfile(profileRow as DbRow | null, user, trainerRole, ruleRow?.deadlift_enabled === true, seed);
   // A saved profile means the welcome steps are done. A brand-new account saves its profile when the
   // person finishes them, or straight away if they already finished them on this device before signing in.
   const onboarded = Boolean(profileRow) || seed?.onboarded === true;

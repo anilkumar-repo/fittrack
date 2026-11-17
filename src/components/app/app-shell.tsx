@@ -7,6 +7,7 @@ import { MissedDayPrompt } from "./missed-day-prompt";
 import { TourGuide } from "./tour-guide";
 import { LevelChangePopup } from "./level-change";
 import { GlassGlider } from "./glass-glider";
+import { DockScrub } from "./dock-scrub";
 import { ProfileGate } from "./profile-gate";
 import { Avatar } from "./avatar";
 import { unexplainedMissedDays } from "@/lib/missed-days";
@@ -18,7 +19,7 @@ import { RULE_VERSION } from "@/lib/templates";
 import { hasSupabaseConfig } from "@/lib/supabase-browser";
 import { sessionForDate, useFitTrack } from "./fit-track-provider";
 import { START_TODAY_KEY, WANT_PUSH_KEY, Welcome } from "./welcome";
-import { enablePush } from "@/lib/push-client";
+import { enablePush, syncPushOwner } from "@/lib/push-client";
 import { InstallHint } from "./install-hint";
 import { RoziLoader } from "./rozi-loader";
 
@@ -68,6 +69,14 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     } catch { /* storage blocked: nothing to do */ }
   }, [ready, state.onboarded, isDemo, browserClient, currentDate, state.profile.trainingDays, state.profile.timeZone, router, setNotice]);
 
+  // Signed in on a phone that already allows notifications: make sure they're about this account
+  // (another account may have signed in here before and still own this phone's reminders).
+  const accountId = isDemo ? null : state.profile.id;
+  useEffect(() => {
+    if (!ready || !accountId || !browserClient || !state.onboarded) return;
+    syncPushOwner(browserClient, state.profile.timeZone, accountId).catch(() => undefined);
+  }, [ready, accountId, browserClient, state.onboarded, state.profile.timeZone]);
+
   if (!ready || !authChecked || (accountLoading && isDemo)) return <RoziLoader />;
   if (!state.onboarded) return <><Welcome /><InstallHint /></>;
   const missedDays = unexplainedMissedDays(state.profile, state.sessions, currentDate);
@@ -85,6 +94,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <TourGuide blocked={missedDays.length > 0} />
       <LevelChangePopup />
       <GlassGlider />
+      <DockScrub />
       {missedDays.length === 0 && <InstallHint />}
       {missedDays.length === 0 && <ProfileGate />}
       <aside className="sidebar">
