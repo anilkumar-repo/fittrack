@@ -10,6 +10,7 @@ import { clearPendingSession, readPendingSessions, writePendingSession } from "@
 import { getSupabaseBrowserClient } from "@/lib/supabase-browser";
 import { computeFriendStats } from "@/lib/friends";
 import { publishFriendStats } from "@/lib/friends-repository";
+import { releasePush } from "@/lib/push-client";
 import { loadCloudState, saveCloudBodyWeightEntry, saveCloudMissedDay, saveCloudProfile, saveCloudSession } from "@/lib/supabase-repository";
 import { DEFAULT_TRAINER_RULE_SETTINGS, profileWithTrainerEquipment } from "@/lib/trainer-rules";
 import { isFigureChoice, type FigureChoice } from "@/lib/figure";
@@ -389,6 +390,8 @@ export function FitTrackProvider({ children }: { children: React.ReactNode }) {
     if (!browserClient) return;
     flushDelayedCloudWrites();
     await sessionSaveQueue.current.catch(() => undefined);
+    // Unlink this phone from the account first, so a signed-out account never sends it reminders.
+    await releasePush(browserClient, stateRef.current.profile.id).catch(() => undefined);
     await browserClient.auth.signOut();
     setNotice("You’re signed out. RozFit now saves on this device only.");
   }, [browserClient, flushDelayedCloudWrites]);

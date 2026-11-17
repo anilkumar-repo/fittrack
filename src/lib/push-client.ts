@@ -61,6 +61,11 @@ export async function enablePush(client: SupabaseClient, timeZone: string, prefs
   if (permission !== "granted") throw new Error(permission === "denied" ? "Notifications are blocked. Allow them for this site in your phone or browser settings." : "Notifications were not turned on.");
   const reg = await registration();
   const subscription = await reg.pushManager.getSubscription() ?? await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: keyBytes(vapidKey) });
+  return claimSubscription(client, subscription, timeZone, prefs);
+}
+
+/** Links this phone's subscription to whoever is signed in now (taking it over from another account if needed). */
+async function claimSubscription(client: SupabaseClient, subscription: PushSubscription, timeZone: string, prefs: PushPrefs): Promise<PushPrefs> {
   const json = subscription.toJSON();
   // The phone may still be registered to another account that signed in here before. The database
   // function hands this device over to whoever is signed in now (a plain upsert is blocked by row security).
@@ -81,6 +86,48 @@ export async function enablePush(client: SupabaseClient, timeZone: string, prefs
   if (error?.message.includes("row-level security")) throw new Error("This phone gets notifications for another RozFit account. Sign in to that account and turn them off there, then try again.");
   if (error) throw new Error(error.message);
   return prefs;
+}
+
+/**
+ * Called when the app opens signed in. If this phone already allows notifications but its subscription is
+ * still linked to a different account (someone else signed in here before), the reminders would be about
+ * that account's workouts. Re-link it to the signed-in account, with the default reminder choices.
+ * Returns true when it re-linked. Never asks for permission; a phone that turned notifications off stays off.
+ */
+const savedPrefsKey = (userId: string) => `rozfit-push-prefs-${userId}`;
+
+export async function syncPushOwner(client: SupabaseClient, timeZone: string, userId: string): Promise<boolean> {
+  if (pushSupport().state !== "ready" || Notification.permission !== "granted") return false;
+  const existing = await navigator.serviceWorker.getRegistration();
+  const subscription = await existing?.pushManager.getSubscription();
+  if (!subscription) return false;
+  // Row security only shows this account's own rows: no row means it belongs to another account (or none).
+  const { data, error } = await client.from("push_subscriptions").select("id").eq("endpoint", subscription.endpoint).maybeSingle();
+  if (error || data) return false;
+  // Same account coming back after signing out: keep the reminder times it had chosen.
+  let prefs = DEFAULT_PUSH_PREFS;
+  try {
+    const saved = window.localStorage.getItem(savedPrefsKey(userId));
+    if (saved) prefs = { ...DEFAULT_PUSH_PREFS, ...(JSON.parse(saved) as Partial<PushPrefs>) };
+  } catch { /* storage blocked or unreadable: defaults */ }
+  await claimSubscription(client, subscription, timeZone, prefs);
+  return true;
+}
+
+/**
+ * Before signing out: unlink this phone so the signed-out account stops sending it reminders. The browser
+ * keeps its subscription, so the next account to sign in is linked again automatically (syncPushOwner).
+ */
+export async function releasePush(client: SupabaseClient, userId: string): Promise<void> {
+  if (typeof navigator === "undefined" || !("serviceWorker" in navigator)) return;
+  const existing = await navigator.serviceWorker.getRegistration();
+  const subscription = await existing?.pushManager.getSubscription();
+  if (!subscription) return;
+  const { data } = await client.from("push_subscriptions").select("*").eq("endpoint", subscription.endpoint).maybeSingle();
+  if (data) {
+    try { window.localStorage.setItem(savedPrefsKey(userId), JSON.stringify(rowToPrefs(data))); } catch { /* not remembered */ }
+  }
+  await client.from("push_subscriptions").delete().eq("endpoint", subscription.endpoint);
 }
 
 export async function savePushPrefs(client: SupabaseClient, timeZone: string, prefs: PushPrefs): Promise<void> {

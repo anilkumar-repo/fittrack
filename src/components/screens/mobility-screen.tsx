@@ -106,7 +106,7 @@ function RoutineView({ routineId, autoplay, quick, then }: { routineId: string; 
         {routine.moves.map((id, i) => {
           const move = mobilityMove(id);
           if (!move) return null;
-          return <li key={id}><span className="routine-num">{i + 1}</span><Image src={stretchPicture(id)} alt="" width={420} height={210} sizes="120px" loading="lazy" /><span><strong>{move.name}</strong><small>{doseLabel(move)} · {move.works}</small></span><MoveVideo move={move} compact /></li>;
+          return <li key={id}><span className="routine-num">{i + 1}</span><Image src={stretchPicture(id)} alt="" width={420} height={210} sizes="120px" loading="lazy" /><span className="routine-move-text"><strong>{move.name}</strong><small>{doseLabel(move)} · {move.works}</small></span><MoveVideo move={move} compact /></li>;
         })}
       </ol>
       {playing && <MobilityPlayer routine={routine} date={currentDate} onClose={(finished) => { setPlaying(false); if (finished && then) router.push(backTo); }} />}
