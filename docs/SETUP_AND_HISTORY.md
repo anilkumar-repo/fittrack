@@ -801,3 +801,63 @@ with stand-in pictures (temporary, removed): tabs, switching, tapping, and the f
 
 Checked in the preview: picture avatar and letter avatar, desktop (avatar ends at 335 px, text starts at 349 px) and
 375 px dark; nothing overlaps.
+
+### 2026-11-17 — Fixes: wrong "You missed yesterday's workout", routine list text, dock drag
+
+**1. "You missed yesterday's workout" although it was done**
+
+| What happened | Why | How it's fixed |
+|---|---|---|
+| On 17 Nov the phone showed "You missed yesterday's workout" although the 16 Nov workout was saved as completed (finished 23:09) | Checked in the database: the reminder logic was right for that account. But the phone's notification subscription was still linked to **another account** that had signed in on this phone earlier (its 16 Nov workout was only "planned"), so the 07:32 morning check sent that account's reminder to this phone. The phone was only re-linked to the right account at 14:18, when notifications were switched on again. The app linked a phone to an account only when notifications were turned on, never when a different account signed in | **On app start (signed in):** if the phone already allows notifications but its subscription isn't this account's, it's re-linked automatically (`syncPushOwner`, same database function as turning notifications on). **On sign-out:** the phone is unlinked first (`releasePush`), so a signed-out account never sends it reminders; its reminder times are remembered on the phone and restored if the same account signs in again. A phone where notifications were turned off stays off |
+
+Files: `src/lib/push-client.ts`, `src/components/app/app-shell.tsx`, `src/components/app/fit-track-provider.tsx`.
+Takes effect once this branch is live (the hourly reminder job runs on the production site).
+
+**2. Routine list: name and "40 s each side" ran together**
+
+| What was wrong | Why | How it's fixed |
+|---|---|---|
+| In a routine's move list the move name and the dose ("Overhead triceps stretch40 s each side · Triceps") ran into one line | The text block was styled as "the last item in the row"; when the video button was added at the end of each row, the text was no longer last and lost its stacked layout | The text block has its own class (`routine-move-text`): name on top, dose and muscles underneath (`mobility-screen.tsx`, `globals.css`) |
+
+**3. Dock: press and drag the glass lens (like iOS)**
+
+New `DockScrub` (`src/components/app/dock-scrub.tsx`): pressing the dock lifts the glass lens a little; sliding the finger
+(more than 8 px) moves the lens with it, the tab under it lights up (tiny vibration on Android); letting go opens that
+tab and the lens glides into place. A plain tap works as before; the click the browser fires after a drag is ignored,
+so it never opens the tab the finger started on. Reduced motion: no lift or zoom, the drag still works.
+
+**Checked:** 159 tests, typecheck, lint (only the old warning), build. In the preview at 375 px: drag Home → Progress
+opens Progress; drag Train → Friends (with the browser's stray click on Train) opens Friends; a plain tap still
+navigates; mid-drag the lens is lifted between tabs and the tab under it is highlighted; the routine list shows name and
+dose on separate lines.
+
+### 2026-11-17 — Still open: first sign-up email has a link instead of a code (dashboard settings)
+
+Seen again on 17 Nov ("Confirm your email address" with only a link; the link opened Vercel; "Send a new code" then
+sent the code). Same cause as item 1 in the 16 Nov table: **not app code, two Supabase dashboard settings that
+haven't been changed yet.**
+
+| What you see | Why | Fix (Supabase dashboard, project `cjdvgtqxanetaegbkojv`) |
+|---|---|---|
+| New email → "Confirm your email address", link only | A brand-new address gets the **Confirm sign up** template, still Supabase's default (link, no code). "Send a new code" goes to an address that now exists, so it uses the **Magic link** template, which has the code | Authentication → **Emails** → *Confirm sign up* → paste the subject and body from section 6.2 → Save |
+| The link opens a Vercel page | The link returns to the address the app asked for only if it's in **Redirect URLs**; otherwise Supabase uses the **Site URL**. If that's an old or protected Vercel address (the dev site has Vercel login protection), you land on Vercel | Authentication → **URL Configuration** → **Site URL** = `https://rozfit-a.vercel.app`; **Redirect URLs** include `https://rozfit-a.vercel.app/**`, `https://rozfit-dev.vercel.app/**`, `http://localhost:3000/**` |
+
+Note: a link that goes to `rozfit-dev.vercel.app` will still show Vercel's login while the dev site's protection is on
+(you chose to leave it on); typing the code always works there.
+
+Test after saving: use an email that has never signed up (or delete the test user under Authentication → Users first)
+→ the first email should say "Welcome to RozFit! Your code is 123456".
+
+### 2026-11-17 — Fix: new accounts asked for body details again after signing up
+
+| What happened | Why | How it's fixed |
+|---|---|---|
+| Right after signing up with the code, the app showed "Quick update for your plan" (height, weight, age) and "Why are you training?", although Get started had just asked all of it. The new account also lost the goal, level, focus muscle and gym type (they were saved as the defaults) | For a brand-new account the app builds the profile from the Get started answers saved on the phone, then passed it through `mapProfile`, the converter for profiles read from the database. That converter reads height, age, sex, "why", focus, gym, goal and level **only from the database row**, which is empty for a new account, so those answers were dropped and the account was saved without them. The body-details prompt then (correctly) saw them missing | New `accountProfile()` in `supabase-repository.ts`: a saved row still goes through `mapProfile`; a new account keeps the Get started answers whole |
+
+**Test:** new `src/lib/supabase-repository.test.ts` (a new account keeps every answer; an existing account still loads
+its saved profile). To let `npm test` load app files whose imports leave off ".ts", the test command now registers a
+tiny resolver (`scripts/test-register.mjs`, `scripts/test-resolve-hook.mjs`). 161 tests, typecheck, lint, build pass.
+
+**Accounts already created:** the database shows the four newest accounts (14–17 Nov) all saved with the default goal
+and no focus or gym. Those answers only ever lived on the phone, so they can't be recovered; the people can set them in
+Settings → Your plan. Takes effect for new sign-ups once this branch is live.
