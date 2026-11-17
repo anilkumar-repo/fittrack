@@ -37,7 +37,8 @@ export function MoveLoop({ id, alt, sizes, priority = false, paused = false }: {
     return () => window.clearTimeout(timer);
   }, [id, step, shown, frames.length, order.length, paused, still]);
 
-  if (frames.length < 2) return <Image src={stretchPicture(id)} alt={alt} width={840} height={420} priority={priority} sizes={sizes} />;
+  // The picture is the main content of the sheet or player, so it never waits to be scrolled to.
+  if (frames.length < 2) return <Image src={stretchPicture(id)} alt={alt} width={840} height={420} priority={priority} loading={priority ? undefined : "eager"} sizes={sizes} />;
   return (
     <span className="move-loop" role="img" aria-label={`${alt}, moving picture`}>
       {frames.map((src, index) => <Image key={src} src={src} alt="" width={840} height={420} sizes={sizes} priority={priority} loading="eager" className={index === shown ? "" : "off"} />)}
