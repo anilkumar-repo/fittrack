@@ -50,6 +50,8 @@ export interface Profile {
   gymType?: import("./onboarding").GymType;
   /** Profile picture: "photo:<url>", "rozi:<mood>" or "color:<hex>". */
   avatar?: string;
+  /** Share best lifts with friends (exercise leaderboard). Unset = on, or off for anyone under 18. */
+  shareLifts?: boolean;
 }
 
 export interface TrainerRuleSettings {

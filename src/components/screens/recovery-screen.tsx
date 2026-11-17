@@ -12,20 +12,28 @@ import { dateLabel, shortDate } from "@/lib/dates";
 import { mobilityRoutine, routineMinutes, stretchPicture } from "@/lib/mobility";
 import { GROUP_LABELS, GROUP_REGIONS, MUSCLE_GROUPS, readyCount, recoveryLine, STATUS_LABELS, type MuscleGroup } from "@/lib/recovery";
 import type { BodyRegion } from "@/lib/figure";
+import { hasSideView } from "@/lib/muscle-images";
 
 const BACK_ONLY = new Set<MuscleGroup>(["back"]);
 const FRONT_ONLY = new Set<MuscleGroup>(["chest", "core"]);
 const REGION_TO_GROUP = new Map<BodyRegion, MuscleGroup>(MUSCLE_GROUPS.flatMap((group) => GROUP_REGIONS[group].map((region) => [region, group] as const)));
 
-/** The recovery map: front and back body coloured by how recovered each muscle group is. Tap a muscle for details. */
+/**
+ * The recovery map: the body coloured by how recovered each muscle group is (Front / Back, plus Side for figures that
+ * have side pictures). Tap a muscle for details.
+ */
 export function RecoveryScreen() {
   const { figure } = useFitTrack();
   const { recovery, today } = useRecovery();
   const [picked, setPickedGroup] = useState<MuscleGroup>(() => recovery.find((item) => item.status === "sore" || item.status === "fresh")?.group ?? "chest");
-  const [side, setSide] = useState<"front" | "back">(() => BACK_ONLY.has(picked) ? "back" : "front");
-  // Picking a muscle that can't be seen from this side turns the body around.
+  const [side, setSide] = useState<"front" | "side" | "back">(() => BACK_ONLY.has(picked) ? "back" : "front");
+  const sides = hasSideView(figure) ? (["front", "side", "back"] as const) : (["front", "back"] as const);
+  // Choosing a figure without side pictures while on Side falls back to the front.
+  const shownSide = side === "side" && !hasSideView(figure) ? "front" : side;
+  // Picking a muscle that can't be seen from this side turns the body around (the side view shows every group).
   function setPicked(group: MuscleGroup) {
     setPickedGroup(group);
+    if (shownSide === "side") return;
     if (BACK_ONLY.has(group)) setSide("back");
     else if (FRONT_ONLY.has(group)) setSide("front");
   }
@@ -41,11 +49,11 @@ export function RecoveryScreen() {
 
       <article className="panel recovery-map">
         <div className="segmented recovery-side" role="tablist" aria-label="Body side">
-          {(["front", "back"] as const).map((value) => <button key={value} type="button" role="tab" aria-selected={side === value} className={side === value ? "selected" : ""} onClick={() => setSide(value)}>{value === "front" ? "Front" : "Back"}</button>)}
+          {sides.map((value) => <button key={value} type="button" role="tab" aria-selected={shownSide === value} className={shownSide === value ? "selected" : ""} onClick={() => setSide(value)}>{value === "front" ? "Front" : value === "side" ? "Side" : "Back"}</button>)}
         </div>
         <div className="real-solo">
-          <RealBody key={side} figure={figure} side={side} tone={recoveryTone(recovery)} selected={GROUP_REGIONS[picked]} priority sizes="300px"
-            onPick={(region) => { const group = REGION_TO_GROUP.get(region); if (group) setPicked(group); }} label={`Recovery map, ${side} view. Tap a muscle to see details.`} />
+          <RealBody key={shownSide} figure={figure} side={shownSide} tone={recoveryTone(recovery)} selected={GROUP_REGIONS[picked]} priority sizes="300px"
+            onPick={(region) => { const group = REGION_TO_GROUP.get(region); if (group) setPicked(group); }} label={`Recovery map, ${shownSide} view. Tap a muscle to see details.`} />
         </div>
         <small className="recovery-tap-hint">Tap a muscle</small>
         <RecoveryLegend />

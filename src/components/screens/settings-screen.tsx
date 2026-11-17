@@ -1,6 +1,6 @@
 "use client";
 
-import { AccountCard, DataCard, TrainerInviteCard, TrainerLinkCard } from "@/components/app/account-cards";
+import { AccountCard, DataCard, LiftSharingCard, TrainerInviteCard, TrainerLinkCard } from "@/components/app/account-cards";
 import { useFitTrack } from "@/components/app/fit-track-provider";
 import { NotificationsCard } from "@/components/app/notifications-card";
 import { Avatar } from "@/components/app/avatar";
@@ -197,7 +197,7 @@ export function SettingsScreen() {
       </>}
       {section === "trainers" && <><TrainerInviteCard onLinked={refreshTrainerClients} /><TrainerLinkCard /></>}
       {section === "account" && <AccountCard />}
-      {section === "data" && <DataCard />}
+      {section === "data" && <><LiftSharingCard /><DataCard /></>}
       {section === "about" && <>
           <details className="why-plan" open>
             <summary>About this plan</summary>

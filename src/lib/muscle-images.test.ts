@@ -25,3 +25,12 @@ test("the turnable figure starts on the side where the muscle group is seen", ()
   assert.equal(sidePicture("female", "back", "chest")?.src, "/figures/v3/female-base-back.webp");
   assert.equal(sidePicture("male", "front", "hamstrings")?.src, "/figures/v3/male-base-front.webp");
 });
+
+test("side view: every listed figure has its plain side picture and a side mask for every muscle group", async () => {
+  const { SIDE_VIEW_FIGURES } = await import("./muscle-images.ts");
+  const regions = ["shoulders", "chest", "back", "arms", "forearms", "core", "glutes", "quads", "hamstrings", "calves"];
+  for (const figure of SIDE_VIEW_FIGURES) {
+    assert.ok(existsSync(new URL(`../../public/figures/v3/${figure}-base-side.webp`, import.meta.url)), `${figure}: missing plain side picture`);
+    for (const region of regions) assert.ok(existsSync(new URL(`../../public/figures/masks/v1/${figure}-${region}-side.webp`, import.meta.url)), `${figure}: missing ${region} side mask`);
+  }
+});

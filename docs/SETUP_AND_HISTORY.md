@@ -720,3 +720,84 @@ notification-icon warning), build. In the preview (375 px and desktop, light and
 guide (plain body + pulsing highlight, layers exactly aligned). The frame player was tested with temporary
 cat-cow frames (sequence 1 1 2 2 3 3 3 2 2 1 1 …, holds on Pause, next move falls back to the still); the test frames
 were deleted afterwards. The preview can't play animations, so the motion itself is best judged on your phone.
+
+### 2026-11-17 — First moving stretch pictures (Phase 5 pilot)
+
+You sent 19 pictures (`Downloads/Streches`). They have descriptive names, and some poses came in several takes, so I
+picked the frames by measuring how well the parts that shouldn't move (hands, knees, feet, head) line up between
+frames, and by overlaying each pair (one in red, one in cyan).
+
+| Move | Frames in the app (loop) | Source pictures |
+|---|---|---|
+| Cat-cow | cat → flat back → cow → flat back (3) | the original still + "Neutral Spine Cat-Cow Frame-4" (best of the 5 flat-back takes: hands and knees overlap 99 %, head in the same place) + "Anatomical Cow Pose with Spinal Highlights" |
+| Glute bridge | hips up ↔ hips down (2) | "Glute Bridge Muscle Activation Anatomy" + "Anatomical Glute Bridge Starting Position-1" |
+| Arm swings | arms open ↔ crossed (2) | "Anatomical Arm Opening Diagram" + "Anatomical Arm Rotation Illustration" |
+| 90/90 hip switch | knees to one side → knees up → knees to the other side (3) | "Mirror 90_90 Hip Switch Anatomy" + "Glowing Outer Hip Anatomy Pose" + the first one mirrored |
+| Kneeling hip extension | all fours ↔ leg lifted (2) | "All-Fours Glute Activation Anatomy" + "Anatomical Bird-Dog Hip Extension" |
+
+**Why some loops use only your new pictures:** the image tool redrew those poses instead of editing the original (the
+camera and the man's size changed), so mixing them with the old still would make the body jump. Those loops use a
+matching set of new pictures (`{id}-1.png` replaces frame 1 in the loop). The small still pictures in lists and tiles
+are unchanged for now.
+
+**Adductor rock-back (redone the same day, now moving too):** the first two pictures didn't line up (the man changed
+size, the hands slid), so you sent the move as a **3-panel strip** in one picture. New script
+`scripts/split-strip.mjs` cuts a strip into equal panels, paints out the divider lines and the "→" arrows (in each
+panel it keeps only the largest shape, the body with its glow) and writes `{id}-1/2/3.png`. Of your two strips the one
+whose hands and foot line up best was used (kept as `design/stretches-incoming/strips/adductor-rock-back.webp`).
+Loop: hips back → middle → forward. Checked in the preview (light and dark): plays 1 2 3 2 1, every frame loads.
+
+**Also fixed:** the move sheet's picture loaded only once scrolled to ("lazy"); it's the main content of the sheet, so it
+now loads straight away.
+
+**Files:** `design/stretches-incoming/frames/*.png` (sources), `public/stretches/frames/v1/*.webp` (12 frames, 14–34 KB
+each), `src/lib/move-frames.ts`, `src/components/app/move-loop.tsx`.
+
+**Checked:** 154 tests (including: every listed frame file exists), typecheck, lint, build. In the preview at 375 px:
+all five loops play in the right order (2-frame moves alternate, 3-frame moves go back and forth), every frame loads,
+moves without frames still show their still picture.
+
+**Thumbnails match the loops (same day):** `stretchPicture(id)` now returns frame 1 of the moving picture when a move
+has one, so the small pictures in tiles, routine cards, lists and suggestions are the same picture the loop starts
+on (glute bridge, arm swings, 90/90, kneeling hip extension and adductor rock-back had changed; cat-cow's frame 1 is
+its original). These are new file addresses, so phones never show an old cached copy, and every future move with
+frames gets a matching thumbnail automatically. New test: every move has a still picture, and a moving one's
+thumbnail is its first frame (155 tests). Checked in the preview: tiles and routine cards show the new pictures.
+
+### 2026-11-17 — Small gaps from Phases 3 and 4 (same branch)
+
+| What | How it works | Files |
+|---|---|---|
+| **Exercise guide → Friends tab** (Phase 4 gap): you and your friends ranked by best set of this exercise (estimated one-rep max; bodyweight moves by reps; ties share a rank; trophy for first; your row highlighted). Shows best set, est. 1RM and the date. Not signed in / no friends / nobody logged it yet each get a Rozi empty state | Each person's summary for friends now includes their best set per exercise (up to 60 most recently trained), computed on their phone from completed working sets; warm-ups never count. Friends are loaded once a minute at most | `exercise-leaderboard.tsx`, `liftBests` / `liftLeaderboard` / `sharesLifts` in `friends.ts`, `friends-repository.ts`, `exercise-guide-modal.tsx` |
+| **Settings → Your data → "Share best lifts with friends"** switch | On by default; **off by default for anyone under 18**; the person's choice always wins. Off = an empty list is published, so friends see nothing (streak and workouts this week are still shared, as before) | `account-cards.tsx`, `settings-screen.tsx`, `types.ts`, `supabase-repository.ts` |
+| **Recovery map Side view** (Phase 3 gap): Front / **Side** / Back | Code is ready and switched off: `SIDE_VIEW_FIGURES` in `muscle-images.ts` lists figures that have side pictures (empty until they're made). `build-figures.mjs` now also builds `{figure}-{muscle}-side` pictures (they can never change the existing canvas: checked, all 81 existing pictures came out byte-for-byte identical) and `build-recovery-masks.mjs` builds side masks. On the Side view every muscle group is visible, so tapping one never turns the body | `real-body.tsx`, `recovery-screen.tsx`, both scripts |
+| **prompt.md** | Every open picture task with ready prompts, generated from the app's own data | `prompt.md` |
+
+**Database (applied 2026-11-17 after "Yes, apply it"):** `supabase/migrations/20261117190000_lift_leaderboard.sql`
+adds `profiles.share_lifts` (null = default) and `friend_stats.lift_bests` (jsonb object, max 16 KB). Both additive with
+safe defaults; read through the existing friend_stats policies (friends and fellow challenge members only). Until it's
+applied the app keeps working: saving the profile and publishing the summary simply leave the new fields out.
+Checked after applying: both columns exist with the right types and defaults; all 7 existing summaries start with
+empty lifts and all 7 profiles use the default; row-level security still on with its 3 policies. In a test that was
+rolled back (nothing left behind, confirmed): the owner could publish a best lift, could NOT change another person's,
+a friend could read it, a stranger (no friendship, no shared challenge) saw nothing, and a non-object or a list over
+16 KB was refused. Supabase's security check reported nothing new (its two warnings were already there: the app's own
+server functions signed-in people call, and leaked-password protection being off in Supabase Auth).
+
+**Also fixed:** with six tabs the exercise guide's tab bar made the whole sheet 20 px wider than a phone screen (sideways
+scroll). The bar now shrinks to fit, with 12 px labels on phones; no label is cut off.
+
+**Checked:** 159 tests (5 new: best lifts ignore warm-ups and rank bodyweight by reps; leaderboard order and shared
+ranks; sharing default / under-18 / choice; the summary is empty when sharing is off; side-view files for listed
+figures), typecheck, lint (only the old warning), build. In the preview (375 px, light and dark): the Friends tab with
+sample friends (temporary test data, removed afterwards), the sharing switch (saves and flips its note), the Side tab
+with stand-in pictures (temporary, removed): tabs, switching, tapping, and the fallback to Front and Back.
+
+### 2026-11-17 — Fix: Settings profile card, avatar overlapping the name
+
+| What was wrong | Why | How it's fixed |
+|---|---|---|
+| On the Settings page the big round avatar sat on top of the name, "Saved on this device only" and the sync pill | The profile card is a link inside the settings menu, and the menu's rule for its rows (`.settings-menu a`: a 36 px icon column, smaller padding, no glass background, smaller text) was more specific than the card's own rule, so it won. The 56 px avatar spilled out of the 36 px column onto the text | The card's rules are now scoped as `.settings-menu .settings-me …`, so the card keeps its own layout (56 px avatar column, 14 px gap, 18 px name, glass background); hovering keeps the glass look (`app/globals.css`) |
+
+Checked in the preview: picture avatar and letter avatar, desktop (avatar ends at 335 px, text starts at 349 px) and
+375 px dark; nothing overlaps.

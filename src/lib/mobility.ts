@@ -19,8 +19,12 @@ export function mobilityRoutine(id: string): MobilityRoutine | undefined {
   return MOBILITY_ROUTINES.find((routine) => routine.id === id);
 }
 
+/**
+ * The still picture of a move, for tiles, lists and cards. A move with a moving picture uses its first frame, so the
+ * thumbnail always matches the loop that opens (those frames can come from a newer set than the original still).
+ */
 export function stretchPicture(id: string): string {
-  return `/stretches/v1/${id}.webp`;
+  return (MOVE_FRAMES[id] ?? 0) >= 2 ? `/stretches/frames/v1/${id}-1.webp` : `/stretches/v1/${id}.webp`;
 }
 
 /**

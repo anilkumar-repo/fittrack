@@ -40,6 +40,7 @@ export function newAccountProfileDefaults(user: AuthUser, seed?: NewAccountSeed)
     ...(local?.why ? { why: local.why } : {}),
     ...(local?.focusArea ? { focusArea: local.focusArea } : {}),
     ...(local?.gymType ? { gymType: local.gymType } : {}),
+    ...(typeof local?.shareLifts === "boolean" ? { shareLifts: local.shareLifts } : {}),
     ...(local?.avatar && !local.avatar.startsWith("photo:data:") ? { avatar: local.avatar } : {}),
     deadliftEnabled: false,
     trainerRole: false,
@@ -79,6 +80,7 @@ function mapProfile(row: DbRow, id: string, trainerRole: boolean, deadliftEnable
     ...(typeof row.why === "string" && row.why ? { why: row.why } : {}),
     ...(typeof row.focus_area === "string" && FOCUS_IDS.has(row.focus_area) ? { focusArea: row.focus_area as FocusArea } : {}),
     ...(typeof row.gym_type === "string" && GYM_IDS.has(row.gym_type) ? { gymType: row.gym_type as GymType } : {}),
+    ...(typeof row.share_lifts === "boolean" ? { shareLifts: row.share_lifts } : {}),
   };
 }
 
@@ -399,12 +401,13 @@ export async function saveCloudProfile(client: SupabaseClient, profile: Profile)
     updated_at: new Date().toISOString(),
     ...(profile.focusArea ? { focus_area: profile.focusArea } : {}),
     ...(profile.gymType ? { gym_type: profile.gymType } : {}),
+    ...(typeof profile.shareLifts === "boolean" ? { share_lifts: profile.shareLifts } : {}),
   };
   const { error } = await client.from("profiles").upsert(row, { onConflict: "id" });
-  // Before the Phase 2 migration adds focus_area / gym_type, save everything else rather than fail.
-  if (error && (error.code === "PGRST204" || error.code === "42703") && (row.focus_area || row.gym_type)) {
-    const { focus_area: _focus, gym_type: _gym, ...rest } = row;
-    void _focus; void _gym;
+  // Before a migration adds the newer optional columns (focus_area, gym_type, share_lifts), save everything else rather than fail.
+  if (error && (error.code === "PGRST204" || error.code === "42703") && (row.focus_area || row.gym_type || row.share_lifts !== undefined)) {
+    const { focus_area: _focus, gym_type: _gym, share_lifts: _share, ...rest } = row;
+    void _focus; void _gym; void _share;
     const { error: retryError } = await client.from("profiles").upsert(rest, { onConflict: "id" });
     if (retryError) throw retryError;
     return;

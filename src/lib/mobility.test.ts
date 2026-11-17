@@ -77,3 +77,13 @@ test("moving pictures: every listed move is real, has 2–4 frames and every fra
   assert.deepEqual(loopOrder(4), [0, 1, 2, 3, 2, 1]);
   assert.deepEqual(loopOrder(1), [0]);
 });
+
+test("every move has a still picture, and a moving one's thumbnail is its first frame", async () => {
+  const { stretchPicture, moveFrames } = await import("./mobility.ts");
+  for (const move of MOBILITY_MOVES) {
+    const url = stretchPicture(move.id);
+    assert.ok(existsSync(new URL(`../../public${url}`, import.meta.url)), `missing ${url}`);
+    const frames = moveFrames(move.id);
+    if (frames.length) assert.equal(url, frames[0]);
+  }
+});

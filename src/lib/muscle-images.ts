@@ -45,6 +45,17 @@ export function pictureFileNames(): string[] {
 
 export type Side = "front" | "back";
 
+/**
+ * Figures that have the side view (recovery map): a plain side picture and one per muscle group, built by
+ * scripts/build-figures.mjs, with masks from scripts/build-recovery-masks.mjs. Add a figure here once its side
+ * pictures are in public/figures/v3 (a test checks every file exists). Until then the map shows Front and Back only.
+ */
+export const SIDE_VIEW_FIGURES: readonly FigureChoice[] = [];
+
+export function hasSideView(figure: FigureChoice): boolean {
+  return SIDE_VIEW_FIGURES.includes(figure);
+}
+
 /** Muscle groups seen mainly from behind start the turnable figure on its back view. */
 const BACK_FIRST = new Set<BodyRegion>(["back", "hips", "hamstrings", "calves"]);
 

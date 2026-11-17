@@ -4,14 +4,15 @@ import { useCallback, useEffect, useRef } from "react";
 import Image from "next/image";
 import type { BodyRegion, FigureChoice } from "@/lib/figure";
 
-type Side = "front" | "back";
+/** "side" is the recovery map's side view, only for figures in SIDE_VIEW_FIGURES (muscle-images.ts). */
+type Side = "front" | "back" | "side";
 const W = 489;
 const H = 820;
 /** Mask file name for each muscle group, and the sides it can be seen from. */
 const FILES: Record<BodyRegion, { name: string; sides: Side[] }> = {
-  shoulders: { name: "shoulders", sides: ["front", "back"] }, chest: { name: "chest", sides: ["front"] }, back: { name: "back", sides: ["back"] },
-  arms: { name: "arms", sides: ["front", "back"] }, forearms: { name: "forearms", sides: ["front", "back"] }, core: { name: "core", sides: ["front"] },
-  hips: { name: "glutes", sides: ["back"] }, thighs: { name: "quads", sides: ["front"] }, hamstrings: { name: "hamstrings", sides: ["back"] }, calves: { name: "calves", sides: ["front", "back"] },
+  shoulders: { name: "shoulders", sides: ["front", "back", "side"] }, chest: { name: "chest", sides: ["front", "side"] }, back: { name: "back", sides: ["back", "side"] },
+  arms: { name: "arms", sides: ["front", "back", "side"] }, forearms: { name: "forearms", sides: ["front", "back", "side"] }, core: { name: "core", sides: ["front", "side"] },
+  hips: { name: "glutes", sides: ["back", "side"] }, thighs: { name: "quads", sides: ["front", "side"] }, hamstrings: { name: "hamstrings", sides: ["back", "side"] }, calves: { name: "calves", sides: ["front", "back", "side"] },
 };
 const REGIONS = Object.keys(FILES) as BodyRegion[];
 const maskUrl = (figure: FigureChoice, region: BodyRegion, side: Side) => `/figures/masks/v1/${figure}-${FILES[region].name}-${side}.webp`;

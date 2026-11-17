@@ -539,6 +539,14 @@ Rozi base as Part D (1024 x 1024, transparent):
 
 ## Part H — Moving stretch pictures (Phase 5) · 2026-11-17
 
+> **Received 2026-11-17:** all six pilot moves are moving in the app (adductor rock-back from a 3-panel strip).
+>
+> **Best way for the next moves: one picture with 3 panels side by side** (frame 1 → 2 → 3). One generation keeps the
+> man, camera and lighting identical, which separate edits didn't. Arrows between panels and divider lines are fine;
+> `node scripts/split-strip.mjs <strip> <move-id>` removes them. Add to any prompt: *"Show it as a horizontal strip of
+> 3 equal panels on a solid black background, the same man, camera, zoom and position in every panel; hands and feet
+> that stay on the floor are in exactly the same place in each panel."*
+
 The app can now play a move as a short loop: frame 1 → 2 → 3 → 2 → 1 …, cross-fading, holding a little longer at
 each end. Frame 1 is the picture already in the app; you make **frames 2 and 3 by editing that same picture**, so
 the man, the camera and the lighting stay identical (that's what makes it look like one clip, not three pictures).
@@ -574,3 +582,19 @@ says which one.
 **After the pilot:** if the six look good, the same table can be filled in for the other moves, then strength
 exercises (those need new pictures first; they only have muscle maps today). Short real clips (the v3 recording
 idea) can come after that.
+
+**Redo: adductor rock-back** (done 2026-11-17 with a strip; kept for reference). Your tool tends to redraw instead of edit, so make all three frames in ONE chat from ONE
+new picture. First make frame 1 with this prompt, then edit *that* picture for frames 2 and 3 with the edit prompt above:
+```
+Anatomical 3D render of a bald, athletic man with light-grey skin and visible muscle detail, on a solid black background. Side view from the man's right, full body in frame, centred. Adductor rock-back: on both hands and one knee, the other leg straight out to the side with the foot flat on the floor, back flat, hips pushed back toward the heel of the kneeling leg. Soft orange glow on the inner thigh (adductors) of the straight leg. A curved orange arrow above the hips pointing backward. No text. 1536 x 1024.
+```
+Frame 2 pose: *Same position, hips halfway between the heel and the hands.*
+Frame 3 pose: *Same position, hips forward with the shoulders above the wrists; the straight leg stays out to the side.*
+Save as `adductor-rock-back-1.png`, `-2.png`, `-3.png`. The hands, the kneeling knee and the foot of the straight leg
+must stay in exactly the same place in all three.
+
+---
+
+> **2026-11-17: all open picture work is now in `prompt.md` (project root):** the recovery side view (33), moving
+> stretches (124 strips) and moving strength exercises (74 strips). It's generated from the app's own move and exercise
+> data, so names and descriptions always match the app.
