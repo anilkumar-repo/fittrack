@@ -95,21 +95,21 @@ export function ChatsScreen() {
         <p>{chats.length ? `${chats.length} ${chats.length === 1 ? "chat" : "chats"}` : "No chats yet"}</p>
         <button type="button" className="button button-primary small" onClick={() => setPicking(true)}><MessageCirclePlus aria-hidden="true" /> New chat</button>
       </div>
-      {state.profile.buddyAnchor && !hasGroupChat && <button type="button" className="panel chat-row chat-start-group" onClick={() => void openGroup()}>
+      {state.profile.buddyAnchor && !hasGroupChat && <button type="button" className="panel convo-row chat-start-group" onClick={() => void openGroup()}>
         <span className="chat-group-icon"><Users aria-hidden="true" /></span>
-        <span className="chat-row-text"><strong>Train together</strong><small>Start your group chat</small></span>
+        <span className="convo-row-text"><strong>Train together</strong><small>Start your group chat</small></span>
       </button>}
       {chats.length ? <ul className="panel chat-list">{chats.map((chat) => {
         const sender = chat.kind === "buddy" ? chat.members.find((member) => member.id === chat.last?.senderId)?.name : undefined;
         return (
           <li key={chat.id}>
-            <Link href={`/chats/${chat.id}`} className={`chat-row ${chat.unread && !chat.muted ? "unread" : ""}`}>
+            <Link href={`/chats/${chat.id}`} className={`convo-row ${chat.unread && !chat.muted ? "unread" : ""}`}>
               <ChatAvatar chat={chat} me={me} />
-              <span className="chat-row-text">
+              <span className="convo-row-text">
                 <strong>{chat.title}{chat.muted && <BellOff className="chat-muted" aria-label="Muted" />}</strong>
                 <small>{chat.blocked ? "Blocked" : messagePreview(chat.last, me, sender)}</small>
               </span>
-              <span className="chat-row-meta">
+              <span className="convo-row-meta">
                 <time>{chatTime(chat.last?.at ?? chat.lastAt)}</time>
                 {chat.unread > 0 && <span className={`chat-badge ${chat.muted ? "muted" : ""}`} aria-label={`${chat.unread} unread`}>{chat.unread > 99 ? "99+" : chat.unread}</span>}
               </span>
@@ -150,9 +150,9 @@ function NewChatSheet({ onClose }: { onClose: () => void }) {
         <button type="button" className="modal-close" aria-label="Close" onClick={onClose}>×</button>
         <h2>New chat</h2>
         {contacts === null ? <p role="status" className="card-note">Loading…</p> : contacts.length ? <ul className="chat-contacts">{contacts.map((contact) => (
-          <li key={contact.id}><button type="button" className="chat-row" disabled={Boolean(busy)} onClick={() => void open(contact)}>
+          <li key={contact.id}><button type="button" className="convo-row" disabled={Boolean(busy)} onClick={() => void open(contact)}>
             <Avatar value={contact.avatar} name={contact.name} size={44} />
-            <span className="chat-row-text"><strong>{contact.name}</strong><small>{ROLE_LABEL[contact.role]}</small></span>
+            <span className="convo-row-text"><strong>{contact.name}</strong><small>{ROLE_LABEL[contact.role]}</small></span>
           </button></li>
         ))}</ul> : <p className="card-note">You can message friends, your trainer and your clients. Add friends from the <Link href="/friends" onClick={onClose}>Friends</Link> page.</p>}
         {error && <p role="alert" className="form-error">{error}</p>}
@@ -206,9 +206,9 @@ export function ShareWorkoutSheet({ session, onClose }: { session: WorkoutSessio
           <WorkoutCardView card={card} unit={weightUnit} />
           <label className="field-label">Add a note <small className="field-hint">optional</small><input type="text" maxLength={500} value={note} placeholder="e.g. New bench PR 💪" onChange={(event) => setNote(event.target.value)} /></label>
           {chats === undefined ? <p role="status" className="card-note">Loading your chats…</p> : usable.length ? <ul className="chat-contacts">{usable.map((chat) => (
-            <li key={chat.id}><button type="button" className="chat-row" disabled={busy} onClick={() => void send(chat)}>
+            <li key={chat.id}><button type="button" className="convo-row" disabled={busy} onClick={() => void send(chat)}>
               <ChatAvatar chat={chat} size={44} me={state.profile.id} />
-              <span className="chat-row-text"><strong>{chat.title}</strong><small>{chat.kind === "buddy" ? "Your Train together group" : "Send to this chat"}</small></span>
+              <span className="convo-row-text"><strong>{chat.title}</strong><small>{chat.kind === "buddy" ? "Your Train together group" : "Send to this chat"}</small></span>
               <Send aria-hidden="true" className="chat-send-icon" />
             </button></li>
           ))}</ul> : <p className="card-note">No chats yet. Start one from <Link href="/chats" onClick={onClose}>Chats</Link> first.</p>}

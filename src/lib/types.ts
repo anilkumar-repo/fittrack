@@ -53,6 +53,10 @@ export interface Profile {
    * gets the same session on the same day even if someone skipped. Managed by the database.
    */
   buddyAnchor?: string;
+  /** Public profile (Phase 7): @username, short bio, and whether people can find you (always off under 18). */
+  username?: string;
+  bio?: string;
+  findable?: boolean;
   /** Monday of a week your trainer made lighter: fewer sets, the same session (Train together stays in step). */
   lightWeekStart?: string;
   /** Profile picture: "photo:<url>", "rozi:<mood>" or "color:<hex>". */

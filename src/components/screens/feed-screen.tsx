@@ -106,8 +106,8 @@ function PostCard({ post, photoUrl, onOpen, onChange, onNotice }: { post: FeedPo
   return (
     <article className="panel post-card">
       <header className="post-head">
-        <Avatar value={post.avatar} name={post.author} size={42} />
-        <span><strong>{mine ? "You" : post.author}</strong><small>{agoLabel(post.at)}</small></span>
+        <Link href={`/people/${post.authorId}`} className="post-author-face" aria-label={`${post.author}’s profile`}><Avatar value={post.avatar} name={post.author} size={42} /></Link>
+        <span><Link href={`/people/${post.authorId}`} className="post-author"><strong>{mine ? "You" : post.author}</strong></Link><small>{agoLabel(post.at)}</small></span>
         <button type="button" className="icon-button" aria-label="Post options" aria-expanded={menu} onClick={() => setMenu(!menu)}>···</button>
         {menu && <div className="chat-menu" role="menu">
           {mine ? <button type="button" role="menuitem" className="danger-text" disabled={busy} onClick={() => { setMenu(false); void remove(); }}><Trash2 aria-hidden="true" /> Delete post</button>
@@ -202,7 +202,7 @@ function CommentsSheet({ postId, onClose, onChange }: { postId: string; onClose:
           })}</ul> : <div className="chat-empty"><Rozi mood="chat-hello" size={90} eager /><p>No comments yet. Say something nice 💬</p></div>}
           <div ref={end} />
           <div className="comment-compose">
-            <label className="chat-input"><span className="sr-only">Comment</span><textarea rows={1} maxLength={COMMENT_MAX + 50} value={text} placeholder="Add a comment" onChange={(event) => { setText(event.target.value); setError(""); }}
+            <label className="msg-input"><span className="sr-only">Comment</span><textarea rows={1} maxLength={COMMENT_MAX + 50} value={text} placeholder="Add a comment" onChange={(event) => { setText(event.target.value); setError(""); }}
               onKeyDown={(event) => { if (event.key === "Enter" && !event.shiftKey && !event.nativeEvent.isComposing) { event.preventDefault(); void send(); } }} /></label>
             <button type="button" className="button button-primary chat-send" aria-label="Post comment" disabled={busy || !text.trim() || text.trim().length > COMMENT_MAX} onClick={() => void send()}><Send aria-hidden="true" /></button>
           </div>
@@ -306,17 +306,5 @@ export function PostWorkoutSheet({ session, onClose, onPosted }: { session: Work
       </section>
     </div>,
     document.body,
-  );
-}
-
-/** The Feed card on Friends. */
-export function FeedLink() {
-  const { isDemo, browserClient } = useFitTrack();
-  if (isDemo || !browserClient) return null;
-  return (
-    <Link href="/feed" className="panel buddies-link">
-      <span aria-hidden="true" className="feed-link-icon">💪</span>
-      <span><strong>Feed</strong><small>Your friends’ workouts — send a 💪 or a comment</small></span>
-    </Link>
   );
 }

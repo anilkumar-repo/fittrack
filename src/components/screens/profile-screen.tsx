@@ -8,6 +8,7 @@ import { calculateStreak } from "@/lib/rozi";
 import { levelTitle } from "@/lib/levels";
 import { bmi } from "@/lib/body";
 import { CountUp } from "@/components/ui/count-up";
+import { PublicProfileCard } from "./discover-screen";
 
 const LINKS = [
   { href: "/streak", label: "Streak calendar", note: "Every day, done or rested", icon: Flame },
@@ -43,6 +44,7 @@ export function ProfileScreen() {
           <div><strong>{bodyMass ? <CountUp value={bodyMass} decimals={1} /> : "—"}</strong><small>BMI</small></div>
         </div>
       </article>
+      <PublicProfileCard />
       <nav className="profile-links panel" aria-label="Your pages">
         {LINKS.map((item) => (
           <Link key={item.href} href={item.href}>

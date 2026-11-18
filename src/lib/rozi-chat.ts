@@ -5,10 +5,12 @@
  */
 export type RoziIntent =
   | "TODAY_WORKOUT" | "NEXT_WORKOUT" | "LAST_WORKOUT" | "WEEKLY_WORKOUT_COUNT" | "STREAK_STATUS"
-  | "PROGRESS_CHECK" | "MOBILITY_RECOMMENDATION" | "WATER" | "BODY_GOAL_PROGRESS" | "WEEKLY_REPORT" | "MUSCLE_RECOVERY" | "HELLO" | "UNKNOWN";
+  | "PROGRESS_CHECK" | "MOBILITY_RECOMMENDATION" | "WATER" | "BODY_GOAL_PROGRESS" | "WEEKLY_REPORT" | "MUSCLE_RECOVERY" | "PLAN_WORKOUT" | "HELLO" | "UNKNOWN";
 
 // Checked in order: the first intent with a matching phrase wins, so more specific ones come first.
 const DICTIONARY: Array<[RoziIntent, RegExp]> = [
+  // "Plan me a leg workout", "give me a 30 min chest workout", "build a push day", "arm day".
+  ["PLAN_WORKOUT", /^(?!.*\brest\b)(?:.*\b(plan|make|build|create|give|suggest|design|write|need|want)\b.*\b(workout|session|routine|day|training)\b|\b(leg|legs|chest|back|arm|arms|shoulder|shoulders|push|pull|glute|glutes|core|abs|upper ?body|lower ?body|full ?body)\s+(day|workout|session|routine)\b)/],
   ["WEEKLY_REPORT", /\b(summar|report|recap|review)\w*\b.*\bweek\b|\bmy week\b/],
   ["MUSCLE_RECOVERY", /\b(recover|recovered|recovery|rested|ready|sore)\b/],
   ["LAST_WORKOUT", /\b(last|previous|yesterday'?s?|recent)\b.*\b(workout|session|train|trained|training)\b|what did i (do|train)/],
@@ -36,6 +38,7 @@ export const SUGGESTED_QUESTIONS = [
   "How is my streak?",
   "Am I getting stronger?",
   "I feel stiff, what should I stretch?",
+  "Plan me a 30 min leg workout",
 ];
 
 /** Messages longer than this are cut, so a pasted essay can't slow the page down. */
