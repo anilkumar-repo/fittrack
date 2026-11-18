@@ -1,7 +1,7 @@
 "use client";
 
 import { CoolDownCard, WarmUpCard } from "@/components/app/mobility-suggestion";
-import { clearWorkoutNotification, notifyWorkoutStarted } from "@/lib/session-notify";
+import { clearWorkoutNotification, notifyWorkoutStarted, updateWorkoutNotification, workoutStartedAt } from "@/lib/session-notify";
 import { notifyBuddies } from "@/lib/buddies-repository";
 import { levelTitle } from "@/lib/levels";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -211,10 +211,34 @@ function WorkoutDayView({ date, extraDay = false, startAtReview = false }: { dat
   const preStart = !todaySession || todaySession.status === "planned";
   const isDone = todaySession?.status === "completed" && !editing;
   const logging = Boolean(todaySession) && !preStart && !isDone;
+  // Workout mode: while you're logging sets, the phone dock slides away (a small handle brings it back).
+  const workoutMode = logging && displayFlowStep === "workout";
+  useEffect(() => {
+    if (!workoutMode) return;
+    document.body.classList.add("workout-mode");
+    return () => document.body.classList.remove("workout-mode", "dock-peek");
+  }, [workoutMode]);
   const regions = plan ? regionsForExercises(plan.exercises).slice(0, 4) : [];
   const totalSets = plan?.exercises.reduce((sum, exercise) => sum + exercise.sets, 0) ?? 0;
   const setsPlanned = todaySession?.exerciseLogs.reduce((sum, log) => sum + (log.status === "skipped" ? 0 : log.sets.length), 0) ?? 0;
   const setsDone = todaySession?.exerciseLogs.reduce((sum, log) => sum + log.sets.filter((set) => set.completed).length, 0) ?? 0;
+  // Keep the "workout in progress" notification current whenever you leave the app (lock the phone or switch apps),
+  // so the lock screen shows your progress, when you started and when your rest ends. Only on leaving: refreshing it
+  // while the app is open could pop a banner on every set.
+  const workoutTitle = todaySession?.plan.title ?? "";
+  const restEndsAt = rest?.endsAt ?? null;
+  const restName = rest?.exerciseName ?? "";
+  useEffect(() => {
+    if (!workoutMode || !workoutTitle) return;
+    const refresh = () => void updateWorkoutNotification({
+      title: workoutTitle, startedAt: workoutStartedAt(date), setsDone, setsTotal: setsPlanned,
+      rest: restEndsAt ? { endsAt: restEndsAt, exerciseName: restName } : null,
+    });
+    const onHide = () => { if (document.visibilityState === "hidden") refresh(); };
+    document.addEventListener("visibilitychange", onHide);
+    window.addEventListener("pagehide", refresh);
+    return () => { document.removeEventListener("visibilitychange", onHide); window.removeEventListener("pagehide", refresh); };
+  }, [workoutMode, workoutTitle, date, setsDone, setsPlanned, restEndsAt, restName]);
   const doneMoment = todaySession?.status === "completed"
     ? roziMoment({ streak: calculateStreak(state.profile, recordedSessions, date), todaySession, hour: 12, name: state.profile.displayName, wins: winsForWorkout(recordedSessions, date, state.profile.sessionsPerWeek) })
     : null;

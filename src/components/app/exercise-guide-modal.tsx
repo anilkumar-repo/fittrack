@@ -110,9 +110,10 @@ export function ExerciseGuideModal({ exercise, workout, onOpen, onClose }: Exerc
     <div className="modal-backdrop guide-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
       <section className="exercise-modal guide" role="dialog" aria-modal="true" aria-labelledby="exercise-modal-title">
         <SheetGrip onClose={onClose} />
+        {/* Pinned to the top of the sheet, so it stays in reach while the guide scrolls. */}
+        <div className="guide-close-pin"><button type="button" className="guide-close" aria-label="Close guide" onClick={() => onClose()}><X aria-hidden="true" /></button></div>
         <div className="guide-head">
           <div><p className="guide-kicker">{exercise.category === "core" ? "Core" : exercise.category === "conditioning" ? "Conditioning" : "Strength"} · {exercise.difficulty}</p><h2 id="exercise-modal-title">{exercise.name}</h2></div>
-          <button className="guide-close" aria-label="Close guide" onClick={() => onClose()}><X aria-hidden="true" /></button>
         </div>
         <div className="chip-row">
           <span className="chip"><Repeat aria-hidden="true" /> {exercise.sets} × {exercise.reps}</span>

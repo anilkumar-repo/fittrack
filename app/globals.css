@@ -3552,10 +3552,14 @@ img[data-motion="float"] { --rozi-motion: rozi-float 3.6s ease-in-out infinite; 
 .rozi-back svg { width: 16px; height: 16px; }
 @media (max-width: 700px) {
   .rozi-mode .mobile-nav { display: none; }
-  .rozi-mode .main-area { padding-bottom: 16px; }
   .rozi-mode .app-footer { display: none; }
-  .rozi-mode .chat-input { bottom: calc(12px + env(safe-area-inset-bottom)); }
-  .rozi-mode .rozi-chat { min-height: calc(100dvh - 150px); grid-template-rows: auto 1fr auto auto; }
+  /* The chat fills the screen exactly: Rozi sits centred in the free space, and the messages, suggestions and message
+     box stay together at the bottom with no empty band under them. */
+  .rozi-mode .main-area { display: flex; flex-direction: column; min-height: 100dvh; padding-bottom: calc(10px + env(safe-area-inset-bottom)); }
+  .rozi-mode .rozi-chat { display: flex; flex: 1; flex-direction: column; min-height: 0; }
+  .rozi-mode .rozi-back { align-self: flex-start; }
+  .rozi-mode .chat-hero { margin: auto 0; }
+  .rozi-mode .chat-input { bottom: calc(10px + env(safe-area-inset-bottom)); }
   .rozi-back { display: inline-flex; }
 }
 /* New answers scroll in above the pinned message box, not behind it. */
@@ -3632,3 +3636,118 @@ img[data-motion="float"] { --rozi-motion: rozi-float 3.6s ease-in-out infinite; 
 .sheet-action svg { width: 19px; height: 19px; color: var(--accent); }
 .sheet-action.danger-text, .sheet-action.danger-text svg { color: #c0392b !important; }
 .sheet-action:disabled { opacity: .65; }
+
+/* ===================== 2026-11-18 · WORKOUT SCREEN FIXES ===================== */
+/* Exercise guide: the × stays pinned at the top right while the guide scrolls (a zero-height sticky row, so it takes
+   no space; the title keeps room for it). */
+.guide-close-pin { position: sticky; top: 6px; z-index: 4; display: flex; justify-content: flex-end; height: 0; margin-bottom: -16px; pointer-events: none; }
+.guide-close-pin .guide-close { pointer-events: auto; background: var(--surface-solid); box-shadow: 0 6px 18px rgba(0, 0, 0, .12); }
+.guide-head { padding-right: 54px; }
+
+/* Rest timer: a floating timer you can drag anywhere (it settles against the nearer side) in two sizes — a small
+   round one, or the full card. Tap the ring or the corner button to switch. */
+.rest-float { position: fixed; z-index: 70; right: 12px; bottom: calc(16px + env(safe-area-inset-bottom)); display: flex; align-items: center; gap: 10px; border: var(--glass-edge); background: var(--surface-solid); box-shadow: 0 16px 40px rgba(0, 0, 0, .18); touch-action: none; -webkit-user-select: none; user-select: none; cursor: grab; animation: rest-pop .3s cubic-bezier(.2, .9, .3, 1) backwards; -webkit-tap-highlight-color: transparent; }
+@media (min-width: 701px) { .rest-float { right: 24px; bottom: 24px; } }
+.rest-float.dragging { cursor: grabbing; box-shadow: 0 24px 60px rgba(0, 0, 0, .28); transform: scale(1.04); }
+.rest-float.finished { box-shadow: 0 0 0 3px var(--tone-ready, #5fbf9a), 0 16px 40px rgba(0, 0, 0, .18); }
+.rest-float.finished .rest-ring-value { stroke: var(--tone-ready, #5fbf9a); }
+.rest-float .rest-ring { flex: none; cursor: pointer; }
+.rest-float.full { width: min(360px, calc(100vw - 24px)); padding: 12px 14px; border-radius: 26px; }
+.rest-float.full .rest-ring { width: 88px; height: 88px; }
+.rest-float.full .rest-ring-text { flex: 1; min-width: 0; padding-right: 20px; }
+.rest-float.compact { padding: 6px 8px 6px 6px; border-radius: 999px; }
+.rest-float.compact .rest-ring { width: 60px; height: 60px; }
+.rest-float.compact .rest-ring strong { font-size: 15px; }
+.rest-mini-actions { display: flex; gap: 6px; }
+.rest-mini-actions button { display: grid; min-width: 42px; height: 42px; padding: 0 10px; place-items: center; border: 0; border-radius: 999px; color: var(--ink); background: var(--surface-2); font: inherit; font-size: 14px; font-weight: 800; cursor: pointer; }
+.rest-mini-actions .rest-mini-skip { padding: 0; color: #fff; background: #4f9be0; }
+.rest-mini-skip svg { width: 18px; height: 18px; }
+.rest-size { position: absolute; top: 8px; right: 8px; display: grid; width: 28px; height: 28px; padding: 0; place-items: center; border: 0; border-radius: 50%; color: var(--muted); background: transparent; cursor: pointer; }
+.rest-size svg { width: 15px; height: 15px; }
+.rest-float.compact .rest-size { top: -8px; right: -6px; width: 26px; height: 26px; border: var(--glass-edge); background: var(--surface-solid); box-shadow: 0 2px 8px rgba(0, 0, 0, .15); }
+@keyframes rest-pop { from { opacity: 0; transform: scale(.85); } }
+@media (prefers-reduced-motion: reduce) { .rest-float { animation: none; } .rest-float.dragging { transform: none; } }
+
+/* Workout mode (logging sets on a phone): the dock slides down out of the way so it never covers the sets, the
+   Previous / Next buttons or the rest timer. A small handle at the bottom brings it back. */
+.dock-handle { display: none; }
+@media (max-width: 700px) {
+  .mobile-nav { transition: transform .35s cubic-bezier(.2, .9, .3, 1), opacity .25s ease; }
+  body.workout-mode:not(.dock-peek) .mobile-nav { opacity: 0; pointer-events: none; transform: translateY(calc(100% + 24px + env(safe-area-inset-bottom))); }
+  body.workout-mode .main-area { padding-bottom: calc(44px + env(safe-area-inset-bottom)); }
+  body.workout-mode .dock-handle { position: fixed; z-index: 31; bottom: calc(6px + env(safe-area-inset-bottom)); left: 50%; display: grid; width: 60px; height: 24px; padding: 0; place-items: center; border: var(--glass-edge); border-radius: 999px; color: var(--muted); background: var(--nav-bg, var(--surface-solid)); box-shadow: 0 4px 14px rgba(0, 0, 0, .12); transform: translateX(-50%); -webkit-backdrop-filter: blur(20px); backdrop-filter: blur(20px); transition: bottom .35s cubic-bezier(.2, .9, .3, 1); }
+  body.workout-mode .dock-handle svg { width: 18px; height: 18px; transition: transform .3s ease; }
+  body.workout-mode.dock-peek .dock-handle { bottom: calc(88px + env(safe-area-inset-bottom)); }
+  body.workout-mode.dock-peek .dock-handle svg { transform: rotate(180deg); }
+  /* The rest timer sits just above the handle by default. */
+  body.workout-mode .rest-float { bottom: calc(40px + env(safe-area-inset-bottom)); }
+}
+@media (max-width: 700px) and (prefers-reduced-motion: reduce) { .mobile-nav, body.workout-mode .dock-handle, body.workout-mode .dock-handle svg { transition: none; } }
+
+/* ===================== 2026-11-18 · ROZI AI ON THE CHAT SCREEN ===================== */
+/* Cards under an AI answer (numbers come from RozFit's own tools), the opt-in card, and the small "AI" tag. */
+.rozi-cards { display: grid; gap: 8px; margin-top: 10px; }
+.rozi-card { display: grid; gap: 6px; padding: 10px 12px; border-radius: 14px; background: var(--surface-2); }
+.rozi-card header { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 6px; }
+.rozi-card header strong { font-size: 15px; }
+.rozi-card > small { color: var(--muted); font-size: 12.5px; }
+.rozi-card .inline-icon { width: 13px; height: 13px; vertical-align: -2px; }
+.rozi-chip { padding: 2px 8px; border-radius: 999px; color: var(--ink-2); background: var(--surface-solid); font-size: 11.5px; font-weight: 800; white-space: nowrap; }
+.rozi-chip.status-completed { color: #1f6f55; background: #d8f1e6; }
+.rozi-chip.status-in_progress, .rozi-chip.status-partial { color: #8a5a00; background: #fbecc8; }
+.rozi-chip.status-skipped { color: #8f2f45; background: #f7dbe2; }
+:root[data-theme="dark"] .rozi-chip.status-completed { color: #a8e6cf; background: rgba(63, 174, 140, .22); }
+:root[data-theme="dark"] .rozi-chip.status-in_progress, :root[data-theme="dark"] .rozi-chip.status-partial { color: #f3d58c; background: rgba(233, 180, 76, .2); }
+:root[data-theme="dark"] .rozi-chip.status-skipped { color: #f2b3c3; background: rgba(217, 87, 122, .22); }
+.rozi-card-list { display: grid; gap: 4px; margin: 0; padding: 0; list-style: none; counter-reset: rozi; }
+.rozi-card-list li { display: grid; grid-template-columns: 20px minmax(0, 1fr) auto; align-items: center; gap: 8px; font-size: 13.5px; counter-increment: rozi; }
+.rozi-card-list li::before { content: counter(rozi); display: grid; width: 20px; height: 20px; place-items: center; border-radius: 50%; color: #fff; background: var(--accent); font-size: 11px; font-weight: 800; }
+.rozi-card-list li span { display: -webkit-box; overflow: hidden; font-weight: 700; line-height: 1.3; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
+.rozi-card-list li small { color: var(--muted); font-size: 12px; white-space: nowrap; }
+.rozi-trend { display: flex; align-items: flex-end; gap: 4px; height: 44px; padding-top: 4px; }
+.rozi-trend-bar { flex: 1; max-width: 22px; border-radius: 4px 4px 0 0; background: var(--accent); opacity: .85; }
+.rozi-trend-bar:last-child { opacity: 1; }
+.rozi-trend-caption { color: var(--muted); font-size: 12px; }
+.rozi-recovery { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px 10px; margin: 0; padding: 0; list-style: none; }
+.rozi-recovery li { display: grid; grid-template-columns: 10px minmax(0, 1fr); align-items: center; column-gap: 6px; font-size: 13px; }
+.rozi-recovery li .dot { grid-row: span 2; width: 10px; height: 10px; border-radius: 50%; background: var(--line-strong); }
+.rozi-recovery li small { color: var(--muted); font-size: 11.5px; }
+.rozi-recovery .recovery-ready .dot { background: var(--tone-ready); }
+.rozi-recovery .recovery-recovering .dot { background: var(--tone-recovering); }
+.rozi-recovery .recovery-fresh .dot { background: var(--tone-fresh); }
+.rozi-recovery .recovery-sore .dot { background: var(--tone-sore); }
+.rozi-steps { display: grid; gap: 4px; margin: 0; padding-left: 18px; font-size: 13.5px; line-height: 1.45; }
+.rozi-alternatives { margin: 0; font-size: 13px; }
+.rozi-alternatives small { color: var(--muted); font-weight: 700; }
+.rozi-stat strong { font-size: 20px; font-weight: 900; }
+.rozi-ai-tag { display: inline-flex; align-items: center; gap: 4px; margin-top: 6px; color: var(--muted); font-size: 11.5px; font-weight: 700; }
+.rozi-ai-tag svg { width: 12px; height: 12px; }
+.rozi-optin { display: grid; gap: 8px; padding: 14px; border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent); border-radius: 20px; background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 12%, transparent), transparent 70%), var(--surface); }
+.rozi-optin h3 { display: flex; align-items: center; gap: 6px; margin: 0; font-size: 16px; }
+.rozi-optin h3 svg { width: 18px; height: 18px; color: var(--accent); }
+.rozi-optin p { margin: 0; color: var(--ink-2); font-size: 13.5px; line-height: 1.45; }
+.rozi-optin .rozi-optin-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.rozi-ai-setting { display: grid; gap: 8px; }
+.rozi-ai-setting .switch-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.rozi-ai-setting p { margin: 0; color: var(--muted); font-size: 13.5px; line-height: 1.45; }
+
+/* Rozi AI chat history (stage 6): History / New chat above the chat, and the history sheet. */
+.rozi-chat-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 0; }
+.rozi-chat-top:not(:has(.rozi-chat-actions)) { display: contents; }
+.rozi-chat-actions { display: flex; gap: 4px; margin-left: auto; }
+.rozi-chat-actions .text-button { display: inline-flex; align-items: center; gap: 5px; padding: 6px 10px; border-radius: 999px; font-size: 14px; }
+.rozi-chat-actions .text-button svg { width: 16px; height: 16px; }
+.rozi-chat-actions .text-button:disabled { opacity: .45; }
+.rozi-history-list { display: grid; gap: 4px; margin: 0; padding: 0; list-style: none; }
+.rozi-history-list li { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 6px; border-radius: 16px; }
+.rozi-history-list li.current { background: var(--accent-soft); }
+.rozi-history-open { display: grid; grid-template-columns: 22px minmax(0, 1fr); align-items: center; gap: 10px; min-width: 0; padding: 10px; border: 0; border-radius: 16px; color: var(--ink); background: transparent; font: inherit; text-align: left; cursor: pointer; }
+.rozi-history-open:hover { background: var(--surface-2); }
+.rozi-history-open > svg { width: 20px; height: 20px; color: var(--accent); }
+.rozi-history-open span { display: grid; min-width: 0; }
+.rozi-history-open strong { overflow: hidden; font-size: 15px; text-overflow: ellipsis; white-space: nowrap; }
+.rozi-history-open small { color: var(--muted); font-size: 12.5px; }
+.rozi-history-list .icon-button svg { width: 17px; height: 17px; }
+.rozi-history-confirm { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: 14px; }
+.rozi-history .inline-icon { width: 15px; height: 15px; vertical-align: -2px; }
+.rozi-ai-setting .inline-icon { width: 15px; height: 15px; vertical-align: -2px; }
