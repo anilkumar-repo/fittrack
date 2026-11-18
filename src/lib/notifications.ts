@@ -21,11 +21,13 @@ export const MORNING_HOURS = [5, 6, 7, 8, 9, 10, 11];
 export const EVENING_HOURS = [16, 17, 18, 19, 20, 21, 22];
 
 export interface PushMessage {
-  kind: "morning" | "evening" | "nudge" | "water" | "comeback" | "weigh-in";
+  kind: "morning" | "evening" | "nudge" | "water" | "comeback" | "weigh-in" | "trainer" | "chat";
   title: string;
   body: string;
   /** Page to open when the notification is tapped. */
   url: string;
+  /** Notifications with the same tag replace each other (default: the kind). Chats use one per chat. */
+  tag?: string;
 }
 
 /** Local date (YYYY-MM-DD) and hour (0–23) in a time zone. */

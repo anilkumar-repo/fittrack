@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { Bell, Check, Copy, Flame, Share2, Trophy, UserPlus, X } from "lucide-react";
+import { Bell, Check, Copy, Dumbbell, Flame, MessageCircle, Share2, Trophy, UserPlus, Users, X } from "lucide-react";
 import { Rozi } from "@/components/app/rozi";
 import { Avatar } from "@/components/app/avatar";
 import { useFitTrack } from "@/components/app/fit-track-provider";
@@ -16,8 +16,16 @@ import {
 } from "@/lib/friends-repository";
 import { goalTitle } from "@/lib/program";
 import { pushNudge } from "@/lib/push-client";
+import { loadMyTrainers } from "@/lib/supabase-repository";
+import { loadFriendTrainers, loadTrainerProfiles, requestTrainer, type TrainerProfile } from "@/lib/trainers-repository";
+import { inviteBuddy } from "@/lib/buddies-repository";
+import { MAX_GROUP } from "@/lib/buddies";
+import { useBuddies } from "@/components/screens/buddies-screen";
 import { shortDate } from "@/lib/dates";
 import { EmptyState } from "@/components/ui/empty-state";
+import { MessageButton } from "@/components/app/message-button";
+import { useChats } from "@/components/screens/chats-screen";
+import { FeedLink } from "@/components/screens/feed-screen";
 
 export function FriendsScreen() {
   const { state, isDemo, browserClient, currentDate, recordedSessions } = useFitTrack();
@@ -42,6 +50,28 @@ export function FriendsScreen() {
       setLoadError(error instanceof Error ? error.message : "Friends could not be loaded.");
     }
   }, [browserClient, isDemo, userId, currentDate]);
+
+  // Friends who are trainers can be asked "Be my trainer"; remember who's already linked or asked.
+  const [trainerFriends, setTrainerFriends] = useState<Set<string>>(new Set());
+  const [trainerStatus, setTrainerStatus] = useState<Map<string, "active" | "requested">>(new Map());
+  const [trainerInfo, setTrainerInfo] = useState<Map<string, TrainerProfile>>(new Map());
+  // Train together: who's already in your group or invited, and whether there's room for one more.
+  const { overview: buddies, refresh: refreshBuddies } = useBuddies();
+  const { chats, unread: unreadChats } = useChats();
+  const buddyStatus = new Map((buddies?.members ?? []).map((member) => [member.userId, member.status]));
+  const groupFull = (buddies?.members.length ?? 0) >= MAX_GROUP;
+  useEffect(() => {
+    if (!browserClient || isDemo) return;
+    let cancelled = false;
+    Promise.all([loadFriendTrainers(browserClient), loadMyTrainers(browserClient).catch(() => [])]).then(async ([ids, mine]) => {
+      if (cancelled) return;
+      setTrainerFriends(ids);
+      setTrainerStatus(new Map(mine.map((item) => [item.id, item.status])));
+      const profiles = await loadTrainerProfiles(browserClient, [...ids]);
+      if (!cancelled) setTrainerInfo(profiles);
+    });
+    return () => { cancelled = true; };
+  }, [browserClient, isDemo, userId]);
 
   useEffect(() => {
     if (!browserClient || isDemo) return;
@@ -94,6 +124,17 @@ export function FriendsScreen() {
         <Rozi mood="cheer" size={96} priority />
         <div><h2>Friends</h2><p>Streaks, nudges and challenges. Friends see your streak and workout days — never your weights or notes.</p></div>
       </header>
+      <FeedLink />
+      {chats !== null && chats !== undefined && <Link href="/chats" className="panel buddies-link">
+        <MessageCircle aria-hidden="true" />
+        <span><strong>Chats</strong><small>{unreadChats ? `${unreadChats} unread ${unreadChats === 1 ? "message" : "messages"}` : chats.length ? `${chats.length} ${chats.length === 1 ? "chat" : "chats"} · stickers and workout cards` : "Message friends, your group and your trainer"}</small></span>
+        {unreadChats > 0 && <span className="trainer-home-badge">{unreadChats > 99 ? "99+" : unreadChats}</span>}
+      </Link>}
+      <Link href="/buddies" className="panel buddies-link">
+        <Users aria-hidden="true" />
+        <span><strong>Train together</strong><small>{buddies?.group ? `${buddies.members.filter((member) => member.status === "active").length} on one plan · see who’s done today` : buddies?.invites.length ? `${buddies.invites.length} ${buddies.invites.length === 1 ? "invite" : "invites"} waiting` : "Same plan with up to 3 friends, your own weights"}</small></span>
+        {buddies?.invites.length ? <span className="trainer-home-badge">{buddies.invites.length}</span> : null}
+      </Link>
 
       {loadError && <p className="error-inline" role="alert">{loadError}</p>}
       {message && <p className="friends-message" role="status">{message}</p>}
@@ -134,13 +175,38 @@ export function FriendsScreen() {
               <li key={friend.userId} className="friend-card">
                 <Avatar value={friend.avatar} name={friend.displayName} size={42} className="friend-avatar" />
                 <div className="friend-main">
-                  <strong>{friend.displayName}</strong>
+                  <strong>{friend.displayName}{trainerFriends.has(friend.userId) && <span className="trainer-badge"><Dumbbell aria-hidden="true" /> Trainer</span>}</strong>
+                  {trainerInfo.get(friend.userId)?.specialties.length ? <small className="trainer-specialties">{trainerInfo.get(friend.userId)!.specialties.slice(0, 3).join(" · ")}</small> : null}
                   <small>{goalTitle(friend.goal)} · {lastWorkoutLabel(friend.lastWorkoutDate, currentDate)}</small>
                   <div className="friend-week" aria-label={`${friend.weekCount} of ${friend.weekGoal} workouts this week`}><span style={{ width: `${Math.min(100, (friend.weekCount / friend.weekGoal) * 100)}%` }} /></div>
                   <small>{friend.weekCount} / {friend.weekGoal} this week</small>
                 </div>
                 <span className="friend-streak"><Flame aria-hidden="true" /> {friend.currentStreak}</span>
                 <div className="friend-actions">
+                  <MessageButton userId={friend.userId} />
+                  {trainerFriends.has(friend.userId) && (() => {
+                    const status = trainerStatus.get(friend.userId);
+                    return <button type="button" className={`button small ${status ? "button-subtle" : "button-primary"} trainer-ask`} disabled={Boolean(status) || busy === `trainer-${friend.userId}`}
+                      onClick={() => void run(`trainer-${friend.userId}`, async () => {
+                        const result = await requestTrainer(client!, friend.userId);
+                        setTrainerStatus((map) => new Map(map).set(friend.userId, result));
+                        return result === "active" ? `${friend.displayName} is already your trainer.` : `Asked ${friend.displayName} to be your trainer. You’ll see them in Settings → Trainers once they accept.`;
+                      })}>
+                      {status === "active" ? <><Check aria-hidden="true" /> Your trainer</> : status === "requested" ? <><Check aria-hidden="true" /> Requested</> : <><Dumbbell aria-hidden="true" /> Ask to be my trainer</>}
+                    </button>;
+                  })()}
+                  {buddies !== null && buddies !== undefined && (() => {
+                    const status = buddyStatus.get(friend.userId);
+                    if (!status && groupFull) return null;
+                    return <button type="button" className={`button small ${status ? "button-subtle" : "button-primary"} buddy-ask`} disabled={Boolean(status) || busy === `buddy-${friend.userId}`}
+                      onClick={() => void run(`buddy-${friend.userId}`, async () => {
+                        await inviteBuddy(client!, friend.userId);
+                        await refreshBuddies();
+                        return `Invited ${friend.displayName} to train together. Your plans sync once they join.`;
+                      })}>
+                      {status === "active" ? <><Check aria-hidden="true" /> Buddy</> : status === "invited" ? <><Check aria-hidden="true" /> Invited</> : <><Users aria-hidden="true" /> Train together</>}
+                    </button>;
+                  })()}
                   <button type="button" className="button button-subtle small" disabled={nudged || busy === `nudge-${friend.userId}`} onClick={() => void run(`nudge-${friend.userId}`, async () => {
                     const nudgeId = await sendNudge(client!, friend.userId, NUDGE_MESSAGES[Math.floor(Math.random() * NUDGE_MESSAGES.length)]);
                     void pushNudge(client!, nudgeId);

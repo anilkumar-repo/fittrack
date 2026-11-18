@@ -328,12 +328,11 @@ export function FitTrackProvider({ children }: { children: React.ReactNode }) {
     if (!browserClient) throw new Error("Supabase is not connected.");
     const { data, error } = await browserClient.auth.getUser();
     if (error) throw error;
-    if (!data.user || data.user.id !== stateRef.current.profile.id || data.user.app_metadata?.role !== "trainer") {
-      throw new Error("Sign in again with an authorized trainer account to refresh these rules.");
-    }
+    if (!data.user || data.user.id !== stateRef.current.profile.id) throw new Error("Your sign-in has expired. Please sign in again.");
+    // Trainer status comes from Trainer mode (it can change while the app is open), so it's refreshed too.
     const refreshed = await loadCloudState(browserClient, data.user);
     setState((current) => {
-      const next = { ...current, trainerClients: refreshed.trainerClients };
+      const next = { ...current, profile: { ...current.profile, trainerRole: refreshed.profile.trainerRole }, trainerClients: refreshed.trainerClients };
       stateRef.current = next;
       return next;
     });

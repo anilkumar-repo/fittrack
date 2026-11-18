@@ -1,12 +1,12 @@
 "use client";
 
-import { AccountCard, DataCard, LiftSharingCard, TrainerInviteCard, TrainerLinkCard } from "@/components/app/account-cards";
+import { AccountCard, DataCard, LiftSharingCard, TrainerInviteCard, TrainerLinkCard, TrainerModeCard } from "@/components/app/account-cards";
 import { useFitTrack } from "@/components/app/fit-track-provider";
 import { NotificationsCard } from "@/components/app/notifications-card";
 import { Avatar } from "@/components/app/avatar";
 import { replayTour } from "@/components/app/tour-guide";
 import { TrainerControls } from "@/components/trainer-controls";
-import { Bell, CalendarDays, Check, ChevronLeft, ChevronRight, Database, Info, KeyRound, MessageCircle, Moon, Palette, QrCode, ShieldCheck, Smartphone, Sparkles, Sun, UserRound, Users } from "lucide-react";
+import { Bell, CalendarDays, Check, ChevronLeft, ChevronRight, Database, Dumbbell, Info, KeyRound, MessageCircle, Moon, Palette, QrCode, ShieldCheck, Smartphone, Sparkles, Sun, UserRound, Users } from "lucide-react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { SettingsMenu, type MenuItem } from "@/components/app/settings-menu";
@@ -88,6 +88,8 @@ export function SettingsScreen() {
   const workouts = recordedSessions.filter((session) => session.status === "completed").length;
 
   const section = params.get("section");
+  // In a buddy group the goal and days are shared: they change through Train together, not here.
+  const synced = Boolean(saved.buddyAnchor) && !isDemo;
   const themeLabel = THEME_OPTIONS.find((option) => option.id === theme)?.label ?? "Auto";
   const items: MenuItem[] = [
     { group: "Account", id: "profile", href: "/profile", icon: UserRound, color: "#ef7d5c", label: "Your profile", note: "Picture, name, stats", keywords: "avatar photo picture name" },
@@ -97,7 +99,8 @@ export function SettingsScreen() {
     { group: "Preferences", id: "notifications", icon: Bell, color: "#e5a33b", label: "Notifications", note: "Reminders, water, nudges", keywords: "push reminder morning evening water comeback nudge weigh" },
     { group: "Preferences", id: "appearance", icon: Palette, color: "#9b7be0", label: "Appearance", note: "Theme, figure, units", value: themeLabel, keywords: "dark light theme figure male female units kg lb pounds" },
     { group: "Trainers & safety", id: "safety", icon: ShieldCheck, color: "#3fae8c", label: profile.trainerRole && !isDemo ? "Your clients" : "Safety rules", note: profile.trainerRole && !isDemo ? "Rules for each client" : "Deadlifts, pain = recovery", keywords: "deadlift pain trainer clients rules" },
-    { group: "Trainers & safety", id: "trainers", icon: Users, color: "#5b9bd5", label: "Trainers", note: "Codes and links", keywords: "trainer code coach link" },
+    ...(profile.trainerRole && !isDemo ? [{ group: "Trainers & safety", id: "clients", href: "/clients", icon: Dumbbell, color: "#ef7d5c", label: "My clients", note: "Requests, client cards, gym QR, message all", keywords: "clients dashboard qr broadcast message requests" } as MenuItem] : []),
+    { group: "Trainers & safety", id: "trainers", icon: Users, color: "#5b9bd5", label: "Trainers", note: profile.trainerRole && !isDemo ? "Trainer mode, add clients, your own trainers" : "Your trainers · become a trainer", keywords: "trainer code coach link qr share" },
     { group: "Help", id: "tour", icon: Sparkles, color: "#ef7d5c", label: "Show the app tour", note: "A quick walk through", onClick: replayTour, keywords: "help tour guide" },
     { group: "Help", id: "install", href: "/install", icon: QrCode, color: "#16181a", label: "Install / share", note: "Home Screen app and QR code", keywords: "install qr share phone" },
     { group: "Help", id: "rozi", href: "/rozi", icon: MessageCircle, color: "#ef7d5c", label: "Ask Rozi", note: "Questions about your training", keywords: "help chat question rozi" },
@@ -126,8 +129,8 @@ export function SettingsScreen() {
             <h3><CalendarDays aria-hidden="true" /> Your plan</h3>
             <label className="settings-field">Your name<input type="text" maxLength={80} autoComplete="given-name" value={profile.displayName} onChange={(event) => edit({ displayName: event.target.value })} /></label>
             <div className="settings-field"><span>Goal</span>
-              <div className="goal-options">{GOAL_OPTIONS.map((option) => <button key={option.id} type="button" className={goalOf(profile) === option.id ? "selected" : ""} aria-pressed={goalOf(profile) === option.id} onClick={() => edit({ goal: option.id })}><strong>{option.title}</strong><small>{option.note}</small></button>)}</div>
-              <small>Changing your goal starts its plan from the first workout. Your history and records stay.</small>
+              <div className="goal-options">{GOAL_OPTIONS.map((option) => <button key={option.id} type="button" disabled={synced} className={goalOf(profile) === option.id ? "selected" : ""} aria-pressed={goalOf(profile) === option.id} onClick={() => edit({ goal: option.id })}><strong>{option.title}</strong><small>{option.note}</small></button>)}</div>
+              <small>{synced ? <>Shared with your training buddies. <Link href="/buddies">Propose a change in Train together</Link>.</> : "Changing your goal starts its plan from the first workout. Your history and records stay."}</small>
             </div>
             <BodySettings />
             <div className="settings-field"><span>Level</span>
@@ -143,10 +146,11 @@ export function SettingsScreen() {
               <small>Choosing a place fills in its usual equipment below; adjust it if yours is different.</small>
             </div>
             <div className="settings-field"><span>Training days</span>
-              <div className="onb-days">{WEEKDAY_LABELS.map((label, day) => <button key={label} type="button" className={profile.trainingDays.includes(day) ? "selected" : ""} aria-pressed={profile.trainingDays.includes(day)} onClick={() => {
+              <div className="onb-days">{WEEKDAY_LABELS.map((label, day) => <button key={label} type="button" disabled={synced} className={profile.trainingDays.includes(day) ? "selected" : ""} aria-pressed={profile.trainingDays.includes(day)} onClick={() => {
                 const next = profile.trainingDays.includes(day) ? profile.trainingDays.filter((value) => value !== day) : [...profile.trainingDays, day];
                 if (trainingDaysValid(next)) edit({ trainingDays: next.sort((a, b) => a - b), sessionsPerWeek: next.length });
               }}>{label}</button>)}</div>
+              {synced && <small className="synced-note">Same days as your training buddies — change them together in <Link href="/buddies">Train together</Link>.</small>}
               <small>Between {MIN_TRAINING_DAYS} and {MAX_TRAINING_DAYS} days{profile.trainingDays.length >= 5 ? "; keep back-to-back days easy" : ""}. Missed sessions are never crammed into the next day.</small>
             </div>
             <div className="settings-field"><span>Session length</span>
@@ -195,7 +199,7 @@ export function SettingsScreen() {
                 <div className="settings-row"><div><strong>Pain always means recovery</strong><small>If you tick pain in a check-in, that day switches to gentle recovery. This cannot be turned off.</small></div><span className="settings-status ok">On</span></div>
               </article>}
       </>}
-      {section === "trainers" && <><TrainerInviteCard onLinked={refreshTrainerClients} /><TrainerLinkCard /></>}
+      {section === "trainers" && <><TrainerModeCard /><TrainerInviteCard onLinked={refreshTrainerClients} /><TrainerLinkCard /></>}
       {section === "account" && <AccountCard />}
       {section === "data" && <><LiftSharingCard /><DataCard /></>}
       {section === "about" && <>

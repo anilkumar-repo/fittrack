@@ -6,12 +6,14 @@ import {
 } from "./templates.ts";
 import {
   BODY_AREAS,
+  exerciseSearchRank,
   filterExerciseLibrary,
   getExerciseLibraryFilterOptions,
   getExerciseReferenceInstructions,
   getSafeExerciseAlternatives,
   isDeadliftVariation,
   NO_EQUIPMENT_FILTER,
+  rankSearchResults,
 } from "./exercise-library.ts";
 import type { ExerciseDefinition, Profile } from "./types.ts";
 
@@ -115,4 +117,33 @@ test("body-area cards split the library into upper, lower and core without overl
   assert.equal(counts.upper + counts.lower + counts.core, all.length);
   assert.ok(filterExerciseLibrary(EXERCISE_LIBRARY, profile, { area: "lower" }).some((item) => item.id === "bodyweight_squat"));
   assert.ok(filterExerciseLibrary(EXERCISE_LIBRARY, profile, { area: "upper" }).every((item) => !["squat", "core"].includes(item.movementPattern ?? "")));
+});
+
+// The exercise picker's search (reported: "Biceps" listed pull-ups and rows first, A–Z).
+const allowAll: Profile = { ...profile, experience: "advanced", deadliftEnabled: true, equipmentAvailability: "verified", availableEquipment: [] };
+
+test("search ranks the name first, then the main muscle, then other muscles it works", () => {
+  const curl = EXERCISE_LIBRARY.find((exercise) => exercise.name === "Dumbbell biceps curl")!;
+  const row = EXERCISE_LIBRARY.find((exercise) => exercise.name === "Barbell row")!;
+  assert.equal(exerciseSearchRank(curl, "biceps"), 0);
+  assert.equal(exerciseSearchRank(row, "biceps"), 2);
+  const ranked = rankSearchResults(filterExerciseLibrary(EXERCISE_LIBRARY, allowAll, { query: "Biceps" }), "Biceps");
+  const firstOther = ranked.findIndex((item) => !item.best);
+  assert.ok(firstOther > 0, "best matches come first");
+  // Every best match trains biceps as its main muscle or has it in the name; rows come after them.
+  for (const item of ranked.slice(0, firstOther)) assert.ok(/biceps/i.test(item.exercise.name) || item.exercise.targetMuscles[0] === "Biceps", item.exercise.name);
+  assert.ok(ranked.slice(firstOther).some((item) => item.exercise.name === "Barbell row"));
+  assert.ok(ranked.every((item) => item.exercise.targetMuscles.includes("Biceps") || /biceps/i.test(item.exercise.name)), "no moves that only mention biceps in their tips");
+});
+
+test("search understands short names and needs every word of a longer search", () => {
+  assert.ok(filterExerciseLibrary(EXERCISE_LIBRARY, allowAll, { query: "quads" }).some((exercise) => exercise.targetMuscles.includes("Quadriceps")));
+  assert.ok(filterExerciseLibrary(EXERCISE_LIBRARY, allowAll, { query: "abs" }).length > 0);
+  const dumbbellCurls = filterExerciseLibrary(EXERCISE_LIBRARY, allowAll, { query: "dumbbell curl" });
+  assert.ok(dumbbellCurls.length > 0 && dumbbellCurls.every((exercise) => /curl/i.test(exercise.name)));
+  assert.equal(filterExerciseLibrary(EXERCISE_LIBRARY, allowAll, { query: "zzzz" }).length, 0);
+  // A movement-type search still works when no name or muscle matches.
+  assert.ok(filterExerciseLibrary(EXERCISE_LIBRARY, allowAll, { query: "hinge" }).length > 0);
+  // "ham" still finds the hammer curl.
+  assert.ok(filterExerciseLibrary(EXERCISE_LIBRARY, allowAll, { query: "ham" }).some((exercise) => /hammer/i.test(exercise.name)));
 });
