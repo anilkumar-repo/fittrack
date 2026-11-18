@@ -5,7 +5,6 @@ import { createPortal } from "react-dom";
 import { Check, Search, X } from "lucide-react";
 import { useFitTrack } from "./fit-track-provider";
 import { MuscleThumb } from "./muscle-thumb";
-import { AlphabetIndex, firstLetter, letterAnchorId } from "./alphabet-index";
 import { useScrollLock } from "./use-scroll-lock";
 import { SheetGrip } from "@/components/ui/sheet-grip";
 import { exerciseEquipmentIsAvailable, filterExerciseLibrary, rankSearchResults } from "@/lib/exercise-library";
@@ -14,7 +13,7 @@ import { EXERCISE_LIBRARY } from "@/lib/templates";
 const CATEGORIES = ["All", "Strength", "Core", "Conditioning"];
 
 /**
- * Pick exercises (from the reference apps): search, category pills with counts, A–Z strip, tick several,
+ * Pick exercises (from the reference apps): search, category pills with counts, a plain A–Z list, tick several,
  * then "Add (3)". Moves you don't have the equipment for are marked but still allowed.
  */
 export function ExercisePicker({ already, onAdd, onClose }: { already: string[]; onAdd: (ids: string[]) => void; onClose: () => void }) {
@@ -32,7 +31,6 @@ export function ExercisePicker({ already, onAdd, onClose }: { already: string[];
   [query, category, planningProfile]); // eslint-disable-line react-hooks/exhaustive-deps
   const results = ranked.map((item) => item.exercise);
   const mixed = searching && ranked.some((item) => item.best) && ranked.some((item) => !item.best);
-  const letters = searching ? [] : [...new Set(results.map((exercise) => firstLetter(exercise.name)))];
   const toggle = (id: string) => setPicked((current) => current.includes(id) ? current.filter((item) => item !== id) : [...current, id]);
 
   if (typeof document === "undefined") return null;
@@ -49,10 +47,8 @@ export function ExercisePicker({ already, onAdd, onClose }: { already: string[];
         <div className="library-chips" role="group" aria-label="Category">{CATEGORIES.map((cat) => <button key={cat} type="button" className={category === cat ? "selected" : ""} aria-pressed={category === cat} onClick={() => setCategory(cat)}>{cat}<span className="chip-count">{list(cat).length}</span></button>)}</div>
         {!results.length && <p className="picker-empty">No exercises match “{query.trim()}”. Try a muscle (chest, biceps, glutes) or equipment (dumbbell, cable).</p>}
         <ul className="library-list grouped picker-list">{ranked.flatMap(({ exercise, best }, index) => {
-          const letter = firstLetter(exercise.name);
-          const head = searching
-            ? (mixed && (index === 0 || ranked[index - 1].best !== best) ? [<li key={`h-${best ? "best" : "also"}`} className="letter-head">{best ? "Best matches" : "Also matches"}</li>] : [])
-            : index === 0 || firstLetter(results[index - 1].name) !== letter ? [<li key={`h-${letter}`} className="letter-head" id={letterAnchorId("pick", letter)} aria-hidden="true">{letter}</li>] : [];
+          // A plain A–Z list (no letter strip); while searching, "Best matches" / "Also matches".
+          const head = mixed && (index === 0 || ranked[index - 1].best !== best) ? [<li key={`h-${best ? "best" : "also"}`} className="letter-head">{best ? "Best matches" : "Also matches"}</li>] : [];
           const on = picked.includes(exercise.id);
           const inRoutine = already.includes(exercise.id);
           return [...head, <li key={exercise.id}>
@@ -63,7 +59,6 @@ export function ExercisePicker({ already, onAdd, onClose }: { already: string[];
             </button>
           </li>];
         })}</ul>
-        <AlphabetIndex letters={letters} prefix="pick" />
       </section>
     </div>,
     document.body,

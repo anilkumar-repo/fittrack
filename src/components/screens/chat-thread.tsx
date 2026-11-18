@@ -155,7 +155,7 @@ export function ChatThread({ chatId }: { chatId: string }) {
               {newDay && <p className="chat-day">{dayLabel(day, today)}</p>}
               <div className={`chat-line ${mine ? "mine" : "theirs"} ${first ? "first" : ""}`}>
                 {!mine && chat.kind === "buddy" && <span className="chat-line-face">{first && <Avatar value={who?.avatar} name={who?.name ?? "?"} size={30} />}</span>}
-                <button type="button" className={`chat-bubble kind-${message.deleted ? "deleted" : message.kind}`} disabled={message.deleted} onClick={() => setActing(message)} aria-label={`${mine ? "Your" : `${who?.name ?? "Their"}`} message, ${clock(message.at)}. Options`}>
+                <button type="button" className={`msg-bubble kind-${message.deleted ? "deleted" : message.kind}`} disabled={message.deleted} onClick={() => setActing(message)} aria-label={`${mine ? "Your" : `${who?.name ?? "Their"}`} message, ${clock(message.at)}. Options`}>
                   {!mine && chat.kind === "buddy" && first && <span className="chat-sender">{who?.name.split(" ")[0] ?? "Someone"}</span>}
                   {message.deleted ? <em>Message deleted</em>
                     : sticker ? <Rozi mood={sticker} size={110} motion={false} />
@@ -176,14 +176,14 @@ export function ChatThread({ chatId }: { chatId: string }) {
         ))}</div>}
         {panel === "workouts" && <div className="chat-workouts">{recent.length ? recent.map((session) => {
           const card = workoutCard(session, state.sessions);
-          return card ? <button key={session.id} type="button" className="chat-row" disabled={busy} onClick={async () => { if (await send("workout", "", card)) setPanel(""); }}>
-            <Dumbbell aria-hidden="true" /><span className="chat-row-text"><strong>{card.title}</strong><small>{dayLabel(session.date, today)} · {card.totalSets} sets{card.prs.length ? ` · ${card.prs.length} new best` : ""}</small></span><Send aria-hidden="true" className="chat-send-icon" />
+          return card ? <button key={session.id} type="button" className="convo-row" disabled={busy} onClick={async () => { if (await send("workout", "", card)) setPanel(""); }}>
+            <Dumbbell aria-hidden="true" /><span className="convo-row-text"><strong>{card.title}</strong><small>{dayLabel(session.date, today)} · {card.totalSets} sets{card.prs.length ? ` · ${card.prs.length} new best` : ""}</small></span><Send aria-hidden="true" className="chat-send-icon" />
           </button> : null;
         }) : <p className="card-note">Finish a workout to share it here.</p>}</div>}
         <div className="chat-compose-row">
           <button type="button" className={`icon-button ${panel === "stickers" ? "on" : ""}`} aria-label="Rozi stickers" aria-expanded={panel === "stickers"} onClick={() => setPanel(panel === "stickers" ? "" : "stickers")}><Smile aria-hidden="true" /></button>
           <button type="button" className={`icon-button ${panel === "workouts" ? "on" : ""}`} aria-label="Share a workout" aria-expanded={panel === "workouts"} onClick={() => setPanel(panel === "workouts" ? "" : "workouts")}><Dumbbell aria-hidden="true" /></button>
-          <label className="chat-input"><span className="sr-only">Message</span>
+          <label className="msg-input"><span className="sr-only">Message</span>
             <textarea rows={1} value={text} maxLength={MESSAGE_MAX + 100} placeholder="Message" onChange={(event) => { setText(event.target.value); setError(""); }}
               onKeyDown={(event) => { if (event.key === "Enter" && !event.shiftKey && !event.nativeEvent.isComposing) { event.preventDefault(); void sendText(); } }} />
           </label>

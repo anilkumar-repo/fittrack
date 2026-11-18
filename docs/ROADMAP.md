@@ -196,6 +196,8 @@ pictures first: they only have muscle maps today), and short real clips.
 ### Phase 7 — Community · ~2 weeks · large DB + photo storage
 - ✅ **Step A Chats** (1:1 friends / trainer ↔ client, Train together group chat, Rozi stickers, workout cards, report/block, live + notifications): ✅ applied. Next steps: feed, discover, profiles.
 - ✅ **Step B Feed** (friends-only workout posts, one private photo, 💪 likes, comments, report/delete, notifications): applied. Next: discover / profiles.
+- ✅ **Step C Discover + profiles** (search by name/@username, opt-in findable (never under-18s), friends-of-friends suggestions, friend requests, profile pages with stats and posts, public profile card + checklist): applied.
+- ✅ **Improvements (2026-11-18):** Rozi plans workouts on request (level, goal and equipment aware; Start now / Save as routine), focused Ask Rozi screen on phones, picker without A–Z, Train start button that grows on scroll, Friends page redesign (hub + Friends · Challenges · Invite). ✅ Face pictures allowed (`20261118210000`, applied). ✅ Profile saves fixed (`20261118220000_fix_profile_save_findable_trigger.sql`, applied).
 - 🎨 **Feed** of workout posts: muscle-map card, moves with sets × reps × kg, photo, likes, comments, share (v1 recording, 8056–8057).
 - 🎨 **Discover / Search** with Follow buttons, suggested people, "Invite friends" (v1).
 - 🎨 **Profile**: posts / followers / following, "Complete your profile 1/9" checklist, Overview · Routines · Media tabs (v1).

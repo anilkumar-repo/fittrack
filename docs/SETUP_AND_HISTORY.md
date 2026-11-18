@@ -1208,3 +1208,149 @@ The dry run applied it inside a transaction with 5 temporary accounts and rolled
   - The counts were repeated in a second line (now just "N people sent 💪").
   - The photo's remove button sat under the sheet's close button.
 - **Not checked here:** signed-in-only parts in sample mode (the Feed card on Friends) and real photo storage. Real-account testing on two phones comes after pushing (the database part is live).
+
+### 2026-11-18 — Phase 7 step C: Discover + profiles (same branch)
+
+**What was asked:** discover and profiles. Choices made:
+- **Connecting:** find people and send friend requests. The feed and chats stay friends-only; there are no public followers.
+- **Search:** opt-in, and always off for under-18s.
+- **Suggestions:** friends of friends.
+- **Profile page:** posts, stats and a checklist.
+
+**How it works:**
+
+| What | How | Files |
+|---|---|---|
+| **Find friends** (Friends → Find friends, `/discover`): search as you type by name or @username (2+ characters, up to 20 results). It only shows people who turned on **Let people find me**, never under-18s or anyone without a birth year. Then **Friend requests** (Accept / ✕), **People you may know** (findable friends of friends, most mutual friends first), and **Requests you sent** (tap Requested to cancel). Each person shows only their name, picture, @username and mutual friends | `search_people()`, `suggested_people()`, `friend_requests_overview()`, `send_friend_request()`, `respond_friend_request()`, `cancel_friend_request()` | `discover-screen.tsx`, `discover-repository.ts`, `friends-screen.tsx` (`FindFriendsLink` with the waiting count) |
+| **Friend requests**: if they already asked you, sending one back makes you friends straight away. Someone who declined can't be asked again for 7 days. Limit: 30 requests a day. A new request sends a notification ("New friend request — Ravi wants to be friends"); with **Nudges & messages** off, none is sent | the same functions; `/api/push/friend-request` | `app/api/push/friend-request/route.ts` |
+| **Profile page** (`/people/<id>`; tap a name or face on a post, or anyone in Find friends): picture, name, @username, bio, number of friends and mutual friends, and the friend button. **Friends (and you)** also see the day streak, workouts this month and this week, and a **posts grid** (photo, or the workout name; tap to open the post and its comments). Non-friends see only the basics and "Become friends to see…" | `person_profile()` | `discover-screen.tsx` (`PersonScreen`), `feed-screen.tsx` (links on posts) |
+| **Your public profile** (Profile → Public profile): choose a **@username** (3–20 letters, numbers, dots or underscores; suggested from your name, checked while you type), a **bio** (160 characters) and **Let people find me** (switched off and locked without an adult birth year). **Complete your profile** lists 6 items (picture, @username, bio, birth year, first workout, first post) with links, and hides once all are done | `set_public_profile()`, `username_available()`; `profileChecklist()`, `usernameProblem()`, `suggestUsername()`, `isAdult()` (tested) | `discover-screen.tsx` (`PublicProfileCard`), `profile-screen.tsx`, `discover.ts`, `types.ts`, `supabase-repository.ts` |
+
+**Privacy:**
+- Being findable is enforced by the database, not just the app. A trigger forces it off for anyone under 18 and anyone without a birth year, even if someone edits their profile row directly.
+- **Accounts that already exist start unfindable**, because they never chose. New adult accounts start findable, as decided.
+- Blocking someone (in chats) also hides you from each other in search, suggestions, requests and profiles.
+
+**Database (applied 2026-11-18 after "Yes, apply it"):**
+`supabase/migrations/20261118190000_discover_profiles.sql`:
+- new profile fields `username` (unique, format-checked), `bio` (≤ 160) and `findable`, plus the findable trigger;
+- table `friend_requests` (closed; one open request per pair);
+- 9 functions and the private helpers.
+
+The dry run applied it inside a transaction with 7 temporary accounts and rolled back. 33 checks, all as expected:
+- **Saving your profile:** the username is saved lower case and trimmed. A taken name, a bad format and a bio over 160 characters are refused. The availability check works.
+- **Findable rules:** an under-18 can't turn it on, not even by editing the row directly. An unknown age is off.
+- **Search:** finds by name and by @username. It hides the under-18, the private person and the unknown-age person, and needs 2 or more characters.
+- **Profiles:** a stranger sees only the basics of a findable person and nothing of private ones or under-18s.
+- **Suggestions:** a friend of a friend appears with 1 mutual friend and disappears once requested.
+- **Requests:** a repeat request doesn't duplicate. A private person with no mutual friends can't be asked. The other person sees the incoming request with its mutual count. After a decline you can't ask again. If both ask, they become friends both ways.
+- **Friend's view:** a friend's profile shows the streak, this month and the posts. Cancelling a request works.
+- **Block:** it hides the profile and stops requests.
+- **Access:** the table is closed, and people who aren't signed in can't call anything.
+
+**Found during the dry run:** there are now 2 real accounts in the database. As first written, the migration would have made existing adult accounts searchable without asking them. One of them showed up in my test search. I changed the migration so existing accounts start unfindable, then ran a second dry run. In it, no existing account was findable, a new adult account was and a new under-18 account wasn't, and blocking hid the person from search.
+
+**After applying (live database):**
+- Structure: the 3 new profile fields and the findable trigger are in place, `friend_requests` is closed, all 9 functions exist, and signed-out visitors can't call any of them. **Both existing accounts are unfindable.**
+- Security check: only the expected notes.
+- Behaviour: the full test (36 checks) ran on the live database with 7 temporary accounts and was rolled back. All as expected, including block → hidden from search (0 results) and the real accounts staying hidden.
+- Clean-up: nothing was left behind (no test accounts, requests, usernames, posts or blocks; only the 2 real accounts remain, both unfindable).
+
+**Checked:**
+- **Automated:** 192 tests pass (5 new: usernames, the username suggestion, the adult rule, the checklist, the friend button for each relation). Type check, lint and build pass.
+- **End to end in the preview at 375 px, light and dark,** with a temporary stand-in for the database (removed afterwards):
+  - **Find friends:** the "hidden from search" note, Priya's request, and suggestions with mutual counts.
+  - **Search and requests:** typed "@zar" → Zara → **Add friend** → "Requested" (it moved to Requests you sent). Accepted Priya ("You and Priya are friends now"). A search for a hidden person found nothing.
+  - **Profiles:** a friend's profile showed the streak, month and week plus a posts grid linking to the posts. A non-friend's profile showed only the basics and "Become friends to see…". A hidden person showed "Profile not available".
+  - **Public profile card:** the suggested "@sam"; a taken username showed "That username is taken." with Save disabled; saved "@sam.lifts" and a bio; the checklist hid at 6/6.
+  - **Let people find me:** as an adult it turned on. Without a birth year it was locked with the reason, and Find friends suggested sharing a friend code instead.
+- **Not checked here:** the Message button on profiles (it needs a signed-in session). Real accounts get tested on two phones after pushing (the database part is live).
+
+### 2026-11-18 — Five improvements: profile picture, Rozi plans workouts, picker, Train start button, Friends redesign (same branch)
+
+**1. Fix: changing the profile picture failed ("Profile could not be saved").**
+- **What was wrong:** choosing one of the round Rozi faces showed "Profile could not be saved" and the old picture stayed.
+- **Why:** the face picker saves pictures as `face:<name>` (the faces in `public/rozi/faces/v1`). The database checks on `profiles.avatar` and `friend_stats.avatar` were written before faces existed. They only allowed `photo:https://…`, `rozi:<mood>` and `color:#rrggbb`, so the database refused the save. The Postgres logs showed `profiles_avatar_check` refusing the value.
+- **Fix:** `supabase/migrations/20261118210000_allow_face_avatars.sql` recreates both checks with the same rules plus `face:<name>` (lowercase letters, numbers and dashes, up to 30).
+- **Dry run (rolled back):**
+  - accepted `face:starry`, `face:happy`, `rozi:cheer`, `color:#ef7d5c`, `photo:https://…` and the empty value;
+  - refused `face:Starry`, `face:<script>`, `face:`, `photo:http://x` and `javascript:alert(1)`;
+  - both real accounts' current pictures stay valid.
+- **Applied 2026-11-18 after "Yes, apply it".** Both checks are in place and enforced. The security check shows only the expected notes.
+- **Second problem found by the behaviour test after applying.**
+  - **What:** a temporary account couldn't save its profile at all: "permission denied for function is_adult".
+  - **Why:** the findable trigger from Discover (`private.enforce_findable`) runs on every insert and update of a profile. It calls `private.is_adult`, which signed-in users may not run, and the trigger ran with the caller's rights.
+  - **Effect:** since Discover was applied, **every profile save from the app fails**, not just face pictures. That includes name, plan, settings and new sign-ups. My Discover tests went through the database functions, which run with elevated rights, so they didn't catch it. The real face-picture failures in the logs (01:26–01:27) came before Discover and were the face rule.
+  - **Fix:** `supabase/migrations/20261118220000_fix_profile_save_findable_trigger.sql` makes the trigger function run with its owner's rights, the same as the other profile trigger (`private.keep_buddy_plan`). Its search path stays empty, and nobody can call it directly.
+  - **Dry run (rolled back), all as expected:**
+    - as a signed-in account, a new profile saves;
+    - `face:happy`, `face:starry`, `rozi:cheer`, a colour, a photo and empty all save to both tables, and the 5 bad values are refused;
+    - the findable rule still works on direct edits (no age → off, under 18 → off, adult → on; the username is saved in lower case);
+    - other people's rows can't be changed, and signed-in users can't run the trigger function.
+    - Nothing was left behind (2 real accounts, no test data).
+  - **Applied 2026-11-18 after "Yes, apply it".**
+    - **Structure:** the trigger function now runs with its owner's rights and an empty search path, the same as `keep_buddy_plan`. Signed-in and signed-out users can't run it directly.
+    - **Security check:** unchanged (the same expected notes).
+    - **Behaviour test on the live database (rolled back), as a signed-in temporary account:**
+      - a new profile, name and plan save;
+      - all 6 picture types save to both tables, and the 5 bad values are refused;
+      - the findable rule still works (no age → off, under 18 → off, adult → on, username in lower case);
+      - other people's rows are untouched.
+    - **Clean-up:** nothing left behind. There are 2 real accounts and 2 profiles, none findable.
+
+**2. Rozi plans workouts; Ask Rozi is a focused screen on phones.**
+- **Asking for a plan:** say "plan me a leg workout", "give me a 30 min chest workout", "build a push day" or "arm day please". Rozi answers with a plan card that has **Start now** and **Save as routine**.
+- **How the plan is built** (`src/lib/rozi-plan.ts`):
+  - **Body area:** taken from your words (legs, glutes, chest, back, shoulders, arms, push, pull, upper, lower, core, full body). Nothing specific means full body.
+  - **Length:** "30 min", "an hour", or your usual session length. It's kept between 15 and 90 minutes, at about one move per 8 minutes (3–7 moves).
+  - **Moves:** only ones allowed for you. No deadlifts unless your trainer approved them. Only equipment you've confirmed; bodyweight moves if you haven't set your equipment yet. Higher levels get harder, loaded moves first.
+  - **Sets by level:** beginner 2, intermediate 3, advanced 3–4, pro 4. **Reps by goal.** Timed and one-side moves keep their own wording ("20–30 sec", "8 each side").
+  - **Saving:** a plan always passes the routine rules, so it can be saved. `validateRoutine` now also accepts a move's own library reps.
+- **Rest days don't trigger a plan:** "I need a rest day" is not a plan request. The old questions ("What's my workout today?") still get their usual answers.
+- **Focused screen on phones (up to 700 px):**
+  - the bottom dock and footer hide;
+  - the message box sits at the very bottom;
+  - a **Back** button takes you out.
+  - New answers scroll in above the message box, not behind it. This was found and fixed during the preview check.
+- **Files:** `src/lib/rozi-plan.ts` (+ `rozi-plan.test.ts`, 6 tests), `src/lib/rozi-chat.ts` (new `PLAN_WORKOUT` intent and suggestion), `src/lib/pro-tracking.ts`, `src/components/screens/rozi-chat-screen.tsx`, `src/components/app/app-shell.tsx` (`rozi-mode` class), `app/globals.css`.
+
+**3. Add exercises: the A–Z strip is gone.**
+- The letter strip and the letter headings in the routine planner's picker are removed, and the list now uses the full width.
+- While searching, the list still splits into "Best matches" and "Also matches".
+- The Library keeps its own A–Z index.
+- File: `src/components/app/exercise-picker.tsx`.
+
+**4. Train: the Start button grows as you scroll.**
+- At the top of the page, Start is a small round ▶ button on the right.
+- After you scroll about 120 px it smoothly grows into the full "Start workout ▶" bar, and it shrinks back when you return to the top.
+- Turning on "Reduce motion" removes the animation.
+- Files: `src/components/screens/today-screen.tsx`, `app/globals.css`.
+
+**5. Friends page redesign.** From top to bottom:
+- **Your week:** your picture, "x of y workouts" with a progress bar, and your streak.
+- **Hub (2 × 2 on phones, 4 in a row on desktop):** Chats (unread badge), Feed, Find friends (requests badge), Train together (invites badge).
+- **Sections:** **Friends · Challenges · Invite** tabs. They stick under the top bar, and counts show as small badges.
+- **Friends list:**
+  - sorted by this week's progress;
+  - each row shows the picture, name with streak 🔥, "3/4 this week · today", a week bar, a Nudge bell and a **···** button;
+  - **···** opens a sheet with Message, View profile, Train together, Ask to be my trainer (trainers only) and Remove friend.
+- **Invite:** "Find by name or @username" plus the invite code card.
+- Polished during the preview check:
+  - tiles are compact, with the icon beside the text;
+  - Chats always shows, so the grid doesn't jump while loading;
+  - tab counts no longer wrap at 375 px;
+  - friend rows use the short "today / yesterday / 9d ago" label (`lastWorkoutLabel(…, short)`, with new test lines) so nothing is cut off.
+- Files: `src/components/screens/friends-screen.tsx`, `src/lib/friends.ts`, `src/lib/friends.test.ts`, `app/globals.css`.
+
+**Also fixed: an extra white card in Ask Rozi.**
+- My chat CSS reused Rozi's class names (`.chat-row`, `.chat-bubble`, `.chat-input`).
+- Chats and Feed now use their own names: `.convo-row*`, `.msg-bubble`, `.msg-input`. Rozi's styles are untouched.
+
+**Checked:**
+- **Automated:** 197 tests pass. Type check, lint (only the existing welcome-image warning) and build pass.
+- **Preview at 375 px and desktop, light and dark:**
+  - **Rozi:** the dock is hidden and Back shows. "plan me leg workout" gave 5 moves at intermediate level with 3 sets. "give me a 30 min chest workout" gave 4 moves and scrolled fully into view. **Save as routine** showed "Saved 'Chest day · by Rozi'", and it appeared in My routines.
+  - **Picker:** no letter strip; the list uses the full width.
+  - **Train:** the Start button is 64 × 64 round at the top, 351 px wide after scrolling, and round again back at the top.
+  - **Friends:** checked with a temporary stand-in for friends data (removed afterwards). Measured: no text is cut off at 375 px. The ··· sheet and the Challenges tab work.
+- **Not checked here:** Message and Train together in the ··· sheet (they need a signed-in account), and saving a face picture from the real app (both database fixes are live; try it on your phone).
