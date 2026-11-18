@@ -1402,3 +1402,141 @@ The dry run applied it inside a transaction with 7 temporary accounts and rolled
   - **Guide:** after scrolling 600 px the × stayed at the top right and still closed the guide.
   - **Notification:** with stand-ins for permission and the service worker, leaving the app produced "💪 Push B · Chest, shoulders, triceps · 1/21 sets / Started 12:44…". During a rest it produced "⏱ Rest until 12:48:19" with the exercise name. Same tag, so it replaces the old notification.
 - **Not checked here:** the real lock screen on your iPhone and Android (needs the pushed app with notifications allowed).
+
+### 2026-11-18 — Rozi AI stage 2: Google Gemini connection (same branch)
+
+**What:** the first piece of Rozi AI (the full plan is in `docs/ROZI_AI_INTEGRATION.md`). It adds the official Google Gen AI SDK (`@google/genai` 2.32.0, pinned) and a server-only Gemini provider behind a provider-neutral interface, plus configuration from `GEMINI_API_KEY` / `ROZI_AI_PROVIDER` / `ROZI_AI_MODEL` (default `gemini-3.8-flash`, listed as Stable in Google's model list on 2026-11-18). Rozi's screen doesn't use it yet.
+
+**Why this way:**
+- The key stays on the server and never appears in errors or logs. The app refuses to run Rozi AI if the key is ever set under a `NEXT_PUBLIC_` name.
+- Every call has a 15 s timeout, and every failure becomes a safe, typed error, so Rozi can always fall back to its on-device answers.
+- Tool calling is supported from the start, so later stages let Gemini *ask* for facts that RozFit's own modules compute, instead of making them up.
+
+**Decided:**
+- Free tier for now; paid tier and possibly a stronger model later.
+- Gemini may see training details (weight, height, workouts, goal) but never email, phone, name or account id.
+- Adults only and opt-in, from Google's terms.
+
+**Files:** `src/lib/rozi-ai/{config,provider,gemini-provider,server}.ts`, `src/lib/rozi-ai/{config,gemini-provider}.test.ts`, `scripts/rozi-ping.ts`, `package.json` (dependency, `rozi:ping`, tests), `.env.example`, `docs/ROZI_AI_INTEGRATION.md`, `docs/PROJECT_CONTEXT.md` (the "no AI API" line updated), `docs/ROADMAP.md`.
+
+**Checked:** 216 tests pass (13 new, with the SDK mocked). Type check, lint and build pass, and `npm audit` reports 0 vulnerabilities. Without a key the ping exits safely with "Rozi AI off: missing-key". The live ping is waiting for the key in `.env.local`.
+
+### 2026-11-18 — Rozi AI stage 3: tools and conversation loop (same branch)
+
+**What:** Gemini can now answer Rozi questions from real RozFit data. Thirteen tools wrap the existing modules (planner, progress, recovery, streak, weekly report, body/BMI, exercise library and alternatives, mobility, achievements, Rozi's workout planner, profile). A conversation loop lets the model call them (up to 3 rounds) and reply from their results, and cards are built by our code from the same results. Not yet connected to the screen; that's Stages 4–5.
+
+**Found live and fixed:**
+1. **Thinking tokens:** Gemini 3 thinking counts toward the output limit, so a small limit cut answers off. Now the limit is 2048 and length is controlled by the instructions.
+2. **Speed:** thinking level `LOW` takes about 5 s; the default took 20–64 s. `MINIMAL` isn't supported.
+3. **Hidden waits:** the SDK's 5 silent retries turned 503 "high demand" into 45–90 s waits. Now there's 1 retry, a clear "Gemini is busy" error, and a 20 s timeout.
+4. **Thought signatures:** Gemini 3 requires the model's thought signatures to be sent back with tool results. Now they are.
+5. **Exercise matching:** the library search returns non-matches at the end of its list, so "underwater basket weaving" matched an exercise. `findExercise` now accepts only real name matches and prefers logged, equipment-friendly, common versions.
+
+**Free-tier quota:** after about 25 test calls the key hit the daily limit (429, retry in about 23 h; resets at midnight Pacific).
+
+**Files:**
+- `src/lib/rozi-ai/{cards,tools,prompt,conversation}.ts` (new);
+- `config.ts`, `provider.ts` and `gemini-provider.ts` updated (thinking level, retries, signatures, busy message);
+- tests `tools.test.ts` and `conversation.test.ts` (new), `gemini-provider.test.ts` (updated);
+- `scripts/rozi-ask.ts` and `npm run rozi:ask` (new);
+- `docs/ROZI_AI_INTEGRATION.md` (section 9).
+
+**Checked:** 237 tests pass (34 Rozi AI). Type check, lint and build pass. A live call to `gemini-3.5-flash-lite` with the same key worked. A live run on `gemini-3.8-flash` is waiting for the quota reset.
+
+### 2026-11-18 — Rozi AI: Groq provider + stage 4 secure route (same branch)
+
+**Groq (alongside Gemini):**
+- `groq-provider.ts` with `groq-sdk` 1.6.0, pinned.
+- Settings: `ROZI_AI_PROVIDER` is `gemini` (still the default) or `groq`; each provider uses only its own key.
+- Gemini's thought signatures are never sent to Groq.
+- Malformed tool arguments are flagged and the model is asked again, never guessed.
+- Bounded retries (busy, network, short rate-limit waits, `tool_use_failed`).
+- `get_progress` now reports the biggest improvements.
+- `npm run rozi:bench` compares models on the same made-up data; results go to `docs/ROZI_AI_BENCHMARK.md`.
+
+**Stage 4: `POST /api/rozi/chat`.**
+- The person comes only from their Supabase token; the server reads their data as them (row-level security, no service-role key, read only).
+- Checks before any AI call: valid body, opt-in, provider configured, profile, adult.
+- Limits per person: 6 a minute, 60 a day.
+- Every failure is a safe fallback, and logs hold no message text or user id.
+- Details in `docs/ROZI_AI_INTEGRATION.md` sections 10–11.
+
+**Files:**
+- `app/api/rozi/chat/route.ts`;
+- `src/lib/rozi-ai/{groq-provider,handler,rate-limit}.ts` and their tests;
+- `config.ts`, `server.ts`, `provider.ts`, `conversation.ts` and `tools.ts` updated;
+- `supabase-repository.ts` (`loadOwnTrainingData`);
+- `scripts/rozi-{ping,ask,bench}.ts`, `package.json`, `.env.example`.
+
+**Checked:** 258 tests pass. Type check, lint and build pass. Live: Groq gpt-oss-120b answered with a tool round trip in under 1 s; the route refused no-token and forged-token requests (401), an oversized body (413) and GET (405). A signed-in end-to-end request is still to be checked in Stage 5.
+
+### 2026-11-18 — Rozi AI: three-model fallback, fewer tokens, reply-language fix (same branch)
+
+**Why:** Groq's free plan allows about 8K tokens per minute per model, shared by the whole app. A live test answered 2 questions, then returned 429.
+
+**What:**
+- `ROZI_AI_CHAIN` lists up to 4 models, tried in order. The recommended order is gpt-oss-20b → gpt-oss-120b → Gemini 3.5 Flash-Lite.
+- Fallback is per question; a failed model rests; safety blocks are never routed around; the whole question has a 40 s budget.
+- Each question gets only the tools it can need (about 40% fewer tokens).
+- Plainly English questions get an explicit "reply in English", after gpt-oss-20b answered two in Spanish.
+
+**Files:**
+- `src/lib/rozi-ai/{fallback,tool-select}.ts` (new);
+- `config.ts` (`readRoziAiChain`), `server.ts` (`roziAiProviders`), `handler.ts`, `conversation.ts` (`tools` option), `prompt.ts`;
+- `app/api/rozi/chat/route.ts` (shared rests);
+- `scripts/rozi-ask.ts` and `rozi-bench.ts`, `.env.example`;
+- tests `fallback.test.ts` (new), `conversation.test.ts`, `handler.test.ts`.
+
+**Checked:**
+- 268 tests pass. Type check, lint and build pass.
+- Live: 5 questions back to back; question 5 fell back from gpt-oss-20b (429) to gpt-oss-120b and answered.
+- English replies 6/6 after the fix.
+
+### 2026-11-18 — Rozi AI stage 5: on the chat screen (same branch)
+
+**What:**
+- A one-time opt-in card in Ask Rozi, and a Settings → Your data switch (adults, signed in; saved on the device).
+- AI answers with cards built from real data, an "Answered with AI" tag, and the typing dots.
+- Automatic on-phone fallback, tagged "Answered on your phone — Rozi AI is busy".
+- Signed out, demo, minors or switched off: unchanged.
+
+**Tested end to end with the real account in the preview:**
+- Today's workout, progress, chest recovery, a legs follow-up (with a live fallback 20b → 120b) and goblet squat all answered correctly from real data.
+- **Fixed during the test:**
+  - a finished workout was cheered on as if still to do (tool `statusSentence` added; re-tested);
+  - in a real chat, short questions were given all 13 tools (now only real follow-ups; re-tested: 1 tool, about 2.1K tokens instead of 3.2K);
+  - long exercise names were cut off (they now wrap).
+- Logs hold no question text or user id. Checked at 375 px light and dark, and desktop.
+
+**Files:**
+- `src/lib/rozi-ai/client.ts` and `src/components/app/rozi-cards.tsx` (new);
+- `rozi-chat-screen.tsx`, `account-cards.tsx`, `settings-screen.tsx`, `globals.css`, `tools.ts`, `tool-select.ts`;
+- tests `client.test.ts` (new), `tools.test.ts`, `fallback.test.ts`.
+
+**Checked:** 271 tests, type check, lint and build pass.
+
+**Deploy (user):** add `ROZI_AI_CHAIN`, `GROQ_API_KEY` and `GEMINI_API_KEY` (Sensitive) in Vercel for Production and Preview.
+
+### 2026-11-18 — Rozi AI stage 6: chat history + database limit (same branch; migration applied)
+
+**Migration `20261118230000_rozi_chat_history.sql`:**
+- tables `rozi_conversations` and `rozi_messages` (closed, cascade on account delete);
+- 6 functions (start question with limits, save reply, list, open, delete one, delete all), each owner-only;
+- limits of 6 a minute and 60 a day, enforced in the database;
+- chats cleared after 180 days.
+
+**App:**
+- The route records questions and saves replies (falling back to the memory limit and no history until the migration exists).
+- **History** and **New chat** on Ask Rozi, with a history sheet (open, delete one, delete all).
+- Settings "Delete all Rozi chats".
+- On-phone answers are saved next to their questions.
+
+**Dry run:** all owner, limit, validation, retention and delete checks passed, and nothing was left behind. Details in `docs/ROZI_AI_INTEGRATION.md` §15.
+
+**Checked:** 279 tests, type check, lint and build pass.
+
+**Applied 2026-11-18 after "Yes, apply it":**
+- **Structure:** tables closed with row-level security, 6 owner-only functions, indexes in place.
+- **Security check:** only the expected notes.
+- **Live behaviour test (rolled back):** ownership, limits, delete-all with separate calls, and account-deletion cascade all passed; nothing was left behind.
+- **End to end with the real account:** two questions were saved as one conversation, New chat worked, and History reopened it with its cards.

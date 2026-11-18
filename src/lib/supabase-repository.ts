@@ -313,6 +313,34 @@ async function readCloudBodyWeightEntries(client: SupabaseClient, ownerId: strin
   };
 }
 
+/** One account's own training data, for Rozi AI on the server. */
+export type OwnTrainingData = Pick<FitTrackState, "profile" | "sessions" | "bodyWeightEntries" | "trainerRuleSettings" | "trainerRuleRevision">;
+
+/**
+ * Rozi AI (server): reads ONE account's own profile, workouts, body weight and trainer rules — read only, through
+ * the client's own sign-in, so row-level security applies (no service-role key). Null when the account has no saved
+ * profile yet (setup not finished). Unlike loadCloudState it never writes and never loads a trainer's clients.
+ */
+export async function loadOwnTrainingData(client: SupabaseClient, userId: string): Promise<OwnTrainingData | null> {
+  const [{ data: profileRow, error: profileError }, { data: ruleRow, error: ruleError }, sessions, bodyWeight] = await Promise.all([
+    client.from("profiles").select("*").eq("id", userId).maybeSingle(),
+    client.from("trainer_rules").select("deadlift_enabled,rule_settings,rule_revision").eq("user_id", userId).maybeSingle(),
+    createSupabaseWorkoutPort(client).readSessions(userId),
+    readCloudBodyWeightEntries(client, userId),
+  ]);
+  if (profileError) throw profileError;
+  if (ruleError) throw ruleError;
+  if (!profileRow) return null;
+  const revision = Number(ruleRow?.rule_revision);
+  return {
+    profile: mapProfile(profileRow as DbRow, userId, false, ruleRow?.deadlift_enabled === true),
+    sessions,
+    bodyWeightEntries: bodyWeight.entries,
+    trainerRuleSettings: normalizeTrainerRuleSettings(ruleRow?.rule_settings ?? DEFAULT_TRAINER_RULE_SETTINGS),
+    trainerRuleRevision: Number.isFinite(revision) && revision > 0 ? revision : 1,
+  };
+}
+
 export async function loadCloudState(client: SupabaseClient, user: AuthUser, seed?: NewAccountSeed): Promise<FitTrackState> {
   const [{ data: profileRow, error: profileError }, { data: ruleRow, error: ruleError }, sessions, bodyWeight, { data: trainerLinks }, trainerRole] = await Promise.all([
     client.from("profiles").select("*").eq("id", user.id).maybeSingle(),

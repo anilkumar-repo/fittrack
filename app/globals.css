@@ -3683,3 +3683,71 @@ img[data-motion="float"] { --rozi-motion: rozi-float 3.6s ease-in-out infinite; 
   body.workout-mode .rest-float { bottom: calc(40px + env(safe-area-inset-bottom)); }
 }
 @media (max-width: 700px) and (prefers-reduced-motion: reduce) { .mobile-nav, body.workout-mode .dock-handle, body.workout-mode .dock-handle svg { transition: none; } }
+
+/* ===================== 2026-11-18 · ROZI AI ON THE CHAT SCREEN ===================== */
+/* Cards under an AI answer (numbers come from RozFit's own tools), the opt-in card, and the small "AI" tag. */
+.rozi-cards { display: grid; gap: 8px; margin-top: 10px; }
+.rozi-card { display: grid; gap: 6px; padding: 10px 12px; border-radius: 14px; background: var(--surface-2); }
+.rozi-card header { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 6px; }
+.rozi-card header strong { font-size: 15px; }
+.rozi-card > small { color: var(--muted); font-size: 12.5px; }
+.rozi-card .inline-icon { width: 13px; height: 13px; vertical-align: -2px; }
+.rozi-chip { padding: 2px 8px; border-radius: 999px; color: var(--ink-2); background: var(--surface-solid); font-size: 11.5px; font-weight: 800; white-space: nowrap; }
+.rozi-chip.status-completed { color: #1f6f55; background: #d8f1e6; }
+.rozi-chip.status-in_progress, .rozi-chip.status-partial { color: #8a5a00; background: #fbecc8; }
+.rozi-chip.status-skipped { color: #8f2f45; background: #f7dbe2; }
+:root[data-theme="dark"] .rozi-chip.status-completed { color: #a8e6cf; background: rgba(63, 174, 140, .22); }
+:root[data-theme="dark"] .rozi-chip.status-in_progress, :root[data-theme="dark"] .rozi-chip.status-partial { color: #f3d58c; background: rgba(233, 180, 76, .2); }
+:root[data-theme="dark"] .rozi-chip.status-skipped { color: #f2b3c3; background: rgba(217, 87, 122, .22); }
+.rozi-card-list { display: grid; gap: 4px; margin: 0; padding: 0; list-style: none; counter-reset: rozi; }
+.rozi-card-list li { display: grid; grid-template-columns: 20px minmax(0, 1fr) auto; align-items: center; gap: 8px; font-size: 13.5px; counter-increment: rozi; }
+.rozi-card-list li::before { content: counter(rozi); display: grid; width: 20px; height: 20px; place-items: center; border-radius: 50%; color: #fff; background: var(--accent); font-size: 11px; font-weight: 800; }
+.rozi-card-list li span { display: -webkit-box; overflow: hidden; font-weight: 700; line-height: 1.3; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
+.rozi-card-list li small { color: var(--muted); font-size: 12px; white-space: nowrap; }
+.rozi-trend { display: flex; align-items: flex-end; gap: 4px; height: 44px; padding-top: 4px; }
+.rozi-trend-bar { flex: 1; max-width: 22px; border-radius: 4px 4px 0 0; background: var(--accent); opacity: .85; }
+.rozi-trend-bar:last-child { opacity: 1; }
+.rozi-trend-caption { color: var(--muted); font-size: 12px; }
+.rozi-recovery { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px 10px; margin: 0; padding: 0; list-style: none; }
+.rozi-recovery li { display: grid; grid-template-columns: 10px minmax(0, 1fr); align-items: center; column-gap: 6px; font-size: 13px; }
+.rozi-recovery li .dot { grid-row: span 2; width: 10px; height: 10px; border-radius: 50%; background: var(--line-strong); }
+.rozi-recovery li small { color: var(--muted); font-size: 11.5px; }
+.rozi-recovery .recovery-ready .dot { background: var(--tone-ready); }
+.rozi-recovery .recovery-recovering .dot { background: var(--tone-recovering); }
+.rozi-recovery .recovery-fresh .dot { background: var(--tone-fresh); }
+.rozi-recovery .recovery-sore .dot { background: var(--tone-sore); }
+.rozi-steps { display: grid; gap: 4px; margin: 0; padding-left: 18px; font-size: 13.5px; line-height: 1.45; }
+.rozi-alternatives { margin: 0; font-size: 13px; }
+.rozi-alternatives small { color: var(--muted); font-weight: 700; }
+.rozi-stat strong { font-size: 20px; font-weight: 900; }
+.rozi-ai-tag { display: inline-flex; align-items: center; gap: 4px; margin-top: 6px; color: var(--muted); font-size: 11.5px; font-weight: 700; }
+.rozi-ai-tag svg { width: 12px; height: 12px; }
+.rozi-optin { display: grid; gap: 8px; padding: 14px; border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent); border-radius: 20px; background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 12%, transparent), transparent 70%), var(--surface); }
+.rozi-optin h3 { display: flex; align-items: center; gap: 6px; margin: 0; font-size: 16px; }
+.rozi-optin h3 svg { width: 18px; height: 18px; color: var(--accent); }
+.rozi-optin p { margin: 0; color: var(--ink-2); font-size: 13.5px; line-height: 1.45; }
+.rozi-optin .rozi-optin-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.rozi-ai-setting { display: grid; gap: 8px; }
+.rozi-ai-setting .switch-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.rozi-ai-setting p { margin: 0; color: var(--muted); font-size: 13.5px; line-height: 1.45; }
+
+/* Rozi AI chat history (stage 6): History / New chat above the chat, and the history sheet. */
+.rozi-chat-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 0; }
+.rozi-chat-top:not(:has(.rozi-chat-actions)) { display: contents; }
+.rozi-chat-actions { display: flex; gap: 4px; margin-left: auto; }
+.rozi-chat-actions .text-button { display: inline-flex; align-items: center; gap: 5px; padding: 6px 10px; border-radius: 999px; font-size: 14px; }
+.rozi-chat-actions .text-button svg { width: 16px; height: 16px; }
+.rozi-chat-actions .text-button:disabled { opacity: .45; }
+.rozi-history-list { display: grid; gap: 4px; margin: 0; padding: 0; list-style: none; }
+.rozi-history-list li { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 6px; border-radius: 16px; }
+.rozi-history-list li.current { background: var(--accent-soft); }
+.rozi-history-open { display: grid; grid-template-columns: 22px minmax(0, 1fr); align-items: center; gap: 10px; min-width: 0; padding: 10px; border: 0; border-radius: 16px; color: var(--ink); background: transparent; font: inherit; text-align: left; cursor: pointer; }
+.rozi-history-open:hover { background: var(--surface-2); }
+.rozi-history-open > svg { width: 20px; height: 20px; color: var(--accent); }
+.rozi-history-open span { display: grid; min-width: 0; }
+.rozi-history-open strong { overflow: hidden; font-size: 15px; text-overflow: ellipsis; white-space: nowrap; }
+.rozi-history-open small { color: var(--muted); font-size: 12.5px; }
+.rozi-history-list .icon-button svg { width: 17px; height: 17px; }
+.rozi-history-confirm { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: 14px; }
+.rozi-history .inline-icon { width: 15px; height: 15px; vertical-align: -2px; }
+.rozi-ai-setting .inline-icon { width: 15px; height: 15px; vertical-align: -2px; }

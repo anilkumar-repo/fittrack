@@ -1,6 +1,6 @@
 "use client";
 
-import { AccountCard, DataCard, LiftSharingCard, TrainerInviteCard, TrainerLinkCard, TrainerModeCard } from "@/components/app/account-cards";
+import { AccountCard, DataCard, LiftSharingCard, RoziAiCard, TrainerInviteCard, TrainerLinkCard, TrainerModeCard } from "@/components/app/account-cards";
 import { useFitTrack } from "@/components/app/fit-track-provider";
 import { NotificationsCard } from "@/components/app/notifications-card";
 import { Avatar } from "@/components/app/avatar";
@@ -94,7 +94,7 @@ export function SettingsScreen() {
   const items: MenuItem[] = [
     { group: "Account", id: "profile", href: "/profile", icon: UserRound, color: "#ef7d5c", label: "Your profile", note: "Picture, name, stats", keywords: "avatar photo picture name" },
     { group: "Account", id: "account", icon: KeyRound, color: "#5b9bd5", label: "Account", note: isDemo ? "Not signed in" : state.userEmail ?? "Signed in", keywords: "sign in sign out email login delete" },
-    { group: "Account", id: "data", icon: Database, color: "#7a8a99", label: "Your data", note: "Export or delete", keywords: "export download delete backup" },
+    { group: "Account", id: "data", icon: Database, color: "#7a8a99", label: "Your data", note: "Rozi AI, sharing, export or delete", keywords: "export download delete backup ai rozi gemini groq privacy sharing" },
     { group: "Preferences", id: "plan", icon: CalendarDays, color: "#3fae8c", label: "Your plan", note: "Goal, level, days, equipment", value: `${saved.trainingDays.length} days · ${saved.preferredSessionMinutes} min`, keywords: "goal level days session length equipment body height weight bmi why name" },
     { group: "Preferences", id: "notifications", icon: Bell, color: "#e5a33b", label: "Notifications", note: "Reminders, water, nudges", keywords: "push reminder morning evening water comeback nudge weigh" },
     { group: "Preferences", id: "appearance", icon: Palette, color: "#9b7be0", label: "Appearance", note: "Theme, figure, units", value: themeLabel, keywords: "dark light theme figure male female units kg lb pounds" },
@@ -201,7 +201,7 @@ export function SettingsScreen() {
       </>}
       {section === "trainers" && <><TrainerModeCard /><TrainerInviteCard onLinked={refreshTrainerClients} /><TrainerLinkCard /></>}
       {section === "account" && <AccountCard />}
-      {section === "data" && <><LiftSharingCard /><DataCard /></>}
+      {section === "data" && <><RoziAiCard /><LiftSharingCard /><DataCard /></>}
       {section === "about" && <>
           <details className="why-plan" open>
             <summary>About this plan</summary>
