@@ -10,7 +10,7 @@ import { useFitTrack } from "@/components/app/fit-track-provider";
 import { DEFAULT_CHECK_IN, useWorkoutDay } from "@/components/app/use-workout-day";
 import { Rozi } from "@/components/app/rozi";
 import { AlphabetIndex, firstLetter, letterAnchorId } from "@/components/app/alphabet-index";
-import { BODY_AREAS, type BodyArea, exerciseEquipmentIsAvailable, filterExerciseLibrary, getExerciseLibraryFilterOptions } from "@/lib/exercise-library";
+import { BODY_AREAS, type BodyArea, exerciseEquipmentIsAvailable, filterExerciseLibrary, getExerciseLibraryFilterOptions, rankSearchResults } from "@/lib/exercise-library";
 import type { RoziMood } from "@/lib/rozi";
 import { EXERCISE_LIBRARY } from "@/lib/templates";
 import type { ExerciseDefinition } from "@/lib/types";
@@ -45,9 +45,14 @@ export function LibraryScreen() {
     query: librarySearch, category, muscleGroup: libraryMuscleFilter, movementPattern: libraryPatternFilter,
     equipment: libraryEquipmentFilter, difficulty: libraryDifficultyFilter, area: libraryArea,
   }).length;
-  // A–Z order, so the side letter strip can jump straight to a letter.
-  const sortedResults = [...libraryResults].sort((a, b) => a.name.localeCompare(b.name));
-  const letters = [...new Set(sortedResults.map((exercise) => firstLetter(exercise.name)))];
+  // A–Z order, so the side letter strip can jump straight to a letter. Searching: best matches first instead.
+  const searching = librarySearch.trim().length > 0;
+  const ranked = searching
+    ? rankSearchResults(libraryResults, librarySearch)
+    : [...libraryResults].sort((a, b) => a.name.localeCompare(b.name)).map((exercise) => ({ exercise, best: true }));
+  const sortedResults = ranked.map((item) => item.exercise);
+  const mixed = searching && ranked.some((item) => item.best) && ranked.some((item) => !item.best);
+  const letters = searching ? [] : [...new Set(sortedResults.map((exercise) => firstLetter(exercise.name)))];
   const extraFilters = [libraryMuscleFilter, libraryPatternFilter, libraryEquipmentFilter, libraryDifficultyFilter].filter(Boolean).length;
   const anyFilter = Boolean(librarySearch) || libraryFilter !== "All" || libraryArea !== "full" || extraFilters > 0;
   const clearFilters = () => { setLibrarySearch(""); setLibraryFilter("All"); setLibraryArea("full"); setLibraryMuscleFilter(""); setLibraryPatternFilter(""); setLibraryEquipmentFilter(""); setLibraryDifficultyFilter(""); };
@@ -85,19 +90,22 @@ export function LibraryScreen() {
         {libraryResults.length ? <ul className="library-list grouped has-alpha">{sortedResults.flatMap((exercise, index) => {
           const equipmentReady = exerciseEquipmentIsAvailable(exercise, planningProfile);
           const letter = firstLetter(exercise.name);
+          const best = ranked[index].best;
           const startsLetter = index === 0 || firstLetter(sortedResults[index - 1].name) !== letter;
-          const head = startsLetter ? [<li key={`head-${letter}`} className="letter-head" id={letterAnchorId("lib", letter)} data-letter={letter} aria-hidden="true">{letter}</li>] : [];
+          const head = searching
+            ? (mixed && (index === 0 || ranked[index - 1].best !== best) ? [<li key={`head-${best ? "best" : "also"}`} className="letter-head">{best ? "Best matches" : "Also matches"}</li>] : [])
+            : startsLetter ? [<li key={`head-${letter}`} className="letter-head" id={letterAnchorId("lib", letter)} data-letter={letter} aria-hidden="true">{letter}</li>] : [];
           return [...head, (
             <li key={exercise.id}>
               <button className="exercise-row" onClick={() => setGuideExercise(toGuideExercise(exercise))}>
                 <span className="exercise-thumb"><MuscleThumb exercise={exercise} /></span>
-                <span className="exercise-text"><strong>{exercise.name}</strong><small>{exercise.targetMuscles.slice(0, 2).join(" · ")}</small><small className={`library-ready ${equipmentReady ? "ok" : "warn"}`}>{equipmentReady ? (exercise.requiredEquipment?.length ? "You have the equipment" : "No equipment needed") : `Needs ${exercise.equipment.toLowerCase()}`}</small></span>
+                <span className="exercise-text"><strong>{exercise.name}</strong><small>{exercise.targetMuscles.slice(0, searching ? 3 : 2).join(" · ")}</small><small className={`library-ready ${equipmentReady ? "ok" : "warn"}`}>{equipmentReady ? (exercise.requiredEquipment?.length ? "You have the equipment" : "No equipment needed") : `Needs ${exercise.equipment.toLowerCase()}`}</small></span>
                 <ChevronRight aria-hidden="true" />
               </button>
             </li>
           )];
         })}</ul> : <div className="panel"><EmptyState mood="grumpy" title="No matching exercises" text="Rozi looked everywhere. Try a different word or clear the filters." action={{ label: "Clear filters", onClick: clearFilters }} /></div>}
-        {libraryResults.length > 0 && <AlphabetIndex letters={letters} prefix="lib" />}
+        {libraryResults.length > 0 && !searching && <AlphabetIndex letters={letters} prefix="lib" />}
       </section>
       {guideExercise && <ExerciseGuideModal exercise={guideExercise} workout={{ date: currentDate, session: todaySession, plan }} onOpen={(exercise) => setGuideExercise(toGuideExercise(exercise))} onClose={() => setGuideExercise(null)} />}
     </>

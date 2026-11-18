@@ -69,6 +69,13 @@ export function setCap(goal: TrainingGoal, week: number, earlyFoundation: boolea
 }
 
 /** Recovery weeks keep about two thirds of the usual sets (a 30–40% cut). */
+/** True on the 7 days from the Monday a trainer made lighter (`start`). */
+export function inLightWeek(start: string | undefined, date: string): boolean {
+  if (!start) return false;
+  const days = Math.round((Date.parse(`${date}T12:00:00Z`) - Date.parse(`${start}T12:00:00Z`)) / 86_400_000);
+  return days >= 0 && days < 7;
+}
+
 export function recoveryWeekSets(sets: number): number {
   return Math.max(1, Math.round(sets * 0.65));
 }

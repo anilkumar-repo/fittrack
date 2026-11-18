@@ -20,8 +20,10 @@ import { hasSupabaseConfig } from "@/lib/supabase-browser";
 import { sessionForDate, useFitTrack } from "./fit-track-provider";
 import { START_TODAY_KEY, WANT_PUSH_KEY, Welcome } from "./welcome";
 import { enablePush, syncPushOwner } from "@/lib/push-client";
+import { joinCode, PENDING_JOIN_KEY } from "@/lib/trainers";
 import { InstallHint } from "./install-hint";
 import { RoziLoader } from "./rozi-loader";
+import { useChats } from "@/components/screens/chats-screen";
 
 const navItems: Array<{ href: string; label: string; shortLabel: string; icon: LucideIcon; title: string }> = [
   { href: "/", label: "Home", shortLabel: "Home", icon: House, title: "Home" },
@@ -44,6 +46,8 @@ function Icon({ children }: { children: React.ReactNode }) {
 /** Sidebar, top bar, messages, and mobile navigation around every page. */
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  // Unread chat messages (signed in only): a badge on the chat button and a dot on Friends.
+  const { unread: unreadChats } = useChats();
   // Big page titles shrink into a frosted bar once the page scrolls (see "LIQUID GLASS 2" in globals.css).
   useEffect(() => {
     const root = document.documentElement;
@@ -77,12 +81,26 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     syncPushOwner(browserClient, state.profile.timeZone, accountId).catch(() => undefined);
   }, [ready, accountId, browserClient, state.onboarded, state.profile.timeZone]);
 
+  // Gym QR (/join/<code>): remember the code, so someone who first has to set up RozFit or sign in comes back to it.
+  useEffect(() => {
+    if (!pathname?.startsWith("/join/")) return;
+    const code = joinCode(pathname);
+    try { if (code) window.localStorage.setItem(PENDING_JOIN_KEY, code); } catch { /* storage blocked */ }
+  }, [pathname]);
+  useEffect(() => {
+    if (!ready || !state.onboarded || isDemo || pathname?.startsWith("/join/")) return;
+    try {
+      const pending = window.localStorage.getItem(PENDING_JOIN_KEY);
+      if (pending) router.replace(`/join/${pending}`);
+    } catch { /* storage blocked */ }
+  }, [ready, state.onboarded, isDemo, pathname, router]);
+
   if (!ready || !authChecked || (accountLoading && isDemo)) return <RoziLoader />;
   if (!state.onboarded) return <><Welcome /><InstallHint /></>;
   const missedDays = unexplainedMissedDays(state.profile, state.sessions, currentDate);
 
   const active = navItems.find((item) => item.href === pathname);
-  const pageTitle = active?.title ?? (pathname === "/sign-in" ? "Sign in" : pathname === "/streak" ? "Your streak" : pathname === "/install" ? "Install the app" : pathname === "/mobility" ? "Stretch & mobility" : pathname === "/recovery" ? "Recovery" : pathname === "/report" ? "Your week" : pathname === "/routines" ? "My routines" : "RozFit");
+  const pageTitle = active?.title ?? (pathname === "/sign-in" ? "Sign in" : pathname === "/streak" ? "Your streak" : pathname === "/install" ? "Install the app" : pathname === "/mobility" ? "Stretch & mobility" : pathname === "/recovery" ? "Recovery" : pathname === "/report" ? "Your week" : pathname === "/routines" ? "My routines" : pathname === "/clients" ? "My clients" : pathname === "/buddies" ? "Train together" : pathname === "/chats" ? "Chats" : pathname === "/feed" ? "Feed" : pathname?.startsWith("/chats/") ? "Chat" : pathname?.startsWith("/join/") ? "Add your trainer" : "RozFit");
   const dueToday = state.profile.trainingDays.includes(weekdayOf(currentDate)) || Boolean(sessionForDate(state, currentDate));
   const saveLabel = isDemo
     ? accountLoading ? "Loading your account…" : "Saved on this device"
@@ -123,7 +141,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         {/* Home has no top bar: its hero carries the picture, greeting and date. */}
         {pathname === "/" ? <h1 className="sr-only">Home</h1> : <header className="topbar">
           <div><span className="eyebrow">{dateLabel(currentDate, { month: "long", day: "numeric", year: "numeric" })}</span><h1>{pageTitle}</h1></div>
-          <div className="topbar-actions">{!isDemo && (savingSession || saveError) && <span className={`save-state ${saveError ? "sync-error" : "connected"}`}><span className="save-dot" />{saveLabel}</span>}{isDemo && hasSupabaseConfig() && pathname !== "/sign-in" && <Link className="button button-subtle topbar-sign-in" href="/sign-in">Sign in</Link>}<Link className="round-avatar has-picture" aria-label="Open your profile" href="/profile"><Avatar value={state.profile.avatar} name={state.profile.displayName} size={36} /></Link></div>
+          <div className="topbar-actions">{!isDemo && (savingSession || saveError) && <span className={`save-state ${saveError ? "sync-error" : "connected"}`}><span className="save-dot" />{saveLabel}</span>}{isDemo && hasSupabaseConfig() && pathname !== "/sign-in" && <Link className="button button-subtle topbar-sign-in" href="/sign-in">Sign in</Link>}{!isDemo && <Link className={`topbar-chat ${pathname?.startsWith("/chats") ? "active" : ""}`} href="/chats" aria-label={unreadChats ? `Chats, ${unreadChats} unread` : "Chats"}><MessageCircle aria-hidden="true" />{unreadChats > 0 && <span className="topbar-chat-badge" aria-hidden="true">{unreadChats > 9 ? "9+" : unreadChats}</span>}</Link>}<Link className="round-avatar has-picture" aria-label="Open your profile" href="/profile"><Avatar value={state.profile.avatar} name={state.profile.displayName} size={36} /></Link></div>
         </header>}
 
         {/* Messages float at the top as small glass toasts; information closes by itself, sync errors stay. */}
@@ -149,8 +167,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       {/* Phone navigation: a floating glass pill for the main pages, and a round glass button for Settings. */}
       <nav className="mobile-nav" aria-label="Mobile navigation">
         <div className="dock-pill">{navItems.filter((item) => DOCK_HREFS.includes(item.href)).map((item) => {
-          const on = active?.href === item.href || (item.href === "/profile" && (pathname === "/settings" || pathname === "/library"));
-          return <Link key={item.href} href={item.href} className={on ? "active" : ""} aria-label={item.label} aria-current={on ? "page" : undefined}><Icon>{item.href === "/profile" ? <Avatar value={state.profile.avatar} name={state.profile.displayName} size={24} className="dock-avatar" /> : <item.icon aria-hidden="true" strokeWidth={1.8} />}</Icon><small>{item.shortLabel}</small>{item.href === "/today" && dueToday && active?.href !== "/today" && <span className="dock-dot" aria-hidden="true" />}</Link>;
+          const on = active?.href === item.href || (item.href === "/profile" && (pathname === "/settings" || pathname === "/library")) || (item.href === "/friends" && (pathname?.startsWith("/chats") === true || pathname === "/buddies" || pathname === "/feed"));
+          return <Link key={item.href} href={item.href} className={on ? "active" : ""} aria-label={item.label} aria-current={on ? "page" : undefined}><Icon>{item.href === "/profile" ? <Avatar value={state.profile.avatar} name={state.profile.displayName} size={24} className="dock-avatar" /> : <item.icon aria-hidden="true" strokeWidth={1.8} />}</Icon><small>{item.shortLabel}</small>{item.href === "/today" && dueToday && active?.href !== "/today" && <span className="dock-dot" aria-hidden="true" />}{item.href === "/friends" && unreadChats > 0 && <span className="dock-dot chat" aria-hidden="true" />}</Link>;
         })}</div>
         <Link href="/rozi" className={`dock-round dock-rozi ${active?.href === "/rozi" ? "active" : ""}`} aria-label="Ask Rozi" aria-current={active?.href === "/rozi" ? "page" : undefined}>
           {/* eslint-disable-next-line @next/next/no-img-element -- small static Rozi face */}

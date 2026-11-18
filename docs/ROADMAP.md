@@ -187,12 +187,15 @@ pictures first: they only have muscle maps today), and short real clips.
 - 🎨 Moving exercise pictures: first 2–4 frame loops from our own pictures, then short clips (v3 recording).
 - 🎨 Animated muscle highlight on the body; Rozi micro-animations (wave in the morning, yawn at night, cheer on finish).
 
-### Phase 6 — Trainers v2 · ~1 week · DB
+### Phase 6 — Trainers v2 · ✅ done 2026-11-17 (migration applied) · DB
+- ✅ Step A self-serve trainers (applied) · ✅ Step B Train together (applied) · ✅ Step C coach-buddy extras (applied) — Phase 6 complete
 - Several trainers per person; **"Ask to be my trainer" from Friends**, trainer code (kept), **QR at the gym** (section 2).
 - Per-trainer sharing switches; 💡 **trainer broadcast** to all clients (idea 7).
 - 🎨 Trainer dashboard with client cards (streak, last workout, flags).
 
 ### Phase 7 — Community · ~2 weeks · large DB + photo storage
+- ✅ **Step A Chats** (1:1 friends / trainer ↔ client, Train together group chat, Rozi stickers, workout cards, report/block, live + notifications): ✅ applied. Next steps: feed, discover, profiles.
+- ✅ **Step B Feed** (friends-only workout posts, one private photo, 💪 likes, comments, report/delete, notifications): applied. Next: discover / profiles.
 - 🎨 **Feed** of workout posts: muscle-map card, moves with sets × reps × kg, photo, likes, comments, share (v1 recording, 8056–8057).
 - 🎨 **Discover / Search** with Follow buttons, suggested people, "Invite friends" (v1).
 - 🎨 **Profile**: posts / followers / following, "Complete your profile 1/9" checklist, Overview · Routines · Media tabs (v1).

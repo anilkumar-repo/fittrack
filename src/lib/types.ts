@@ -48,6 +48,13 @@ export interface Profile {
   focusArea?: import("./onboarding").FocusArea;
   /** Where the person usually trains; sets the starting equipment list. */
   gymType?: import("./onboarding").GymType;
+  /**
+   * Set while in a buddy group (Train together): sessions follow the calendar from this date, so every buddy
+   * gets the same session on the same day even if someone skipped. Managed by the database.
+   */
+  buddyAnchor?: string;
+  /** Monday of a week your trainer made lighter: fewer sets, the same session (Train together stays in step). */
+  lightWeekStart?: string;
   /** Profile picture: "photo:<url>", "rozi:<mood>" or "color:<hex>". */
   avatar?: string;
   /** Share best lifts with friends (exercise leaderboard). Unset = on, or off for anyone under 18. */
@@ -157,6 +164,11 @@ export interface WorkoutReview {
 export interface TrainerClient {
   id: string;
   displayName: string;
+  avatar?: string;
+  /** What this client lets the trainer see (Phase 6). */
+  shares?: import("./trainers").TrainerShares;
+  /** Latest body weight, only when the client shares body details. */
+  weightKg?: number;
   deadliftEnabled: boolean;
   profile: Profile;
   ruleSettings: TrainerRuleSettings;
@@ -189,8 +201,12 @@ export interface WorkoutPlan {
   stage?: string;
   /** Fitness level the plan was made for. */
   level?: ExperienceLevel;
+  /** A shortened "Quick 20-min version" of the day's session (Train together catch-up). */
+  quick?: boolean;
   /** Every fourth week is lighter: fewer sets, or a conditioning week for the muscle goal. */
   recoveryWeek?: boolean;
+  /** Your trainer made this week lighter. */
+  lightWeek?: boolean;
 }
 
 export interface WorkoutSession {

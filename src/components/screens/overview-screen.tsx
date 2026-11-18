@@ -21,6 +21,8 @@ import { dateLabel, hourIn, nextTrainingDate, shortDate, todayHref, weekDates, w
 import { REGION_LABELS, regionsForExercises } from "@/lib/figure";
 import { CountUp } from "@/components/ui/count-up";
 import { RecoveryCarousel } from "@/components/app/recovery-carousel";
+import { TrainerHomeCard } from "@/components/app/trainer-home-card";
+import { BuddyHomeCard } from "@/components/app/buddy-home-card";
 
 const DAY_INITIALS = ["S", "M", "T", "W", "T", "F", "S"];
 
@@ -98,6 +100,10 @@ export function OverviewScreen() {
       <WeighInCard />
 
       <RecoveryCarousel />
+
+      <BuddyHomeCard />
+
+      <TrainerHomeCard />
 
       <NudgeBanner />
 

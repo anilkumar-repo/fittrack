@@ -6,6 +6,7 @@ import { createExerciseLog, normalizeWorkoutSession, persistWorkoutSession, type
 import { DEFAULT_TRAINER_RULE_SETTINGS, normalizeTrainerRuleSettings, validateTrainerRuleSettings } from "./trainer-rules";
 import { EQUIPMENT_OPTIONS } from "./templates";
 import { FOCUS_OPTIONS, GYM_OPTIONS, type FocusArea, type GymType } from "./onboarding";
+import { readShares, type TrainerShares } from "./trainers";
 
 const FOCUS_IDS = new Set<string>(FOCUS_OPTIONS.map((option) => option.id));
 const GYM_IDS = new Set<string>(GYM_OPTIONS.map((option) => option.id));
@@ -53,6 +54,16 @@ export function newAccountProfileDefaults(user: AuthUser, seed?: NewAccountSeed)
  * only reads from a database row (height, age, sex, "why", focus, gym, goal, level), so new accounts were saved
  * with defaults and asked for their body details again.)
  */
+/**
+ * Whether this account is a trainer right now: Trainer mode on and not paused (trainer_profiles). Before the
+ * self-serve update, falls back to the old flag in the sign-in token.
+ */
+export async function isTrainerAccount(client: SupabaseClient, user: AuthUser): Promise<boolean> {
+  const { data, error } = await client.from("trainer_profiles").select("active, suspended").eq("user_id", user.id).maybeSingle();
+  if (error) return user.app_metadata?.role === "trainer";
+  return Boolean(data && data.active === true && data.suspended !== true);
+}
+
 export function accountProfile(row: DbRow | null, user: AuthUser, trainerRole: boolean, deadliftEnabled: boolean, seed?: NewAccountSeed): Profile {
   if (row) return mapProfile(row, user.id, trainerRole, deadliftEnabled);
   return { ...newAccountProfileDefaults(user, seed), trainerRole, deadliftEnabled };
@@ -92,6 +103,8 @@ function mapProfile(row: DbRow, id: string, trainerRole: boolean, deadliftEnable
     ...(typeof row.focus_area === "string" && FOCUS_IDS.has(row.focus_area) ? { focusArea: row.focus_area as FocusArea } : {}),
     ...(typeof row.gym_type === "string" && GYM_IDS.has(row.gym_type) ? { gymType: row.gym_type as GymType } : {}),
     ...(typeof row.share_lifts === "boolean" ? { shareLifts: row.share_lifts } : {}),
+    ...(typeof row.buddy_anchor === "string" && row.buddy_anchor ? { buddyAnchor: row.buddy_anchor } : {}),
+    ...(typeof row.light_week_start === "string" && row.light_week_start ? { lightWeekStart: row.light_week_start } : {}),
   };
 }
 
@@ -298,13 +311,13 @@ async function readCloudBodyWeightEntries(client: SupabaseClient, ownerId: strin
 }
 
 export async function loadCloudState(client: SupabaseClient, user: AuthUser, seed?: NewAccountSeed): Promise<FitTrackState> {
-  const trainerRole = user.app_metadata?.role === "trainer";
-  const [{ data: profileRow, error: profileError }, { data: ruleRow, error: ruleError }, sessions, bodyWeight, { data: trainerLinks }] = await Promise.all([
+  const [{ data: profileRow, error: profileError }, { data: ruleRow, error: ruleError }, sessions, bodyWeight, { data: trainerLinks }, trainerRole] = await Promise.all([
     client.from("profiles").select("*").eq("id", user.id).maybeSingle(),
     client.from("trainer_rules").select("deadlift_enabled,rule_settings,rule_revision").eq("user_id", user.id).maybeSingle(),
     createSupabaseWorkoutPort(client).readSessions(user.id),
     readCloudBodyWeightEntries(client, user.id),
     client.from("trainer_clients").select("trainer_id").eq("client_id", user.id).eq("status", "active").limit(1),
+    isTrainerAccount(client, user),
   ]);
   if (profileError) throw profileError;
   if (ruleError) throw ruleError;
@@ -319,13 +332,23 @@ export async function loadCloudState(client: SupabaseClient, user: AuthUser, see
   let trainerClients: TrainerClient[] = [];
   let trainerClientAudit: TrainerRuleAudit[] = [];
   if (trainerRole) {
-    const { data: relationships, error: relationshipError } = await client.from("trainer_clients")
-      .select("client_id").eq("trainer_id", user.id).eq("status", "active");
-    if (relationshipError) throw relationshipError;
-    const clientIds = (relationships ?? []).map((row) => String(row.client_id));
+    // Phase 6: clients come from trainer_clients_overview(), which leaves out what a client doesn't share.
+    // Before that migration, fall back to reading the profiles directly.
+    const overview = await client.rpc("trainer_clients_overview");
+    const overviewRows: DbRow[] | null = overview.error ? null : (overview.data ?? []) as DbRow[];
+    if (overview.error && !isMissingFunction(overview.error)) throw overview.error;
+    let clientIds = (overviewRows ?? []).map((row) => String(row.client_id));
+    if (!overviewRows) {
+      const { data: relationships, error: relationshipError } = await client.from("trainer_clients")
+        .select("client_id").eq("trainer_id", user.id).eq("status", "active");
+      if (relationshipError) throw relationshipError;
+      clientIds = (relationships ?? []).map((row) => String(row.client_id));
+    }
     if (clientIds.length) {
       const [{ data: clientProfiles, error: clientProfilesError }, { data: clientRules, error: clientRulesError }, { data: auditRows, error: auditError }] = await Promise.all([
-        client.from("profiles").select("*").in("id", clientIds),
+        overviewRows
+          ? Promise.resolve({ data: overviewRows.map((row) => ({ ...row, id: row.client_id })), error: null })
+          : client.from("profiles").select("*").in("id", clientIds),
         client.from("trainer_rules").select("user_id,deadlift_enabled,rule_settings,rule_revision").in("user_id", clientIds),
         client.from("trainer_rule_audit").select("id,trainer_id,client_id,changed_at,old_rule_settings,new_rule_settings,old_deadlift_enabled,new_deadlift_enabled").in("client_id", clientIds).order("changed_at", { ascending: false }).limit(100),
       ]);
@@ -346,6 +369,9 @@ export async function loadCloudState(client: SupabaseClient, user: AuthUser, see
         return {
           id,
           displayName: String(row.display_name ?? "Client"),
+          ...(typeof row.avatar === "string" && row.avatar ? { avatar: row.avatar } : {}),
+          shares: readShares(row.shares),
+          ...(row.weight_kg !== null && row.weight_kg !== undefined ? { weightKg: Number(row.weight_kg) } : {}),
           deadliftEnabled: rule?.deadlift_enabled === true,
           profile: clientProfile,
           ruleSettings,
@@ -457,7 +483,7 @@ export async function loadCloudSessions(client: SupabaseClient, actorId: string,
   if (userError) throw userError;
   if (!userData.user || userData.user.id !== actorId) throw new Error("Your sign-in has expired. Please sign in again.");
   if (actorId !== ownerId) {
-    if (userData.user.app_metadata?.role !== "trainer") throw new Error("Only an authorized trainer can review another account’s workouts.");
+    if (!(await isTrainerAccount(client, userData.user))) throw new Error("Only a trainer can review another account’s workouts.");
     const { data: relationship, error: relationshipError } = await client.from("trainer_clients").select("client_id")
       .eq("trainer_id", actorId).eq("client_id", ownerId).eq("status", "active").maybeSingle();
     if (relationshipError) throw relationshipError;
@@ -482,7 +508,7 @@ async function authorizeTrainerClientChange(client: SupabaseClient, trainerId: s
   const { data, error } = await client.auth.getUser();
   if (error) throw error;
   const user = data.user as AuthUser | null;
-  if (!user || user.id !== trainerId || user.app_metadata?.role !== "trainer" || trainerId === clientId) return null;
+  if (!user || user.id !== trainerId || trainerId === clientId || !(await isTrainerAccount(client, user))) return null;
   const { data: relationship, error: relationshipError } = await client.from("trainer_clients").select("client_id")
     .eq("trainer_id", trainerId).eq("client_id", clientId).eq("status", "active").maybeSingle();
   if (relationshipError) throw relationshipError;
@@ -524,17 +550,22 @@ function isMissingFunction(error: { code?: string }): boolean {
 }
 const NOT_DEPLOYED = "This feature is not switched on for this RozFit database yet. Ask your trainer to apply the latest database update.";
 
-export async function createTrainerInvite(client: SupabaseClient): Promise<{ code: string; expiresAt: string }> {
-  const { data, error } = await client.rpc("create_trainer_invite");
+/** A one-time trainer code. `together`: a "Train together" QR (whoever uses it also joins your buddy group). */
+export async function createTrainerInvite(client: SupabaseClient, together = false): Promise<{ code: string; expiresAt: string }> {
+  const { data, error } = together ? await client.rpc("create_trainer_invite", { p_together: true }) : await client.rpc("create_trainer_invite");
   if (error) throw new Error(isMissingFunction(error) ? NOT_DEPLOYED : error.message);
   const row = (Array.isArray(data) ? data[0] : data) as { code?: unknown; expires_at?: unknown } | null;
   if (!row || typeof row.code !== "string") throw new Error("The invite code could not be created. Please try again.");
   return { code: row.code, expiresAt: String(row.expires_at ?? "") };
 }
 
-export async function acceptTrainerInvite(client: SupabaseClient, code: string): Promise<void> {
-  const { error } = await client.rpc("accept_trainer_invite", { p_code: code });
+/** Accepts a trainer's code; `origin` "qr" when it came from scanning the gym QR. */
+export async function acceptTrainerInvite(client: SupabaseClient, code: string, origin: "invite" | "qr" = "invite"): Promise<string | null> {
+  let { data, error } = await client.rpc("accept_trainer_invite", { p_code: code, p_origin: origin });
+  // Before the Phase 6 migration the function takes only the code.
+  if (error && isMissingFunction(error)) ({ data, error } = await client.rpc("accept_trainer_invite", { p_code: code }));
   if (error) throw new Error(isMissingFunction(error) ? NOT_DEPLOYED : error.message);
+  return typeof data === "string" ? data : null;
 }
 
 export async function removeMyTrainers(client: SupabaseClient): Promise<void> {
@@ -587,12 +618,20 @@ export async function trainerAddClientByCode(client: SupabaseClient, code: strin
   if (error) throw new Error(isMissingFunction(error) ? NOT_DEPLOYED : error.message);
 }
 
-export interface MyTrainer { id: string; name: string; since: string }
+/** One of the client's trainers, or a request still waiting for the trainer's answer. */
+export interface MyTrainer { id: string; name: string; since: string; avatar?: string; status: "active" | "requested"; origin: string; shares: TrainerShares }
 
 export async function loadMyTrainers(client: SupabaseClient): Promise<MyTrainer[]> {
   const { data, error } = await client.rpc("my_trainers");
   if (error) throw new Error(isMissingFunction(error) ? NOT_DEPLOYED : error.message);
-  return ((data ?? []) as Array<{ trainer_id: string; display_name: string; linked_at: string }>).map((row) => ({ id: row.trainer_id, name: row.display_name, since: row.linked_at }));
+  return ((data ?? []) as DbRow[]).map((row) => ({
+    id: String(row.trainer_id), name: String(row.display_name ?? "Trainer"), since: String(row.linked_at ?? ""),
+    ...(typeof row.avatar === "string" && row.avatar ? { avatar: row.avatar } : {}),
+    // Before Phase 6 there were no requests and trainers saw everything.
+    status: row.status === "requested" ? "requested" : "active",
+    origin: typeof row.origin === "string" ? row.origin : "code",
+    shares: row.shares === undefined ? { workouts: true, body: false, checkins: true, missed: true } : readShares(row.shares),
+  }));
 }
 
 export async function removeMyTrainer(client: SupabaseClient, trainerId: string): Promise<void> {

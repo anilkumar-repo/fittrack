@@ -34,8 +34,8 @@ export async function sendPush(subscription: StoredSubscription, message: PushMe
   try {
     await webpush.sendNotification(
       { endpoint: subscription.endpoint, keys: { p256dh: subscription.p256dh, auth: subscription.auth } },
-      JSON.stringify({ title: message.title, body: message.body, url: message.url, tag: message.kind }),
-      { TTL: 60 * 60 * 6, urgency: message.kind === "nudge" ? "high" : "normal" },
+      JSON.stringify({ title: message.title, body: message.body, url: message.url, tag: message.tag ?? message.kind }),
+      { TTL: 60 * 60 * 6, urgency: message.kind === "nudge" || message.kind === "chat" ? "high" : "normal" },
     );
     return "sent";
   } catch (error) {
