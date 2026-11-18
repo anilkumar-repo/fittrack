@@ -62,6 +62,30 @@ export async function POST(request: Request) {
     if (!weightOf.has(user) || date > (weightOf.get(user) as { date: string }).date) weightOf.set(user, { date, kg: Number(row.weight_kg) });
   }
 
+  // Train together: each person's active group, its days, and every member's last two days.
+  const { data: myGroups } = await db.from("buddy_members").select("user_id, group_id").in("user_id", userIds).eq("status", "active");
+  const groupOfUser = new Map((myGroups ?? []).map((row: Row) => [String(row.user_id), String(row.group_id)]));
+  const groupIds = [...new Set(groupOfUser.values())];
+  const [{ data: groupRows }, { data: memberRows }] = groupIds.length
+    ? await Promise.all([
+        db.from("buddy_groups").select("id, training_days").in("id", groupIds),
+        db.from("buddy_members").select("group_id, user_id").in("group_id", groupIds).eq("status", "active"),
+      ])
+    : [{ data: [] }, { data: [] }];
+  const groupDays = new Map((groupRows ?? []).map((row: Row) => [String(row.id), Array.isArray(row.training_days) ? row.training_days.map(Number) : []]));
+  const membersOf = new Map<string, string[]>();
+  for (const row of (memberRows ?? []) as Row[]) membersOf.set(String(row.group_id), [...(membersOf.get(String(row.group_id)) ?? []), String(row.user_id)]);
+  const buddyIds = [...new Set([...membersOf.values()].flat())];
+  const { data: buddySessions } = buddyIds.length
+    ? await db.from("workout_sessions").select("user_id, workout_date, status").in("user_id", buddyIds).gte("workout_date", recent)
+    : { data: [] };
+  const buddyStatus = new Map(((buddySessions ?? []) as Row[]).map((row) => [`${row.user_id}:${row.workout_date}`, String(row.status)]));
+  const buddyNames = new Map<string, string>();
+  if (buddyIds.length) {
+    const { data: names } = await db.from("profiles").select("id, display_name").in("id", buddyIds);
+    for (const row of (names ?? []) as Row[]) buddyNames.set(String(row.id), String(row.display_name || "Your buddy"));
+  }
+
   let sent = 0;
   for (const sub of subs as Row[]) {
     const user = String(sub.user_id);
@@ -81,6 +105,34 @@ export async function POST(request: Request) {
       now,
     });
     const updates: Row = {};
+
+    // Train together (buddy groups of 2+): an 8 pm "they trained, still time?" and a joint "you both rested" morning.
+    const groupId = groupOfUser.get(user);
+    const buddies = groupId ? (membersOf.get(groupId) ?? []).filter((id) => id !== user) : [];
+    if (groupId && buddies.length && prefs.nudges) {
+      const days = groupDays.get(groupId) ?? [];
+      const mineToday = statusByDate.get(localDate);
+      if (hour === 20 && days.includes(weekdayOf(localDate)) && !["completed", "in_progress", "skipped"].includes(String(mineToday))) {
+        const trained = buddies.find((id) => buddyStatus.get(`${id}:${localDate}`) === "completed");
+        if (trained) {
+          const { error: logged } = await db.from("buddy_push_log").insert({ user_id: user, kind: "buddy-evening", sent_on: localDate });
+          if (!logged) messages.push({ kind: "nudge", title: `${buddyNames.get(trained) ?? "Your buddy"} trained today 💪`, body: "Still time for yours — the same session is waiting.", url: "/today" });
+        }
+      }
+      const yesterday = shiftDate(localDate, -1);
+      if (hour === prefs.morningHour && days.includes(weekdayOf(yesterday))) {
+        const everyone = [user, ...buddies];
+        if (everyone.every((id) => buddyStatus.get(`${id}:${yesterday}`) !== "completed")) {
+          const { error: logged } = await db.from("buddy_push_log").insert({ user_id: user, kind: "buddy-both-rested", sent_on: localDate });
+          if (!logged) {
+            // Replaces the usual "You missed yesterday's workout": one kind message, not two.
+            const index = messages.findIndex((message) => message.kind === "morning");
+            const together = { kind: "morning" as const, title: buddies.length === 1 ? "You both rested yesterday" : "Your group rested yesterday", body: "Restart together today? 💪 Same session for all of you.", url: "/buddies" };
+            if (index >= 0) messages[index] = together; else messages.push(together);
+          }
+        }
+      }
+    }
 
     // Comeback: 5+ days without a workout → 9:00, 13:00 and 19:00 until a workout starts.
     const todayStatus = statusByDate.get(localDate);

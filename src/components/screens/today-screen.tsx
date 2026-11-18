@@ -2,10 +2,16 @@
 
 import { CoolDownCard, WarmUpCard } from "@/components/app/mobility-suggestion";
 import { clearWorkoutNotification, notifyWorkoutStarted } from "@/lib/session-notify";
+import { notifyBuddies } from "@/lib/buddies-repository";
 import { levelTitle } from "@/lib/levels";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { ArrowLeft, ArrowRight, Check, ChevronRight, Clock, ListChecks, Pencil, Play, Repeat } from "lucide-react";
+import { ArrowLeft, ArrowRight, Check, ChevronRight, Clock, ListChecks, MessageCircle, Pencil, Play, Repeat } from "lucide-react";
+import Link from "next/link";
+import { ShareWorkoutSheet } from "./chats-screen";
+import { PostWorkoutSheet } from "./feed-screen";
+import { canPostDate } from "@/lib/feed";
+import { loadPostedDates } from "@/lib/feed-repository";
 import { Rozi, RoziEnergy } from "@/components/app/rozi";
 import { WorkoutCelebration } from "@/components/app/workout-celebration";
 import { MusclePicture } from "@/components/app/muscle-picture";
@@ -18,7 +24,7 @@ import { calculateStreak, roziMoment, winsForWorkout } from "@/lib/rozi";
 import { lastPerformance } from "@/lib/logging";
 import { sessionForDate, useFitTrack } from "@/components/app/fit-track-provider";
 import { emptyCheckIn, useWorkoutDay } from "@/components/app/use-workout-day";
-import { dateLabel, describeNextDay, isIsoDate, nextTrainingDate, todayHref, hourIn, weekdayOf } from "@/lib/dates";
+import { dateLabel, describeNextDay, isIsoDate, nextTrainingDate, shiftDate, todayHref, hourIn, weekdayOf } from "@/lib/dates";
 import { generateWorkout, preserveManualExerciseChoices } from "@/lib/planner";
 import { createInitialExerciseLogs } from "@/lib/supabase-repository";
 import type { CheckIn, ExerciseDefinition, ExerciseLog, WorkoutReview, WorkoutSession } from "@/lib/types";
@@ -44,7 +50,7 @@ export function TodayScreen() {
 
 function WorkoutDayView({ date, extraDay = false, startAtReview = false }: { date: string; extraDay?: boolean; startAtReview?: boolean }) {
   const router = useRouter();
-  const { state, getState, currentDate, recordedSessions, trainerRuleSettings, planningProfile, upsertSession, savingSession, saveError, weightUnit, figure } = useFitTrack();
+  const { state, getState, currentDate, recordedSessions, trainerRuleSettings, planningProfile, upsertSession, savingSession, saveError, weightUnit, figure, browserClient, isDemo } = useFitTrack();
   const [flowStep, setFlowStep] = useState<FlowStep>(startAtReview ? "review" : "preview");
   const [checkIn, setCheckIn] = useState<CheckIn>(emptyCheckIn);
   const [checkInEdited, setCheckInEdited] = useState(false);
@@ -57,6 +63,15 @@ function WorkoutDayView({ date, extraDay = false, startAtReview = false }: { dat
   const isFuture = date > currentDate;
   /** True while a saved session is reopened to correct its entries. */
   const [editing, setEditing] = useState(false);
+  const [sharing, setSharing] = useState(false);
+  // "Post to feed?" after a finished workout (signed in, last week only); which days are already posted.
+  const [posting, setPosting] = useState(false);
+  const [postedDates, setPostedDates] = useState<Set<string>>(new Set());
+  const refreshPosted = useCallback(() => {
+    if (isDemo || !browserClient) return;
+    void loadPostedDates(browserClient, shiftDate(currentDate, -8)).then(setPostedDates);
+  }, [isDemo, browserClient, currentDate]);
+  useEffect(() => { const timer = window.setTimeout(refreshPosted, 0); return () => window.clearTimeout(timer); }, [refreshPosted]);
   const [rest, setRest] = useState<{ endsAt: number; total: number; exerciseName: string } | null>(null);
   // Rest timer on/off, remembered on this device.
   const [restOn, setRestOn] = useState(true);
@@ -171,7 +186,11 @@ function WorkoutDayView({ date, extraDay = false, startAtReview = false }: { dat
     if (errors.length) { setFormError(errors.join(" ")); return false; }
     setFormError("");
     const saved = await upsertSession(completed);
-    if (saved) { setFlowStep("done"); setEditing(false); setRest(null); void clearWorkoutNotification(sessionDate); }
+    if (saved) {
+      setFlowStep("done"); setEditing(false); setRest(null); void clearWorkoutNotification(sessionDate);
+      // Train together: "Ravi just finished — your turn?" for buddies who haven't trained yet (today's workout only).
+      if (sessionDate === currentDate && getState().profile.buddyAnchor && browserClient) void notifyBuddies(browserClient, "finished");
+    }
     return saved;
   }
 
@@ -202,6 +221,7 @@ function WorkoutDayView({ date, extraDay = false, startAtReview = false }: { dat
           <h2>{plan?.title ?? "Rest day"}</h2>
           {plan?.stage ? <span className={`stage-chip ${plan.recoveryWeek ? "light" : ""}`}>{plan.level ? `${levelTitle(plan.level)} · ` : ""}Week {plan.weekNumber} of 52 · {plan.stage}</span>
             : plan?.level && plan.sessionType !== "recovery" && <span className="stage-chip">{levelTitle(plan.level)} level</span>}
+          {plan?.lightWeek && <span className="stage-chip light">Lighter week from your trainer · fewer sets</span>}
         </header>
 
         {!plan && <article className="panel train-rest">
@@ -294,7 +314,14 @@ function WorkoutDayView({ date, extraDay = false, startAtReview = false }: { dat
             <div><dd>{todaySession.review?.effort ?? "—"}<small>/10</small></dd><dt>effort</dt></div>
           </dl>
           <CoolDownCard focus={`${todaySession.plan.focus} ${todaySession.plan.title}`} />
-          <div className="done-actions"><button className="button button-primary" onClick={() => router.push("/streak")}>See my streak <ArrowRight aria-hidden="true" /></button><button className="button button-subtle" onClick={() => { setEditing(true); setFlowStep("workout"); }}><Pencil aria-hidden="true" /> Edit entries</button></div>
+          <div className="done-actions"><button className="button button-primary" onClick={() => router.push("/streak")}>See my streak <ArrowRight aria-hidden="true" /></button><button className="button button-subtle" onClick={() => { setEditing(true); setFlowStep("workout"); }}><Pencil aria-hidden="true" /> Edit entries</button>{!isDemo && browserClient && <button className="button button-subtle" onClick={() => setSharing(true)}><MessageCircle aria-hidden="true" /> Share to chat</button>}</div>
+          {sharing && <ShareWorkoutSheet session={todaySession} onClose={() => setSharing(false)} />}
+          {!isDemo && browserClient && canPostDate(todaySession.date, currentDate) && <div className={`post-ask ${postedDates.has(todaySession.date) ? "done" : ""}`}>
+            {postedDates.has(todaySession.date)
+              ? <><Check aria-hidden="true" /><span><strong>Posted to your feed</strong><small>Your friends can send a 💪</small></span><Link href="/feed" className="text-button">See feed</Link></>
+              : <><span className="post-ask-emoji" aria-hidden="true">💪</span><span><strong>Share it with your friends?</strong><small>Post this workout to the feed — add a photo if you like.</small></span><button type="button" className="button button-primary small" onClick={() => setPosting(true)}>Post to feed</button></>}
+          </div>}
+          {posting && <PostWorkoutSheet session={todaySession} onClose={() => setPosting(false)} onPosted={refreshPosted} />}
         </article>}
 
         {logging && todaySession && plan && displayFlowStep !== "review" && <article className="logger">

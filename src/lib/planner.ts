@@ -1,5 +1,5 @@
 import { EXERCISE_LIBRARY, FOCUS_SUBTITLES, GOAL_CYCLES, getExerciseDefinition, getOptionalDeadliftExercise, getRecoveryExercises, getTemplateExercises, RULE_VERSION, TEMPLATE_VERSION, type TemplateFocus } from "./templates.ts";
-import { goalOf, goalTitle, isRecoveryWeek, recoveryWeekSets, setCap, stageLabel } from "./program.ts";
+import { goalOf, goalTitle, inLightWeek, isRecoveryWeek, recoveryWeekSets, setCap, stageLabel } from "./program.ts";
 import { extraSets, levelOf, levelSetBonus, levelTitle, programWeek, usesFoundationWeeks } from "./levels.ts";
 import { exerciseEquipmentIsAvailable, isDeadliftVariation, isExerciseAllowedForProfile } from "./exercise-library.ts";
 import type { CheckIn, ExerciseDefinition, Profile, TrainerRuleSettings, TrainingGoal, TrainingPhase, WorkoutFocus, WorkoutPlan, WorkoutSession } from "./types";
@@ -52,6 +52,31 @@ function phaseFor(date: string, profile: Profile, completed: WorkoutSession[], i
   // A second foundation phase requires both eight weeks and four weeks' worth of completed sessions.
   // This phase change never unlocks deadlift variations.
   return tenureDays >= 56 && completedInEightWeeks >= Math.max(6, profile.sessionsPerWeek * 4) ? "foundation_2" : "foundation_1";
+}
+
+/**
+ * Train together: how many of the plan's training days come between the buddy group's start date (counted) and this
+ * date (not counted). Every buddy gets the same number on the same day, whoever skipped.
+ */
+export function calendarSessionIndex(anchor: string, date: string, trainingDays: number[]): number {
+  if (date <= anchor) return 0;
+  const days = new Set(trainingDays);
+  const total = daysBetween(date, anchor);
+  const fullWeeks = Math.floor(total / 7);
+  let count = fullWeeks * days.size;
+  for (let offset = fullWeeks * 7; offset < total; offset++) {
+    const weekday = new Date(Date.parse(`${anchor}T12:00:00Z`) + offset * 86_400_000).getUTCDay();
+    if (days.has(weekday)) count++;
+  }
+  return count;
+}
+
+/** The session for a buddy group's day: the rotation follows the calendar instead of completed workouts. */
+function calendarFocus(goal: TrainingGoal, index: number, week: number): WorkoutFocus {
+  if (goal === "general") return CYCLE[index % CYCLE.length];
+  if (goal === "muscle" && isRecoveryWeek(goal, week)) return index % 2 === 0 ? "Conditioning circuit" : "Core and cardio";
+  const cycle = GOAL_CYCLES[goal];
+  return cycle[index % cycle.length];
 }
 
 function chooseFocus(completed: WorkoutSession[], isReturnSession: boolean): WorkoutFocus {
@@ -306,8 +331,13 @@ export function generateWorkout({ date, profile, sessions, checkIn, trainerRuleS
   const week = programWeek(profile, date);
   const program = goal !== "general";
   const recoveryWeek = isRecoveryWeek(goal, week);
+  // A week the trainer made lighter: the same session (buddies stay in step), about a third fewer sets.
+  const lightWeek = !isReturnSession && inLightWeek(profile.lightWeekStart, date);
   const stage = stageLabel(goal, week);
-  const focus: WorkoutFocus = program ? chooseProgramFocus(goal, trainingAttempts, date, week) : chooseFocus(trainingAttempts, isReturnSession);
+  // Train together: the same session as your buddies, from the calendar (a return after a long break still comes first).
+  const focus: WorkoutFocus = profile.buddyAnchor && !isReturnSession
+    ? calendarFocus(goal, calendarSessionIndex(profile.buddyAnchor, date, profile.trainingDays), week)
+    : program ? chooseProgramFocus(goal, trainingAttempts, date, week) : chooseFocus(trainingAttempts, isReturnSession);
   const foundPhase = phaseFor(date, profile, completed, isReturnSession);
   // Only beginners get the gentle two-set foundation phase.
   const phase: TrainingPhase = foundPhase === "foundation_1" && !usesFoundationWeeks(level) ? "foundation_2" : foundPhase;
@@ -379,6 +409,7 @@ export function generateWorkout({ date, profile, sessions, checkIn, trainerRuleS
   if (recoveryWeek) generationReasons.push(goal === "muscle"
     ? "Every fourth week is a conditioning week: no heavy lifting, a 20-minute circuit and easy cardio so you recover and move well."
     : "Every fourth week is a recovery week: the same workouts with about a third fewer sets and comfortable loads.");
+  if (lightWeek) generationReasons.push("Your trainer made this week lighter: the same session with about a third fewer sets. Keep the weights comfortable.");
   if (avoidRecentPatterns) generationReasons.push("The last completed workout was within one day; repeated movement patterns are replaced or omitted where a safe alternative is available.");
   if (profile.deadliftEnabled && baseFocus === "Foundation B") generationReasons.push("A trainer-approved rule permits the hinge variation for this client; time in training alone never enables it.");
 
@@ -447,9 +478,9 @@ export function generateWorkout({ date, profile, sessions, checkIn, trainerRuleS
     const levelSets = isReturnSession ? 0 : extraSets(level, exercises.length);
     const cap = setCap(goal, week, isEarlyFoundation, isReturnSession) + (isReturnSession ? 0 : levelSetBonus(level));
     const cappedSets = Math.min(candidate.sets + levelSets, cap);
-    const weekSets = recoveryWeek && goal !== "muscle" ? recoveryWeekSets(cappedSets) : cappedSets;
+    const weekSets = (recoveryWeek && goal !== "muscle") || lightWeek ? recoveryWeekSets(cappedSets) : cappedSets;
     // Focus muscle: one extra set on moves that train it (never in a return, recovery or first-weeks session).
-    const focusHit = focusTargets.length > 0 && !isReturnSession && !recoveryWeek && !isEarlyFoundation
+    const focusHit = focusTargets.length > 0 && !isReturnSession && !recoveryWeek && !lightWeek && !isEarlyFoundation
       && regionsForExercises([candidate]).some((region) => focusTargets.includes(region));
     const plannedSets = focusHit ? Math.min(weekSets + 1, cap + 1) : weekSets;
     if (focusHit) focusUsed = true;
@@ -476,8 +507,8 @@ export function generateWorkout({ date, profile, sessions, checkIn, trainerRuleS
     ? "A lighter first session back. Keep every rep comfortable and leave plenty in reserve."
     : baseFocus === "Conditioning circuit"
       ? "Repeat the three moves as a circuit for 20 minutes at a controlled pace, resting when needed. Keep 2–3 reps in reserve; this is not a race."
-      : recoveryWeek
-        ? "Recovery week: same workout, fewer sets and comfortable weights. Focus on smooth, clean reps."
+      : recoveryWeek || lightWeek
+        ? `${lightWeek ? "Lighter week from your trainer" : "Recovery week"}: same workout, fewer sets and comfortable weights. Focus on smooth, clean reps.`
         : volumeAdjustment
       ? "Today’s plan uses fewer sets based on recovery feedback and recent training."
       : goal === "fatloss"
@@ -506,6 +537,7 @@ export function generateWorkout({ date, profile, sessions, checkIn, trainerRuleS
     trainerRuleSettings: settings,
     level,
     ...(program ? { goal, weekNumber: week, stage, recoveryWeek } : {}),
+    ...(lightWeek ? { lightWeek: true } : {}),
   };
 }
 

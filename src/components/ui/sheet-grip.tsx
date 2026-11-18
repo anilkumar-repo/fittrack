@@ -7,6 +7,15 @@ import { useEffect, useRef } from "react";
  * whole sheet draggable by its top edge, and a swipe down (far or fast enough) closes it. On wider
  * screens it hides itself and does nothing.
  */
+/** True when the sheet, or a scrolling area inside it under the finger, isn't at its top. */
+function scrolledUnder(target: HTMLElement, sheet: HTMLElement): boolean {
+  for (let node: HTMLElement | null = target; node; node = node.parentElement) {
+    if (node.scrollTop > 0) return true;
+    if (node === sheet) break;
+  }
+  return false;
+}
+
 export function SheetGrip({ onClose }: { onClose: () => void }) {
   const grip = useRef<HTMLSpanElement>(null);
   const close = useRef(onClose);
@@ -24,8 +33,9 @@ export function SheetGrip({ onClose }: { onClose: () => void }) {
     function down(event: PointerEvent) {
       if (!phone.matches || !sheet) return;
       const top = sheet.getBoundingClientRect().top;
-      // Only from the top strip, or anywhere when the sheet is scrolled to the top and the finger moves down.
-      if (event.clientY - top > 64 && sheet.scrollTop > 0) return;
+      // Only from the top strip, or anywhere when nothing under the finger is scrolled down — so pulling a list
+      // back up scrolls the list (a list inside the sheet, like the exercise picker's, counts too).
+      if (event.clientY - top > 64 && scrolledUnder(event.target as HTMLElement, sheet)) return;
       if ((event.target as HTMLElement).closest("input, textarea, select, button, a, [role='slider']")) return;
       startY = event.clientY;
       startTime = performance.now();

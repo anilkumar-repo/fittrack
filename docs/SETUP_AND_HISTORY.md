@@ -861,3 +861,350 @@ tiny resolver (`scripts/test-register.mjs`, `scripts/test-resolve-hook.mjs`). 16
 **Accounts already created:** the database shows the four newest accounts (14–17 Nov) all saved with the default goal
 and no focus or gym. Those answers only ever lived on the phone, so they can't be recovered; the people can set them in
 Settings → Your plan. Takes effect for new sign-ups once this branch is live.
+
+### 2026-11-17 — Phase 6: Trainers v2 (same branch)
+
+Decisions (you, 17 Nov): only **approved trainers** (the existing trainer flag) can have clients; new links share
+**workouts only** by default; trainer messages arrive **in the app and as a notification**.
+
+| What you see | How it works | Files |
+|---|---|---|
+| **Several trainers**, each with **"What they can see"** switches: Workouts · Body (height, age, weight) · How you feel (energy, soreness, pain, check-in notes) · Missed days. Remove a trainer, or withdraw a request | `my_trainers()` now returns status, origin and sharing; `set_trainer_shares()` saves a switch | `account-cards.tsx` (Settings → Trainers) |
+| **"Ask to be my trainer"** on a friend's card (only friends who are trainers); becomes "Requested ✓" / "Your trainer ✓" | `friend_trainers()`, `request_trainer()` (friends only; re-asking after a decline waits 7 days) | `friends-screen.tsx` |
+| **Gym QR**: the trainer shows a QR (My clients → Gym QR); the client scans it with the phone camera → `/join/<code>` → "Add Asha as your trainer?" with what will be shared. Someone new goes through Get started / sign-in first and is brought back automatically | The QR is the existing one-time trainer code as a link (works for one client, 7 days); `trainer_invite_info()` shows the trainer's name; `accept_trainer_invite(code, 'qr')` | `join-screen.tsx`, `clients-screen.tsx` (QR sheet), `app-shell.tsx` (remembers the code) |
+| **My clients** (trainers; Settings → My clients, and a Home shortcut with requests waiting): requests to Accept / Decline; a card per client — streak, this week, last workout, body weight (if shared), flags **Reported pain · No workout for a week · Missed planned days · Very sore · Low energy** (most urgent first), and what they share; Plan & rules; Remove | `trainer_requests()`, `respond_trainer_request()`, `trainer_clients_overview()`, `trainer_client_sessions()`, `trainer_remove_client()`; card maths in `clientSummary()` (tested) | `clients-screen.tsx`, `trainers.ts`, `trainers-repository.ts` |
+| **Message all clients**: up to 500 characters, 5 a day; shows on clients' Home (they can hide it) and as a notification (unless they turned off "Nudges from friends"); the trainer can delete a sent message | `send_trainer_broadcast()`, table `trainer_broadcasts`, `/api/push/broadcast` | `trainer-home-card.tsx`, `app/api/push/broadcast/route.ts` |
+
+**Privacy change:** before this, a linked trainer could read everything about a client. Now trainers read client data
+only through what the client shares: profiles and workout days only through the two functions above (which leave out
+unshared fields), and exercise logs / sets (workouts), check-ins / reviews (how you feel) and body weight (body) through
+row security that checks the switch.
+
+**Database (applied 2026-11-17 after "Yes, apply it"):** `supabase/migrations/20261117210000_phase6_trainers_v2.sql`
+(dry-run first: run inside a rolled-back transaction, every statement worked). Checked after applying: new link fields,
+messages table with row security (2 policies), trainers no longer read profiles or workout days directly, all 14
+functions present (one version of accept_trainer_invite), signed-out visitors can't call any of them; Supabase's
+security check shows only the warning type it already showed (signed-in people can call these functions: intended,
+each checks who's calling).
+
+Behaviour test with three temporary accounts (trainer, client, stranger) and sample workouts, in a transaction that
+was rolled back (confirmed nothing left: no test accounts, links, messages or friendships). 30 checks, all as expected:
+the client asks → "requested"; the friend shows as a trainer; the client can't accept their own request; a stranger
+can't ask; the trainer sees 1 request and no client data before accepting; after accepting, the client appears with
+the plan but **no** height / weight, workout days **without** energy or missed reasons, and the trainer can't read the
+client's profile, workout rows, check-ins or weights directly; the client switches on Body + How you feel → height
+172, weight 70.5, energy and check-ins appear, missed reasons stay hidden; a wrong sharing key is refused; the trainer's
+message reaches the client but not the stranger; an empty message and a message from a non-trainer are refused; after
+the client removes the trainer, the trainer sees nothing at all.
+
+Note: the database currently has no accounts at all (they were deleted), so the next sign-ups start fresh.
+
+**Making someone a trainer:** replaced by self-serve Trainer mode (next entry); no SQL needed any more.
+
+**Also fixed while checking:** a client who doesn't share workouts was flagged "No workout for a week" — now such a card
+shows no streak and no flags. The new pages have proper titles ("My clients", "Add your trainer"); the message box text
+was bold.
+
+**Checked:** 167 tests (6 new: sharing defaults, join links, client card streak / week / flags, dashboard order,
+message length), typecheck, lint, build. In the preview with temporary sample data (removed afterwards): My clients at
+375 px light and dark (request, four cards, flags, locked shares, message box), Settings → Trainers (an active trainer
+and a request with their switches), and the join page signed out (asks to sign in, remembers the code). Not checked
+yet in a browser with real accounts: the gym QR flow end to end (needs a trainer account and a phone).
+
+
+### 2026-11-17 — Phase 6 step A: self-serve trainers (same branch)
+
+Decision (you, 17 Nov): **self-serve only** — anyone can become a trainer; no gyms or admin approval. Next steps:
+**B. Train together** (up to 3 buddies, synced plans), **C. coach-buddy extras**; chats (incl. buddy chat) in Phase 7.
+
+| What you see | How it works | Files |
+|---|---|---|
+| **Settings → Trainers → Trainer mode** (everyone signed in): one switch; when on, "About you" (280 characters) and up to 6 specialities (quick picks or your own), Save, and a link to My clients. Turning it off keeps clients' plans but blocks the trainer from their data until it's back on | `set_trainer_mode()`, table `trainer_profiles` | `account-cards.tsx` (`TrainerModeCard`) |
+| **Trainer badge** on friends who are trainers, with their top specialities; the **join page** shows the trainer's specialities and bio | active trainer profiles are readable by signed-in people | `friends-screen.tsx`, `join-screen.tsx` |
+| **Report** under each of your trainers: reason (unsafe advice · inappropriate · spam or selling · pretending to be someone · something else) and an optional note | `report_trainer()`, table `trainer_reports` (nobody can read reports from the app; you read them in Supabase → Table editor). **3 different people within 30 days pause the trainer automatically** (`trainer_profiles.suspended`); they see why and can't be added meanwhile | `account-cards.tsx` |
+| **Limits**: at most **25 active clients** per trainer (accepting a request, a QR or a client code past that is refused); trainers can also have their own trainers now | `trainer_has_room()` | — |
+
+**Under the hood:** "is this person a trainer?" no longer comes from the sign-in token (only an admin could set it, and
+it needed a sign-out). Every database function and access rule now asks `private.is_trainer()` (Trainer mode on and not
+paused); the migration rewrites the ten functions that only needed that swap and checks afterwards that no old check
+is left anywhere. In the app, `isTrainerAccount()` reads the same table (falls back to the old flag until the update
+is applied), and refreshing My clients refreshes trainer status too, so switching Trainer mode on works without signing
+out. To un-pause a trainer after reviewing reports: Supabase → Table editor → trainer_profiles → set `suspended` to false.
+
+**Database (applied 2026-11-17 after "Yes, apply it"):** `supabase/migrations/20261117230000_self_serve_trainers.sql`
+(dry-run first). Checked after applying: no function or access rule reads the trainer flag from the sign-in token any
+more (19 use the new check); reports can't be read from the app at all and trainer profiles can only be changed through
+the function; signed-out visitors can't call the new functions. Supabase's security check: the same "signed-in people
+can call these functions" warning as before, plus an info note that `trainer_reports` has no access rules (intended:
+reports only go in through `report_trainer()` and you read them in the dashboard).
+
+Behaviour test with temporary accounts, rolled back (confirmed nothing left): before Trainer mode a friend can't ask
+and no QR can be made; after switching it on (bio and specialities cleaned: "Strength", "Yoga"), the QR works, the
+friend shows as a trainer, the request is accepted and a plan rule can be saved; with Trainer mode off the trainer
+sees no clients and can't change rules, and back on the client is still there; with 25 active clients the 26th
+request is refused ("You already have 25 clients…"); 2 reports don't pause, the 3rd from a different person does —
+then the trainer sees no clients, can't switch Trainer mode back on themselves, and disappears from friends' trainer
+lists; an unknown report reason is refused; clients can't read reports.
+
+**Checked:** 168 tests (1 new: specialities cleaned to 6 × 30 characters, no duplicates), typecheck, lint, build. In the
+preview with a temporary sample trainer profile (removed afterwards): the Trainer mode card at 375 px (switch, bio with
+counter, chosen specialities, own speciality, Save / My clients). Fixed while checking: the character counter sat on its
+own line.
+
+### 2026-11-17 — Phase 6 step B: Train together (same branch)
+
+Decisions (you, 17 Nov): up to **3 buddies** (groups of 4), **synced plan** (same days and split, own weights), chats in Phase 7.
+
+| What you see | How it works | Files |
+|---|---|---|
+| **Train together** on each friend card → the friend gets an invite (Join / No thanks) showing the plan they'd switch to. Up to 4 people, one group each. Your own plan only changes once someone joins | `invite_buddy()`, `respond_buddy_invite()` | `friends-screen.tsx`, `buddies-screen.tsx` |
+| **One synced plan**: the same goal, days and **session each day** for everyone, with each person's own weights, level, equipment, pain / recovery checks and return-after-a-break. A skip never puts buddies out of step | The planner follows the **calendar** from the group's start date (`profiles.buddy_anchor`, `calendarSessionIndex()`) instead of counting completed workouts. Joining or an accepted change copies the plan onto every member's profile; a database guard keeps it that way even if an app saves an old copy of the profile | `planner.ts`, migration (`apply_buddy_plan`, `keep_buddy_plan`) |
+| **Propose a change** (goal + 3–6 days): applies once **everyone** accepts, starting today for all; Settings → Your plan locks goal and days with a link to Train together | `propose_buddy_plan()`, `respond_buddy_proposal()` | `buddies-screen.tsx`, `settings-screen.tsx` |
+| **Train together page** (`/buddies`, from Friends): buddy streak (planned days everyone trained) with **one carry a week**, the shared plan, everyone's today (done / training now / resting / still to do / rest day) with an **At the gym** badge, pending invites, your switches **I'm at the gym** (2 hours) and **Share why I skip** (off by default), Leave | `buddy_overview()` (one call), `set_at_gym()`, `set_buddy_share_reasons()`, `carry_buddy_streak()`, `leave_buddy_group()`; streak maths in `buddies.ts` (tested) | `buddies-screen.tsx`, `buddies.ts` |
+| **Home card** while training together: faces with a tick when done and a pin at the gym, the streak, and when yours is still to do: **Start · I'm at the gym · Can't today** | — | `buddy-home-card.tsx` |
+| **Can't today** → **Quick 20-min version** (the same session: 3 main exercises × 2 sets; stays quick after the check-in) or **Rest today** with a reason (saved as a missed day; buddies get a gentle note, the reason only if you share reasons) | `quickVersion()`; the existing missed-day saving | `buddy-home-card.tsx`, `use-workout-day.ts` |
+| **Notifications**: a buddy finishes → "🔥 Ravi just finished — your turn?" (only to buddies who haven't trained yet, 7:00–21:00 their time); a buddy rests → "Ravi is resting today"; **8 pm** "Ravi trained today — still time for yours?"; morning after a day nobody trained → "You both rested yesterday — restart together today?" (replaces the usual "you missed yesterday"). Each at most once a day; "Nudges from friends" off = none | `/api/push/buddy` (after finishing / resting), hourly job, `buddy_push_log` | `app/api/push/buddy/route.ts`, `app/api/push/hourly/route.ts`, `today-screen.tsx` |
+
+**Leaving:** your plan keeps its days and goal, and the session order goes back to your own. With fewer than two people
+left, the group ends (unless invites are still open).
+
+**Database (applied 2026-11-17 after "Yes, apply it"):**
+`supabase/migrations/20261118090000_train_together.sql` — tables `buddy_groups`, `buddy_members`, `buddy_proposals`,
+`buddy_carries`, `buddy_push_log` (all private: read through `buddy_overview()`, changed through the functions),
+`profiles.buddy_anchor`, the plan guard trigger. Dry run + behaviour test in a rolled-back transaction with temporary
+accounts: inviting doesn't change your plan; after joining both profiles have the same goal and days and start today;
+a decline keeps the group; skip reasons hidden until shared; at the gym visible; a 2-day plan refused; a change applies
+only after everyone accepts (then both profiles switch); a second carry in a week refused; a stranger sees nothing and
+can't read the tables; after leaving both go back to normal rotation. The plan guard was dry-run separately: an old
+profile copy saved by a buddy keeps the new name but not the old goal / days; people without a group change freely.
+**After applying (live database):** all 5 tables have row security on and no direct access, the plan guard trigger and
+the 9 functions exist, signed-out visitors can't call them. Supabase's security check shows only the expected notes
+(tables reached only through the functions; signed-in people can call the functions, which check who's asking). The
+behaviour test was run again on the live database with temporary accounts and rolled back: the same 24 checks, plus an
+old profile copy saved by a buddy during the group (it kept the group's goal, days and start date) — all as expected.
+Nothing left behind (no test accounts, groups, members, proposals, carries or start dates).
+
+**Checked:** 173 tests (5 new: calendar rotation; buddies get the same session even when one skipped — and without the
+group they wouldn't; today's status; streak with carries and the carryable day; the quick version), typecheck, lint,
+build. In the preview with a temporary sample group (removed afterwards), 375 px: Train together page (streak 1 with
+"Carry Nov 13", shared plan, a pending change "waiting for you, Chitra", today's list with at-the-gym and a pending
+invite), Home card, Can't today sheet; **Quick 20-min version** turned today's 7-exercise Push B into 3 exercises × 2
+sets / 20 min and the Train page kept it. Fixed while checking: the new sheets had no side padding.
+
+### 2026-11-17 — Phase 6 step C: coach-buddy extras (same branch)
+
+**What was asked:** when a trainer trains with their clients in a buddy group, let the trainer change the shared plan
+directly; when a client keeps skipping, prompt the trainer to make the week lighter; and give the trainer's gym QR a
+"Train together" option.
+
+**Why it needed new rules:** in step B every plan change was a proposal that all buddies must accept. A trainer the
+clients already chose to adjust their plan shouldn't need a vote, but a friend who isn't the trainer's client still
+should. And a lighter week has to keep buddies on the same session, only with fewer sets.
+
+**How it works now:**
+
+| What | How | Files |
+|---|---|---|
+| **The group's coach**: the member who is an active trainer of *every* other member. Shown as a **Trainer** badge. If someone who isn't their client joins, there's no coach and changes go back to proposals | `private.buddy_coach()`; `buddy_overview()` returns `group.coach` | migration, `buddies-repository.ts`, `buddies-screen.tsx` |
+| **Coach changes the plan directly**: "Change the plan" → "Change for everyone" applies today for all (replaces any open proposal). Others see "Asha is everyone's trainer here: their changes apply straight away" | `propose_buddy_plan()` applies at once when the caller is the coach | migration, `buddies-screen.tsx` |
+| **Make this week lighter**: on Train together, the coach sees "Ravi has missed 2+ sessions in the last week — Make it lighter"; on My clients, a client with the *Missed planned days* flag gets "Make this week lighter". It runs Monday–Sunday of this week; **Back to normal** undoes it. For a group the trainer coaches, the whole group gets it (buddies stay on the same session) | `trainer_set_light_week()`, `trainer_light_weeks()`, `profiles.light_week_start`; `missedRecently()` (tested) | migration, `trainers-repository.ts`, `buddies.ts`, `buddies-screen.tsx`, `clients-screen.tsx` |
+| **Lighter plan**: the same session with about a third fewer sets, no extra focus-muscle set; a "Lighter week from your trainer · fewer sets" chip on Train and a reason in "Why this plan". Buddies see one line "Lighter week until Sunday, set by Asha" | `inLightWeek()` (tested) and the planner's set count | `program.ts`, `planner.ts`, `today-screen.tsx`, `types.ts`, `supabase-repository.ts` |
+| **"Train together" gym QR**: My clients → Gym QR has **Add as client / Train together**. Scanning the Train together QR shows "Train with Asha?" → **Add Asha & train together** (adds the trainer and joins their group: their plan, same session each day) or **Only add as my trainer**. If the person is already in a group, the trainer is still added and the page says why they didn't join. Typing such a code in Settings opens the same page | `create_trainer_invite(p_together)`, `trainer_invite_info()` (+ `together`), `join_trainer_group()`; `trainer_invites.together` | migration, `clients-screen.tsx`, `join-screen.tsx`, `account-cards.tsx`, `supabase-repository.ts` |
+
+**Safety:** only an active trainer can make a week lighter, and only for their own active clients. Joining a group by
+QR needs a "Train together" code from an active trainer that *this* person used in the last day. A group still has at
+most 4 people and each person is in one group. Showing the QR is the trainer's consent, so no friendship is needed.
+Profile saves from the app never write `light_week_start`, so an old copy can't undo it.
+
+**Database (applied 2026-11-17 after "Yes, apply it"):**
+`supabase/migrations/20261118120000_coach_buddy_extras.sql`. The dry run applied it inside a transaction with temporary
+accounts and rolled back. 29 checks, all as expected:
+- QR: Train together and plain codes made; a non-trainer can't make one; the code shows `together`; joining before accepting is refused.
+- Joining: the client's plan becomes the trainer's, starting today; the trainer is the coach; a plain code can't be used to join; a second Train together client joins the same group (3 people); joining twice is refused.
+- Plan changes: a client's change stays pending; the coach's change applies at once to all three and closes the open proposal.
+- Lighter week: starts on Monday; it covers the whole coached group and shows to members; a non-client or non-trainer is refused; a stranger sees nothing.
+- Old profile copy: a save from an old copy keeps the group plan and the lighter week.
+- A friend who isn't the trainer's client joins: there's no coach any more, the trainer's change becomes a proposal, and turning the lighter week off touches only that client.
+
+**After applying (live database):**
+- Structure: both new columns and all the functions exist. Signed-out visitors can't call any of them, and the coach check (`private.buddy_coach`) isn't callable from the app at all.
+- Security check: only the expected notes (signed-in people can call the new functions, which check who's asking).
+- Behaviour: the same 29-check test ran on the live database with temporary accounts and was rolled back. All as expected.
+- Clean-up: nothing was left behind (no test accounts, trainer profiles, codes, links, groups, proposals or marked profiles).
+
+**Checked:** 176 tests (3 new: the lighter-week dates; the same session with fewer sets and no extra focus set; missed
+sessions in the last week). Type check, lint and build all pass. In the preview, with a temporary sample group and
+clients (removed afterwards), at 375 px and desktop, light and dark: the coach's view (the prompt, "Change the plan",
+Lighter week on / Back to normal), a client's view (Trainer badge, the lighter-week line), the client cards (both
+states), the Gym QR toggle, the "Train with Asha?" page, and the Train chip on a real generated plan (11 sets).
+
+Fixed while checking:
+- Several badges in a row stretched, because an old `.buddy-row span:nth-child(2)` rule also matched the badges. It's now scoped to direct children.
+- One group-wide lighter-week line replaces a badge on every person.
+- The QR toggle labels stay on one line at 375 px.
+- The two chips on Train now have a gap.
+
+### 2026-11-17 — Fix: Add exercises search and scrolling (same branch)
+
+**What was wrong (reported from the phone):**
+1. **Search.** In Add exercises, searching "Biceps" listed Assisted pull-up, Barbell row, Chest-supported row and so on first. Results came A–Z, and the search also matched words inside each exercise's instructions and tips. The rows did list biceps, but only as their third muscle, which the row didn't show, so it looked like search was broken.
+2. **Scrolling.** The exercise list in the sheet didn't scroll.
+
+**Why:**
+1. **Search.** It was a plain "does the text contain the word" check across the name, muscles, equipment, movement type *and* the how-to text, then sorted A–Z. Wrist curls matched because their movement type is labelled with biceps.
+2. **Scrolling.** The shared rounded-list style `.library-list.grouped { overflow: clip }` is more specific than `.picker-list { overflow-y: auto }`, so the list was clipped and could never scroll. Separately, the sheet's swipe-to-close handle only checked whether the *sheet* was scrolled, never the list inside it. So once the list could scroll, pulling it back up would have dragged the sheet down instead.
+
+**How it was fixed:**
+
+| What | How | Files |
+|---|---|---|
+| **Ranked search**: 0 name → 1 main muscle → 2 another muscle it works, equipment or category → 3 movement type → 4 only the how-to text. Only the best level that exists is shown: "Biceps" lists curls, then rows and pulldowns, not wrist curls or moves that only mention biceps in their tips. A longer search needs every word ("dumbbell curl"). Everyday short names work (abs, quads, hams, delts, pecs, bis, tris, arms, legs). "ham" still finds the hammer curl | `exerciseSearchRank()`, `rankSearchResults()`, `filterExerciseLibrary()` | `src/lib/exercise-library.ts` (+3 tests) |
+| **Results while searching**: shown as **Best matches** (the name or main muscle) and **Also matches** instead of A–Z. Each row lists up to 3 muscles, so you can see why it matched. The A–Z strip hides while searching. Searches with nothing found say what to try. The same applies on the Library page | | `exercise-picker.tsx`, `library-screen.tsx`, `globals.css` |
+| **The list scrolls**: `.library-list.grouped.picker-list` gets `overflow-y: auto`, contained overscroll and `touch-action: pan-y`. Section headings stick to the top of the list | | `app/globals.css` |
+| **Swipe-to-close only at the top**: the sheet handle now checks the scrolling area under your finger. Pulling down a scrolled list scrolls it; pulling down at the top (or from the handle) still closes the sheet | `scrolledUnder()` | `src/components/ui/sheet-grip.tsx` |
+
+**Checked:**
+- **Automated:** 178 tests pass (3 new: the ranking order for "Biceps"; short names, multi-word searches, no results and "ham"; a movement-type search). Type check, lint and build pass.
+- **End to end in the preview at 375 px:**
+  - New routine → Add exercises: the list scrolls (7,361 px of content in a 477 px window, moved 500 px), and the sheet stays put.
+  - With the list scrolled, pulling down doesn't move the sheet. At the top, pulling the handle down drags it, and it springs back if released early.
+  - Typed "Biceps": 13 results, with the five curls under Best matches and the rows under Also matches showing "… · Biceps".
+  - Ticked Incline dumbbell curl and Barbell row → **Add (2)** → both are in the routine, and the page scrolls again.
+  - Library: "quads" lists the squats and leg extension, and the A–Z strip comes back after clearing.
+
+**Phase 6 sweep:**
+- Home, Train, Friends, Train together, My clients, the join page, Settings → Trainers, Library, Routines and Progress all load at phone size with no console errors.
+- The signed-in parts of Phase 6 (trainers, Train together, coach extras) were tested in two ways: against the live database with temporary accounts (rolled back: 30 + 23 + 24 + 29 checks), and in the preview with sample data. Real devices with real accounts are the remaining step. That needs two people signed in on the dev site:
+
+**Two-phone checklist (dev site, after pushing):** phone A = trainer, phone B = friend/client.
+1. A: Settings → Trainers → turn on Trainer mode. My clients → Gym QR → **Train together**.
+2. B: scan the QR → "Train with A?" → **Add A & train together** → lands on Train together with the same plan.
+3. B: Train shows the same session as A today. A sees B on My clients and a **Trainer** badge on Train together.
+4. A: Train together → Change the plan → applies to both straight away (B sees it after reopening).
+5. B: Home → Can't today → Rest today (reason). A gets "B is resting today" (notifications on).
+6. B skips again (or two missed days) → A sees "missed 2+ sessions" → **Make it lighter** → both see the lighter-week line and B's Train chip.
+7. B finishes a workout → A gets "B just finished — your turn?". At 8 pm, if one hasn't trained, the evening note.
+8. B: Settings → Trainers → turn sharing switches off → A's card stops showing what isn't shared. B: Leave group → B's plan keeps its days.
+
+### 2026-11-18 — Phase 7 step A: Chats (same branch)
+
+**What was asked:** start Phase 7 with full chats, including a buddy chat. Choices made:
+- **Who:** friends 1:1, one group chat per Train together group, and trainer ↔ client 1:1 (even if they aren't friends).
+- **What:** text, the Rozi faces as stickers, and "share my workout" cards. Photos come later, with the feed.
+- **How:** messages appear live, plus a phone notification. Each chat can be muted.
+
+**How it works:**
+
+| What | How | Files |
+|---|---|---|
+| **Chats list** (top-bar chat button with an unread badge, a dot on Friends, and a Chats card on Friends): the group chat and 1:1 chats, newest first, with a preview line, time and unread count. A muted chat shows a grey count and isn't in the badge. **New chat** lists your friends, trainers and clients | `my_chats()`, `chat_people()`, `open_direct_chat()`, `open_buddy_chat()`; `messagePreview()` | `chats-screen.tsx`, `chats-repository.ts`, `chats.ts`, `app-shell.tsx`, `friends-screen.tsx` |
+| **A chat**: day dividers, your messages on the right, each person's name and face in the group chat, messages from the same person within 5 minutes grouped, and "Show earlier messages" (50 at a time). Messages arrive live and the chat stays marked read while open; the badges update straight away | `messages` table read with row security + Supabase Realtime; `mark_chat_read()`; `startsGroup()`, `dayLabel()`, `localDay()` | `chat-thread.tsx` |
+| **Send**: text (Enter sends, Shift+Enter makes a new line, up to 2,000 characters), one of **16 Rozi stickers**, or a **workout card** from your last 5 finished workouts. The card shows working sets (no warm-ups), the rep range, the top weight, and new bests (only beating an earlier lift) | `send_message()` (checks everything again); `workoutCard()`, `readWorkoutCard()`, `STICKERS` | `chats.ts`, `chat-thread.tsx` |
+| **Share to chat** on a finished workout (Train): pick a chat, add a note | `ShareWorkoutSheet` | `today-screen.tsx`, `chats-screen.tsx` |
+| **Message** buttons: on each friend, each client card (trainers), each of your trainers (Settings → Trainers), and **Group chat** on Train together | `MessageButton` | `message-button.tsx`, `clients-screen.tsx`, `account-cards.tsx`, `buddies-screen.tsx` |
+| **Safety**: tap your message → **Delete** (shows "Message deleted"). Tap someone else's → **Report** (reason + note; a copy of the text is kept for review). ··· → **Mute** / **Block** (no 1:1 messages either way; their group messages are hidden for you; unblock any time). People who stop being friends or trainer/client can read the history but can't send. Someone who leaves the group loses access to its chat. Limit: 20 messages a minute | `delete_message()`, `report_message()`, `set_chat_muted()`, `set_chat_block()`, `private.can_message()`, `private.in_chat()` | migration, `chat-thread.tsx` |
+| **Notifications**: "Ravi: Leg day tomorrow?" (or "Train together · Chitra: …"), tapping opens the chat. Not sent to anyone who muted the chat, blocked the sender, has the chat open, or turned off **Nudges & messages from friends**. At most one per chat every 3 minutes; each chat replaces its own notification | `/api/push/chat`, `chat_push_log`; the notification `tag` per chat | `app/api/push/chat/route.ts`, `push-server.ts`, `notifications.ts`, `notifications-card.tsx` |
+
+**Database (applied 2026-11-18 after "Yes, apply it"):**
+`supabase/migrations/20261118150000_chats.sql`:
+- tables `chats`, `chat_members`, `messages`, `chat_blocks`, `chat_reports`, `chat_push_log`, all with row security;
+- only `messages` can be read directly (so live updates work), and only for chats you're in, never from people you blocked;
+- `messages` is added to Supabase's live-updates list;
+- everything else goes through the functions above.
+
+The dry run applied it inside a transaction with 6 temporary accounts and rolled back. 40 checks, all as expected:
+- **Opening chats:** one chat per pair, the same chat from both sides; a stranger can't be messaged; trainer ↔ client works.
+- **Sending:** text is trimmed. A sticker keeps only its face. A bad sticker, an empty sticker, an empty text, 2,001 characters and a card without moves are all refused. Writing to the table directly is refused.
+- **Reading:** members read the chat; a stranger reads nothing and sees no chats.
+- **Unread:** counts are exact, your own messages don't count, and reading clears them.
+- **Delete and report:** you can delete only your own message. A report keeps the original text, even after the sender deletes it. Strangers can't report, and you can't report your own message.
+- **Block:** it hides the blocked person's messages and stops sending; unblocking restores both. Mute works.
+- **Group chat:** it's the same chat for everyone, the people list has 2 people, and it shows in the list. Strangers and anyone who left can't read or send.
+- **Limits and access:** the 21st message in a minute is refused; live updates are on; people who aren't signed in can't call anything.
+
+Found and fixed during the dry run:
+- The reading rule looked at the blocks table, which signed-in people (rightly) can't read. It now uses a checked helper.
+- Message times use the exact clock, so the order and unread counts stay right even for several messages sent at once.
+
+**After applying (live database):**
+- Structure: all 6 tables have row security, and `messages` is the only one signed-in people can read directly (no table can be written to directly). The reading rule is in place, live updates are on, all 11 functions exist, and signed-out visitors can't call any of them.
+- Security check: only the expected notes (the tables are reached only through the functions; signed-in people can call the functions, which check who's asking).
+- Behaviour: the same 40-check test ran on the live database with 6 temporary accounts and was rolled back. All as expected, with exact unread counts (3 → 0 after reading; 1 in the group).
+- Clean-up: nothing was left behind (no test accounts, chats, messages, members, blocks, reports, groups or links).
+
+**Checked:**
+- **Automated:** 183 tests pass (5 new: the stickers; the workout card's sets, rep range, top weight and new bests; reading a card back safely; preview lines; day labels, grouping and the text limit). Type check, lint and build pass.
+- **End to end in the preview at 375 px and desktop, light and dark,** with a temporary in-browser stand-in for the chat database (removed afterwards):
+  - **List and badges:** the list showed 2 unread for the group and 3 for Ravi, the badge said 5, and the Friends dot was on. Opening Ravi's chat dropped the badge to 2.
+  - **Sending:** typed and sent a message with Enter; sent a sticker; shared a workout card.
+  - **Live and read:** an incoming message appeared live and was marked read.
+  - **Delete and report:** deleted my message; reported Ravi's (the button stays off until a reason is picked).
+  - **Mute and block:** muted the chat; blocked Ravi, which hid his messages and replaced the message box with a banner; unblocked.
+  - **Group chat:** names and faces show.
+  - **New chat:** Chitra → an empty "Say hi" chat.
+  - **Share to chat:** from a finished workout, after Continue on the celebration, with the note "Legs felt strong today" → it arrived in Coach Asha's chat.
+- **Fixed while checking:**
+  - Bubbles showed "Mon" instead of the time.
+  - The badge didn't drop after reading.
+  - The message box floated mid-screen in short chats.
+  - The newest message hid behind the message box.
+  - Group pictures squeezed in 3 faces (now 2 of the others).
+- **Not checked here:** the Friends page's Chats card and per-friend Message buttons, because sample mode shows "Sign in to add friends". They use the same chat-opening path as New chat, which was tested.
+- **Still to do:** real-account testing on two phones after pushing (the database part is live).
+
+### 2026-11-18 — Phase 7 step B: Feed (same branch)
+
+**What was asked:** the workout feed. Choices made:
+- **Who sees posts:** friends only (plus your Train together group).
+- **Photos:** one per post.
+- **Posting:** you're asked after each workout; nothing is shared automatically.
+- **Interactions:** 💪 likes and comments.
+
+**How it works:**
+
+| What | How | Files |
+|---|---|---|
+| **Post to feed** (Train, on a finished workout from the last week): "Share it with your friends?" → a sheet with an optional photo, a caption (up to 1,000 characters) and the workout card → **Post**. Afterwards it says "Posted to your feed · See feed". One post per workout day | `create_post()`, `my_post_dates()`; `canPostDate()` | `today-screen.tsx`, `feed-screen.tsx` (`PostWorkoutSheet`) |
+| **Photo**: shrunk on the phone to fit 1600 px, turned the right way up and saved as WebP (JPEG fallback, under 1.5 MB). Redrawing removes hidden details such as the GPS location. It's uploaded to a **private** bucket in your own folder; if posting fails, the photo is removed again | `preparePhoto()`, `fitInside()`; bucket `post-photos` + storage rules | `feed.ts`, `feed-repository.ts`, migration |
+| **Feed** (Friends → Feed, `/feed`): your posts and your friends' and buddies', newest first, 20 at a time with "Show older posts". Each card shows the photo (via a private link that lasts an hour), the caption, the workout card, **💪** (tap again to undo), the comment count and the latest 2 comments | `feed()`, `photoLinks()` | `feed-screen.tsx`, `friends-screen.tsx`, `app-shell.tsx` |
+| **Comments**: a sheet with every comment and a box to add one (up to 500 characters; Enter posts). Delete your own, or any comment on your own post; report someone else's | `post_detail()`, `add_comment()`, `delete_comment()` | `feed-screen.tsx` (`CommentsSheet`) |
+| **Delete / report**: ··· → **Delete post** (its photo, likes and comments go too) or **Report post** (reason + note; a copy of the text and the photo path is kept) | `delete_post()`, `report_post()` | `feed-screen.tsx` (`ReportSheet`) |
+| **Notifications** to the post's author: "New 💪 on your workout — Ravi sent 💪 on Legs A" and "New comment on your workout — Ravi: …"; tapping opens the post's comments. Not sent for your own posts, if either person blocked the other, or with **Nudges & messages from friends** off. At most one per post every 10 minutes | `/api/push/feed`, `post_push_log` | `app/api/push/feed/route.ts` |
+
+**Privacy:**
+- Only friends and your Train together group see posts and their photos, never strangers.
+- Blocking someone in chats hides posts and comments both ways.
+- The photo links are private and short-lived; a photo that isn't attached to a post can't be seen by anyone else.
+
+**Database (applied 2026-11-18 after "Yes, apply it"):**
+`supabase/migrations/20261118170000_feed.sql`:
+- tables `posts`, `post_likes`, `post_comments`, `post_reports`, `post_push_log`, all closed to direct access (everything goes through the functions);
+- the private `post-photos` bucket (1.5 MB, WebP or JPEG) with three storage rules: upload into your own folder, read your own or a photo you're allowed to see, delete your own.
+
+The dry run applied it inside a transaction with 5 temporary accounts and rolled back. 42 checks, all as expected:
+- **Posting:** the caption is trimmed. A second post for the same day, a date older than a week, a bad card, a caption over 1,000 characters, a photo that wasn't uploaded and a photo from someone else's folder are all refused. Uploading into your own folder works; into someone else's doesn't.
+- **Who sees what:** a friend sees 2 posts and the photo but not a photo that isn't posted. A Train together buddy who isn't a friend sees 2. A stranger sees nothing, can't open a post, load its photo, like or comment. The tables are closed to direct reads.
+- **Likes and comments:** a 💪 counts once. Empty and over-long comments are refused. A report keeps a copy. You can't report your own post or comment. The author can delete any comment on their post; others can delete only their own. The 11th comment in a minute is refused.
+- **Block:** a blocked friend sees no posts and no photos.
+- **Deleting:** it returns the photo path to remove, the post leaves friends' feeds, and its photo can't be loaded any more.
+- **Access:** people who aren't signed in can't call anything, and the bucket is private.
+
+**After applying (live database):**
+- Structure: all 5 tables have row security and are closed to direct access. The `post-photos` bucket is private (1.5 MB, WebP or JPEG) with its 3 storage rules next to the avatar ones. All 9 functions exist, and signed-out visitors can't call any of them.
+- Security check: only the expected notes (the tables are reached only through the functions; signed-in people can call the functions, which check who's asking).
+- Behaviour: the same 42-check test ran on the live database with 5 temporary accounts and was rolled back. All as expected.
+- Clean-up: nothing was left behind (no test accounts, posts, likes, comments, reports, photo records, blocks or groups).
+
+**Checked:**
+- **Automated:** 187 tests pass (4 new: the posting window; photo sizing; the "how long ago" labels; the count labels). Type check, lint and build pass.
+- **End to end in the preview at 375 px, light and dark,** with a temporary stand-in for the feed database (removed afterwards):
+  - **Feed:** two friends' posts, one with a photo and three comments.
+  - **💪:** sent, then undone.
+  - **Comments:** opened, typed and posted one (it showed as "You · Just now" with Delete), deleted it, and reported someone else's (the report sheet opens over the comments).
+  - **Posting:** on Train, the finished workout showed "Share it with your friends?". I added a real 4000 × 3000 photo (1.7 MB), which became a 1600 × 1200 WebP of 206 KB in my own folder. Typed a caption and posted; the panel changed to "Posted to your feed".
+  - **Own post:** it appears at the top of the feed. Deleting it asks first.
+- **Fixed while checking:**
+  - A post with no likes said "0 likes".
+  - The counts were repeated in a second line (now just "N people sent 💪").
+  - The photo's remove button sat under the sheet's close button.
+- **Not checked here:** signed-in-only parts in sample mode (the Feed card on Friends) and real photo storage. Real-account testing on two phones comes after pushing (the database part is live).

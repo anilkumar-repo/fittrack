@@ -129,6 +129,13 @@ export function filterExerciseLibrary(
   const equipment = filters.equipment ?? "";
   const difficulty = filters.difficulty ?? "";
   const category = normalize(filters.category ?? "all");
+  // Only the best level of match shows: name / muscles / equipment first; if none, the movement type; if none,
+  // the how-to text. So "biceps" lists curls and rows, not wrist curls (an arm-curl movement) or moves whose tips
+  // happen to mention biceps. Decided across the whole library, so every category tab follows the same rule.
+  const ranks = query ? new Map(exercises.map((exercise) => [exercise.id, exerciseSearchRank(exercise, query)])) : null;
+  const tier = (rank: number) => (rank <= 2 ? 0 : rank === 3 ? 1 : 2);
+  const bestTier = ranks ? Math.min(3, ...exercises.filter((exercise) => isExerciseAllowedForProfile(exercise, profile))
+    .map((exercise) => ranks.get(exercise.id)).filter((rank): rank is number => rank !== null && rank !== undefined).map(tier)) : 0;
 
   return exercises.filter((exercise) => {
     if (!isExerciseAllowedForProfile(exercise, profile)) return false;
@@ -139,19 +146,51 @@ export function filterExerciseLibrary(
     if (equipment && equipment !== NO_EQUIPMENT_FILTER && !(exercise.requiredEquipment ?? []).includes(equipment as EquipmentKey)) return false;
     if (difficulty && exercise.difficulty !== difficulty) return false;
     if (filters.area && !exerciseInArea(exercise, filters.area)) return false;
-    if (!query) return true;
-    const searchable = normalize([
-      exercise.name,
-      exercise.equipment,
-      exercise.category,
-      exercise.movementPattern ? MOVEMENT_PATTERN_LABELS[exercise.movementPattern] : "",
-      ...exercise.targetMuscles,
-      ...exercise.instructions,
-      ...exercise.cues,
-      ...exercise.cautionNotes,
-    ].join(" "));
-    return searchable.includes(query);
+    if (!ranks) return true;
+    const rank = ranks.get(exercise.id) ?? null;
+    return rank !== null && tier(rank) === bestTier;
   });
+}
+
+// ---------- Search ----------
+
+/** Everyday short names people type for muscles. */
+const SEARCH_ALIASES: Record<string, string[]> = {
+  abs: ["abs", "core", "abdominals", "obliques"], core: ["core", "abs", "abdominals", "obliques"],
+  quads: ["quadriceps"], hams: ["hamstrings"], delts: ["shoulders"], pecs: ["chest"], bis: ["biceps"], tris: ["triceps"], butt: ["glutes"],
+  back: ["back", "lats"], legs: ["legs", "quadriceps", "hamstrings", "glutes", "calves"], arms: ["biceps", "triceps", "forearms"],
+};
+
+/**
+ * How well an exercise matches a search, best first: 0 the name, 1 its main muscle, 2 another muscle it works,
+ * its equipment or category, 3 its movement type, 4 only its how-to text. null = no match. Every word of a longer
+ * search must match.
+ */
+export function exerciseSearchRank(exercise: ExerciseDefinition, rawQuery: string): number | null {
+  const query = normalize(rawQuery);
+  if (!query) return 0;
+  const words = query.split(/\s+/).filter(Boolean);
+  const termsFor = (word: string) => SEARCH_ALIASES[word] ?? [word];
+  const has = (text: string, word: string) => termsFor(word).some((term) => text.includes(term));
+  const all = (text: string) => words.every((word) => has(text, word));
+  const name = normalize(exercise.name);
+  if (name.includes(query) || all(name)) return 0;
+  const muscles = exercise.targetMuscles.map(normalize);
+  if (muscles[0] && all(muscles[0])) return 1;
+  const strong = normalize([exercise.name, exercise.equipment, exercise.category, ...exercise.targetMuscles].join(" "));
+  if (all(strong)) return 2;
+  const withPattern = normalize([strong, exercise.movementPattern ? MOVEMENT_PATTERN_LABELS[exercise.movementPattern] : ""].join(" "));
+  if (all(withPattern)) return 3;
+  const text = normalize([withPattern, ...exercise.instructions, ...exercise.cues, ...exercise.cautionNotes].join(" "));
+  return all(text) ? 4 : null;
+}
+
+/** Search results in order: best matches (name or main muscle) first, then the rest; A–Z within each. */
+export function rankSearchResults(exercises: ExerciseDefinition[], query: string): Array<{ exercise: ExerciseDefinition; best: boolean }> {
+  return exercises
+    .map((exercise) => ({ exercise, rank: exerciseSearchRank(exercise, query) ?? 5 }))
+    .sort((a, b) => a.rank - b.rank || a.exercise.name.localeCompare(b.exercise.name))
+    .map(({ exercise, rank }) => ({ exercise, best: rank <= 1 }));
 }
 
 export function getSafeExerciseAlternatives(

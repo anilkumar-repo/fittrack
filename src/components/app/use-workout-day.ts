@@ -3,6 +3,7 @@
 import { useEffect, useMemo } from "react";
 import { workoutPlanMatchesProfile } from "@/lib/exercise-library";
 import { generateWorkout, preserveManualExerciseChoices } from "@/lib/planner";
+import { quickVersion } from "@/lib/buddies";
 import type { CheckIn, WorkoutPlan, WorkoutSession } from "@/lib/types";
 import { createInFlightDeduper } from "@/lib/workout-tracking";
 import { weekdayOf } from "@/lib/dates";
@@ -41,9 +42,11 @@ export function useWorkoutDay(date: string, checkIn: CheckIn | undefined, checkI
       trainerRuleSettings,
       trainerRuleRevision: state.trainerRuleRevision ?? 1,
     });
-    return generated && session?.status === "planned"
+    const kept = generated && session?.status === "planned"
       ? preserveManualExerciseChoices(generated, session.plan, planningProfile)
       : generated;
+    // "Quick 20-min version" (Train together catch-up) stays quick when the plan is rebuilt, e.g. after the check-in.
+    return kept && session?.plan.quick ? quickVersion(kept) : kept;
   }, [date, extra, state.profile, recordedSessions, session, checkIn, trainerRuleSettings, state.trainerRuleRevision, planningProfile]);
   // A routine you built yourself is never swapped for the generated plan.
   const ownRoutine = session?.plan.focus === "Your routine";

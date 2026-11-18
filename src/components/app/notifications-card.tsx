@@ -67,7 +67,7 @@ export function NotificationsCard() {
       <label className="notify-row"><input type="checkbox" checked={prefs.evening} onChange={(event) => change({ evening: event.target.checked })} /> Reminder to log a workout
         <select value={prefs.eveningHour} disabled={!prefs.evening} onChange={(event) => change({ eveningHour: Number(event.target.value) })} aria-label="Evening time">{EVENING_HOURS.map((hour) => <option key={hour} value={hour}>{hourLabel(hour)}</option>)}</select>
       </label>
-      <label className="notify-row"><input type="checkbox" checked={prefs.nudges} onChange={(event) => change({ nudges: event.target.checked })} /> Nudges from friends</label>
+      <label className="notify-row"><input type="checkbox" checked={prefs.nudges} onChange={(event) => change({ nudges: event.target.checked })} /> Nudges & messages from friends</label>
       <label className="notify-row"><input type="checkbox" checked={prefs.hydration} onChange={(event) => change({ hydration: event.target.checked })} /> Water — only when you’re behind</label>
       <label className="notify-row"><input type="checkbox" checked={prefs.comeback} onChange={(event) => change({ comeback: event.target.checked })} /> Comeback after a 5-day break (3 a day)</label>
       <label className="notify-row"><input type="checkbox" checked={prefs.weighIn} onChange={(event) => change({ weighIn: event.target.checked })} /> Monthly weigh-in</label>
