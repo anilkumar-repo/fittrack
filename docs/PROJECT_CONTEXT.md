@@ -6,7 +6,7 @@ This file is the durable handoff for people and coding assistants working on Fit
 
 FitTrack is a mobile-first workout planner for a beginner/restarting trainee. It supports daily workouts, readiness check-ins, exercise instructions, workout logging, post-session feedback, history and progress, optional body-weight tracking, and trainer controls.
 
-- Workout generation is deterministic TypeScript. There is no AI API or paid model dependency.
+- Workout generation is deterministic TypeScript. Rozi can optionally use Google Gemini (server only, `GEMINI_API_KEY`) to understand questions and word answers, but every fact, plan and number comes from the deterministic modules; without the key Rozi answers on the device. See `docs/ROZI_AI_INTEGRATION.md`.
 - Do not invent a working load when history has no recorded load. The trainee chooses a comfortable load or leaves load unrecorded.
 - The trainee's deadlift restriction defaults to off. No deadlift variation may be generated unless a trusted, authenticated trainer explicitly approves it for that client. Time or training phase never removes the restriction.
 - A pain report reduces or stops relevant activity; it is never a reason to push harder. The app does not diagnose injuries.

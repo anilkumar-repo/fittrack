@@ -7,6 +7,9 @@ import { Download, Trash2 } from "lucide-react";
 import { buildDataExport, isCompleteInviteCode, normalizeInviteCode } from "@/lib/account-data";
 import { dateLabel } from "@/lib/dates";
 import { sharesLifts } from "@/lib/friends";
+import { isAdult } from "@/lib/discover";
+import { readRoziAiChoice, ROZI_AI_CHOICE_EVENT, saveRoziAiChoice, type RoziAiChoice } from "@/lib/rozi-ai/client";
+import { deleteAllConversations } from "@/lib/rozi-ai/history";
 import { hasSupabaseConfig } from "@/lib/supabase-browser";
 import { acceptTrainerInvite, createClientShareCode, createTrainerInvite, deleteMyWorkoutData, loadMyTrainers, removeMyTrainer, removeMyTrainers, trainerAddClientByCode, type MyTrainer } from "@/lib/supabase-repository";
 import { BIO_MAX, cleanSpecialties, MAX_CLIENTS, MAX_SPECIALTIES, REPORT_REASONS, SHARE_OPTIONS, SPECIALTY_SUGGESTIONS, type ShareKey } from "@/lib/trainers";
@@ -328,6 +331,47 @@ export function LiftSharingCard() {
         <button type="button" role="switch" aria-checked={on} aria-label="Share best lifts with friends" className={`toggle ${on ? "on" : ""}`} onClick={() => updateProfile({ shareLifts: !on })}><span /></button>
       </div>
       {isDemo && <p className="card-note">Sign in to share with friends.</p>}
+    </article>
+  );
+}
+
+/** Settings → Your data: switch Rozi AI on or off (kept on this device). Adults only, signed in. */
+export function RoziAiCard() {
+  const { state, isDemo, browserClient, currentDate, setNotice } = useFitTrack();
+  const [choice, setChoice] = useState<RoziAiChoice>(null);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  async function deleteChats() {
+    if (!browserClient) return;
+    setDeleting(true);
+    const count = await deleteAllConversations(browserClient);
+    setDeleting(false);
+    setConfirmDelete(false);
+    setNotice(count === null ? "Chat history couldn’t be deleted right now." : count ? `Deleted ${count} saved ${count === 1 ? "chat" : "chats"} with Rozi.` : "No saved chats with Rozi.");
+  }
+  useEffect(() => {
+    const sync = () => setChoice(readRoziAiChoice());
+    const timer = window.setTimeout(sync, 0);
+    window.addEventListener(ROZI_AI_CHOICE_EVENT, sync);
+    return () => { window.clearTimeout(timer); window.removeEventListener(ROZI_AI_CHOICE_EVENT, sync); };
+  }, []);
+  const adult = isAdult(state.profile.birthYear, Number(currentDate.slice(0, 4)));
+  const available = !isDemo && Boolean(browserClient) && adult;
+  const on = available && choice === "on";
+  return (
+    <article className="panel rozi-ai-setting">
+      <div className="settings-toggle-row">
+        <span><strong>Rozi AI answers</strong><small>{on ? "On: Rozi uses an AI model to understand your questions and explain your training." : "Off: Rozi answers the common questions on this phone, without AI."}</small></span>
+        <button type="button" role="switch" aria-checked={on} aria-label="Rozi AI answers" disabled={!available} className={`toggle ${on ? "on" : ""}`} onClick={() => saveRoziAiChoice(on ? "off" : "on")}><span /></button>
+      </div>
+      <p>When on, each question goes to an AI model (Groq or Google Gemini) with only the workout details needed to answer — like sets, weights, height and body weight. Never your name, email or phone. AI providers may keep questions for a while to run and improve their service. This choice is saved on this device; your chats with Rozi AI are saved to your account for 180 days (History in Ask Rozi).</p>
+      {!isDemo && browserClient && (confirmDelete
+        ? <div className="rozi-history-confirm"><span>Delete all your saved chats with Rozi? This can’t be undone.</span>
+          <button type="button" className="button button-subtle small danger-text" disabled={deleting} onClick={() => void deleteChats()}>{deleting ? "Deleting…" : "Delete all"}</button>
+          <button type="button" className="text-button" onClick={() => setConfirmDelete(false)}>Cancel</button></div>
+        : <button type="button" className="text-button danger-text" onClick={() => setConfirmDelete(true)}><Trash2 aria-hidden="true" className="inline-icon" /> Delete all Rozi chats</button>)}
+      {isDemo && <p className="card-note">Sign in to use Rozi AI.</p>}
+      {!isDemo && !adult && <p className="card-note">Rozi AI is for adults (18+). {typeof state.profile.birthYear === "number" ? "" : "Add your birth year in Settings → Your plan."}</p>}
     </article>
   );
 }

@@ -197,7 +197,7 @@ pictures first: they only have muscle maps today), and short real clips.
 - ✅ **Step A Chats** (1:1 friends / trainer ↔ client, Train together group chat, Rozi stickers, workout cards, report/block, live + notifications): ✅ applied. Next steps: feed, discover, profiles.
 - ✅ **Step B Feed** (friends-only workout posts, one private photo, 💪 likes, comments, report/delete, notifications): applied. Next: discover / profiles.
 - ✅ **Step C Discover + profiles** (search by name/@username, opt-in findable (never under-18s), friends-of-friends suggestions, friend requests, profile pages with stats and posts, public profile card + checklist): applied.
-- ✅ **Improvements (2026-11-18):** Rozi plans workouts on request (level, goal and equipment aware; Start now / Save as routine), focused Ask Rozi screen on phones, picker without A–Z, Train start button that grows on scroll, Friends page redesign (hub + Friends · Challenges · Invite). ✅ Face pictures allowed (`20261118210000`, applied). ✅ Profile saves fixed (`20261118220000_fix_profile_save_findable_trigger.sql`, applied).
+- ✅ **Improvements (2026-11-18):** Rozi plans workouts on request (level, goal and equipment aware; Start now / Save as routine), focused Ask Rozi screen on phones, picker without A–Z, Train start button that grows on scroll, Friends page redesign (hub + Friends · Challenges · Invite). ✅ Face pictures allowed (`20261118210000`, applied). ✅ Profile saves fixed (`20261118220000_fix_profile_save_findable_trigger.sql`, applied). ✅ Workout screen fixes: movable two-size rest timer, dock slides away while logging, Rozi chat fills the screen, guide × pinned, lock-screen notification with rest-end time.
 - 🎨 **Feed** of workout posts: muscle-map card, moves with sets × reps × kg, photo, likes, comments, share (v1 recording, 8056–8057).
 - 🎨 **Discover / Search** with Follow buttons, suggested people, "Invite friends" (v1).
 - 🎨 **Profile**: posts / followers / following, "Complete your profile 1/9" checklist, Overview · Routines · Media tabs (v1).
@@ -209,11 +209,13 @@ pictures first: they only have muscle maps today), and short real clips.
 - 💡 **Rozi evolves**: outfits, accessories, a little gym unlocked by streak and level (idea 1).
 - 💡 **Rest-day missions** with a "rest streak" (idea 3); 💡 **Streak shield** earned every 7 days (idea 4); 💡 **"Why" wall** photo card (idea 6).
 - **Ask Rozi v1**: saved chats, follow-up questions ("what about last month?"), more answers.
+- **Rozi AI (Google Gemini `gemini-3.8-flash`)** — plan in `docs/ROZI_AI_INTEGRATION.md`. ✅ Stage 2 connection · ✅ Stage 3 tools + conversation · ✅ Groq provider · ✅ Stage 4 API and security · ✅ Stage 5 screen · ✅ Stage 6 history (applied) (2026-11-18) · Stage 5 screen · Stage 6 history (DB) · Stage 7 verify.
 
 ### Phase 9 — Native app + Apple Health + Apple Watch · ~3–4 weeks · small DB
 - App Store / Play Store app (Capacitor wrapper around the same code).
 - Apple Health / Health Connect: steps, sleep, heart rate, weight in; workouts out.
 - 🎨 Watch companion: today's list, tick sets, rest timer, heart rate (8081, 8083).
+- **Live Activity** (lock screen / Dynamic Island workout timer and rest countdown, like Apple Fitness). The PWA shows clock times in its notification for now (2026-11-18).
 - Needs Apple Developer (USD 99/yr) and Google Play (USD 25 once).
 
 ### Phase 10 — Nutrition + Voice · ~2 weeks · DB

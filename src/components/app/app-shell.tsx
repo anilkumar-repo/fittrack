@@ -11,7 +11,7 @@ import { DockScrub } from "./dock-scrub";
 import { ProfileGate } from "./profile-gate";
 import { Avatar } from "./avatar";
 import { unexplainedMissedDays } from "@/lib/missed-days";
-import { AlertCircle, BookOpen, ChartColumn, Check, CloudOff, Dumbbell, House, MessageCircle, Settings, UserRound, Users, X, type LucideIcon } from "lucide-react";
+import { AlertCircle, BookOpen, ChartColumn, Check, ChevronUp, CloudOff, Dumbbell, House, MessageCircle, Settings, UserRound, Users, X, type LucideIcon } from "lucide-react";
 import { noticeDuration, noticeIsProblem } from "@/lib/notice";
 import { usePathname, useRouter } from "next/navigation";
 import { dateLabel, weekdayOf } from "@/lib/dates";
@@ -164,8 +164,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <footer className="app-footer"><span>RozFit · Small steps, every day</span><span>Rules {RULE_VERSION}</span></footer>
       </main>
 
+      {/* During a workout the dock slides away; this handle (shown only then) brings it back, or tucks it away again. */}
+      <button type="button" className="dock-handle" aria-label="Show or hide the navigation" onClick={() => document.body.classList.toggle("dock-peek")}><ChevronUp aria-hidden="true" /></button>
       {/* Phone navigation: a floating glass pill for the main pages, and a round glass button for Settings. */}
-      <nav className="mobile-nav" aria-label="Mobile navigation">
+      <nav className="mobile-nav" aria-label="Mobile navigation" onClick={() => document.body.classList.remove("dock-peek")}>
         <div className="dock-pill">{navItems.filter((item) => DOCK_HREFS.includes(item.href)).map((item) => {
           const on = active?.href === item.href || (item.href === "/profile" && (pathname === "/settings" || pathname === "/library")) || (item.href === "/friends" && (pathname?.startsWith("/chats") === true || pathname === "/buddies" || pathname === "/feed" || pathname === "/discover" || pathname?.startsWith("/people/") === true));
           return <Link key={item.href} href={item.href} className={on ? "active" : ""} aria-label={item.label} aria-current={on ? "page" : undefined}><Icon>{item.href === "/profile" ? <Avatar value={state.profile.avatar} name={state.profile.displayName} size={24} className="dock-avatar" /> : <item.icon aria-hidden="true" strokeWidth={1.8} />}</Icon><small>{item.shortLabel}</small>{item.href === "/today" && dueToday && active?.href !== "/today" && <span className="dock-dot" aria-hidden="true" />}{item.href === "/friends" && unreadChats > 0 && <span className="dock-dot chat" aria-hidden="true" />}</Link>;
