@@ -3552,10 +3552,14 @@ img[data-motion="float"] { --rozi-motion: rozi-float 3.6s ease-in-out infinite; 
 .rozi-back svg { width: 16px; height: 16px; }
 @media (max-width: 700px) {
   .rozi-mode .mobile-nav { display: none; }
-  .rozi-mode .main-area { padding-bottom: 16px; }
   .rozi-mode .app-footer { display: none; }
-  .rozi-mode .chat-input { bottom: calc(12px + env(safe-area-inset-bottom)); }
-  .rozi-mode .rozi-chat { min-height: calc(100dvh - 150px); grid-template-rows: auto 1fr auto auto; }
+  /* The chat fills the screen exactly: Rozi sits centred in the free space, and the messages, suggestions and message
+     box stay together at the bottom with no empty band under them. */
+  .rozi-mode .main-area { display: flex; flex-direction: column; min-height: 100dvh; padding-bottom: calc(10px + env(safe-area-inset-bottom)); }
+  .rozi-mode .rozi-chat { display: flex; flex: 1; flex-direction: column; min-height: 0; }
+  .rozi-mode .rozi-back { align-self: flex-start; }
+  .rozi-mode .chat-hero { margin: auto 0; }
+  .rozi-mode .chat-input { bottom: calc(10px + env(safe-area-inset-bottom)); }
   .rozi-back { display: inline-flex; }
 }
 /* New answers scroll in above the pinned message box, not behind it. */
@@ -3632,3 +3636,50 @@ img[data-motion="float"] { --rozi-motion: rozi-float 3.6s ease-in-out infinite; 
 .sheet-action svg { width: 19px; height: 19px; color: var(--accent); }
 .sheet-action.danger-text, .sheet-action.danger-text svg { color: #c0392b !important; }
 .sheet-action:disabled { opacity: .65; }
+
+/* ===================== 2026-11-18 · WORKOUT SCREEN FIXES ===================== */
+/* Exercise guide: the × stays pinned at the top right while the guide scrolls (a zero-height sticky row, so it takes
+   no space; the title keeps room for it). */
+.guide-close-pin { position: sticky; top: 6px; z-index: 4; display: flex; justify-content: flex-end; height: 0; margin-bottom: -16px; pointer-events: none; }
+.guide-close-pin .guide-close { pointer-events: auto; background: var(--surface-solid); box-shadow: 0 6px 18px rgba(0, 0, 0, .12); }
+.guide-head { padding-right: 54px; }
+
+/* Rest timer: a floating timer you can drag anywhere (it settles against the nearer side) in two sizes — a small
+   round one, or the full card. Tap the ring or the corner button to switch. */
+.rest-float { position: fixed; z-index: 70; right: 12px; bottom: calc(16px + env(safe-area-inset-bottom)); display: flex; align-items: center; gap: 10px; border: var(--glass-edge); background: var(--surface-solid); box-shadow: 0 16px 40px rgba(0, 0, 0, .18); touch-action: none; -webkit-user-select: none; user-select: none; cursor: grab; animation: rest-pop .3s cubic-bezier(.2, .9, .3, 1) backwards; -webkit-tap-highlight-color: transparent; }
+@media (min-width: 701px) { .rest-float { right: 24px; bottom: 24px; } }
+.rest-float.dragging { cursor: grabbing; box-shadow: 0 24px 60px rgba(0, 0, 0, .28); transform: scale(1.04); }
+.rest-float.finished { box-shadow: 0 0 0 3px var(--tone-ready, #5fbf9a), 0 16px 40px rgba(0, 0, 0, .18); }
+.rest-float.finished .rest-ring-value { stroke: var(--tone-ready, #5fbf9a); }
+.rest-float .rest-ring { flex: none; cursor: pointer; }
+.rest-float.full { width: min(360px, calc(100vw - 24px)); padding: 12px 14px; border-radius: 26px; }
+.rest-float.full .rest-ring { width: 88px; height: 88px; }
+.rest-float.full .rest-ring-text { flex: 1; min-width: 0; padding-right: 20px; }
+.rest-float.compact { padding: 6px 8px 6px 6px; border-radius: 999px; }
+.rest-float.compact .rest-ring { width: 60px; height: 60px; }
+.rest-float.compact .rest-ring strong { font-size: 15px; }
+.rest-mini-actions { display: flex; gap: 6px; }
+.rest-mini-actions button { display: grid; min-width: 42px; height: 42px; padding: 0 10px; place-items: center; border: 0; border-radius: 999px; color: var(--ink); background: var(--surface-2); font: inherit; font-size: 14px; font-weight: 800; cursor: pointer; }
+.rest-mini-actions .rest-mini-skip { padding: 0; color: #fff; background: #4f9be0; }
+.rest-mini-skip svg { width: 18px; height: 18px; }
+.rest-size { position: absolute; top: 8px; right: 8px; display: grid; width: 28px; height: 28px; padding: 0; place-items: center; border: 0; border-radius: 50%; color: var(--muted); background: transparent; cursor: pointer; }
+.rest-size svg { width: 15px; height: 15px; }
+.rest-float.compact .rest-size { top: -8px; right: -6px; width: 26px; height: 26px; border: var(--glass-edge); background: var(--surface-solid); box-shadow: 0 2px 8px rgba(0, 0, 0, .15); }
+@keyframes rest-pop { from { opacity: 0; transform: scale(.85); } }
+@media (prefers-reduced-motion: reduce) { .rest-float { animation: none; } .rest-float.dragging { transform: none; } }
+
+/* Workout mode (logging sets on a phone): the dock slides down out of the way so it never covers the sets, the
+   Previous / Next buttons or the rest timer. A small handle at the bottom brings it back. */
+.dock-handle { display: none; }
+@media (max-width: 700px) {
+  .mobile-nav { transition: transform .35s cubic-bezier(.2, .9, .3, 1), opacity .25s ease; }
+  body.workout-mode:not(.dock-peek) .mobile-nav { opacity: 0; pointer-events: none; transform: translateY(calc(100% + 24px + env(safe-area-inset-bottom))); }
+  body.workout-mode .main-area { padding-bottom: calc(44px + env(safe-area-inset-bottom)); }
+  body.workout-mode .dock-handle { position: fixed; z-index: 31; bottom: calc(6px + env(safe-area-inset-bottom)); left: 50%; display: grid; width: 60px; height: 24px; padding: 0; place-items: center; border: var(--glass-edge); border-radius: 999px; color: var(--muted); background: var(--nav-bg, var(--surface-solid)); box-shadow: 0 4px 14px rgba(0, 0, 0, .12); transform: translateX(-50%); -webkit-backdrop-filter: blur(20px); backdrop-filter: blur(20px); transition: bottom .35s cubic-bezier(.2, .9, .3, 1); }
+  body.workout-mode .dock-handle svg { width: 18px; height: 18px; transition: transform .3s ease; }
+  body.workout-mode.dock-peek .dock-handle { bottom: calc(88px + env(safe-area-inset-bottom)); }
+  body.workout-mode.dock-peek .dock-handle svg { transform: rotate(180deg); }
+  /* The rest timer sits just above the handle by default. */
+  body.workout-mode .rest-float { bottom: calc(40px + env(safe-area-inset-bottom)); }
+}
+@media (max-width: 700px) and (prefers-reduced-motion: reduce) { .mobile-nav, body.workout-mode .dock-handle, body.workout-mode .dock-handle svg { transition: none; } }

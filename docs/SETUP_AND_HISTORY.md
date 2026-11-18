@@ -1354,3 +1354,51 @@ The dry run applied it inside a transaction with 7 temporary accounts and rolled
   - **Train:** the Start button is 64 × 64 round at the top, 351 px wide after scrolling, and round again back at the top.
   - **Friends:** checked with a temporary stand-in for friends data (removed afterwards). Measured: no text is cut off at 375 px. The ··· sheet and the Challenges tab work.
 - **Not checked here:** Message and Train together in the ··· sheet (they need a signed-in account), and saving a face picture from the real app (both database fixes are live; try it on your phone).
+
+### 2026-11-18 — Workout screen fixes: rest timer, dock, Rozi chat space, guide close button, lock-screen notification (same branch)
+
+**1. Rest timer: movable, two sizes, never cut off.**
+- **What was wrong:** the rest card sat half off the right edge of the screen and covered the sets and buttons.
+- **Why:** it was centred with `transform: translateX(-50%)`, but its slide-up animation also sets `transform`. While the animation ran, and after it, the centring was lost and the card was pushed right by half its width.
+- **Fix:** a new floating timer, `.rest-float`.
+  - **Two sizes:** a small round timer (ring with the time, **+10**, **×** to skip) or the full card (ring, exercise, −10s / +10s / Skip). Tap the ring or the corner button to switch.
+  - **Movable:** drag it anywhere (it follows your finger). When you let go it settles against the nearer side.
+  - **Remembered:** size and place are saved on this device (`rozfit-rest-size`, `rozfit-rest-place`) and kept on screen on any phone size or rotation.
+  - The animation no longer touches its position. Reduce motion is respected. The finished state shows a green ring and "Go!".
+- **Files:** `src/components/app/rest-timer.tsx`, new `src/lib/rest-timer-place.ts` (+ `rest-timer-place.test.ts`, 3 tests), `app/globals.css`.
+
+**2. The dock slides away during a workout.**
+- While you're logging sets, the bottom dock and Rozi button slide down out of view, so Previous / Next, Finish and the timer are never covered.
+- A small **˄ handle** at the bottom brings the dock back; it becomes **˅** to tuck it away. Tapping a dock item leaves the workout screen as usual.
+- Workout mode ends when you leave the logger (review, done, another page).
+- **How:** the Train screen adds `workout-mode` to the page while logging; the CSS moves the dock off-screen. The handle toggles `dock-peek`.
+- **Files:** `src/components/screens/today-screen.tsx`, `src/components/app/app-shell.tsx`, `app/globals.css`.
+
+**3. Ask Rozi: no empty band under the message box.**
+- **Why:** the chat was sized as "screen height − 150 px" inside a page that also had its own minimum height, which left about 60–80 px empty under the message box (more on an iPhone home-screen app).
+- **Fix:** on phones the chat now fills the screen exactly (flex column, 100 dvh). Rozi sits centred in the free space, and the messages, suggestions and message box stay together at the bottom, 10 px above the safe area.
+- **File:** `app/globals.css`.
+
+**4. Exercise guide: the × stays put while scrolling.**
+- The close button is now pinned to the top right of the guide sheet. It sits in a zero-height sticky row, so it takes no space, and the title keeps room for it.
+- **Files:** `src/components/app/exercise-guide-modal.tsx`, `app/globals.css`.
+
+**5. Workout on the lock screen (notification).**
+- **What you asked for:** a workout timer on the lock screen, like Apple Fitness.
+- **What's possible:** that ticking timer is an iOS *Live Activity*, which only native apps can show. RozFit is a web app (PWA), and iPhone pauses web apps in the background, so a notification can't count down by itself. A real Live Activity is planned with the native app (Phase 9).
+- **What it does now:** the existing "Workout in progress" notification shows clock times instead of a countdown.
+  - **Between sets:** "💪 Push B · 4/21 sets" and "Started 9:23."
+  - **During a rest:** "⏱ Rest until 10:15:30" with the exercise name.
+  - On Android it also shows how long ago the workout started.
+- **When it updates:** whenever you leave the app (lock the phone or switch apps). It isn't refreshed after every set, so it never pops a banner while you're using the app.
+- **Files:** `src/lib/session-notify.ts` (`workoutNotificationText`, `updateWorkoutNotification`; + `session-notify.test.ts`, 3 tests), `src/components/screens/today-screen.tsx`.
+
+**Checked:**
+- **Automated:** 203 tests pass (6 new). Type check, lint (only the existing welcome-image warning) and build pass.
+- **Preview at 375 px, light and dark:**
+  - **Workout mode:** the dock moved off-screen and the handle showed. The handle brought the dock back and tucked it away again. Previous / Next were fully visible.
+  - **Timer:** after a set, the compact timer sat above the handle. Dragged up-left, it settled on the left and saved its place. Tapping the ring gave the full card, fully on screen. After a reload it came back full size at the same place.
+  - **Rozi:** the message box sits 10 px from the bottom, with Rozi centred.
+  - **Guide:** after scrolling 600 px the × stayed at the top right and still closed the guide.
+  - **Notification:** with stand-ins for permission and the service worker, leaving the app produced "💪 Push B · Chest, shoulders, triceps · 1/21 sets / Started 12:44…". During a rest it produced "⏱ Rest until 12:48:19" with the exercise name. Same tag, so it replaces the old notification.
+- **Not checked here:** the real lock screen on your iPhone and Android (needs the pushed app with notifications allowed).
