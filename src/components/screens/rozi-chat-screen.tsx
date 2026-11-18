@@ -1,10 +1,11 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
-import { ArrowRight, SendHorizontal } from "lucide-react";
-import { useFitTrack } from "@/components/app/fit-track-provider";
+import { ArrowLeft, ArrowRight, Bookmark, Play, SendHorizontal } from "lucide-react";
+import { sessionForDate, useFitTrack } from "@/components/app/fit-track-provider";
 import { DEFAULT_CHECK_IN, useWorkoutDay } from "@/components/app/use-workout-day";
 import { dateLabel, hourIn, nextTrainingDate, weekDates } from "@/lib/dates";
 import { calculatePersonalRecords } from "@/lib/progress";
@@ -13,15 +14,21 @@ import { suggestionForDay } from "@/lib/mobility";
 import { BMI_BAND_LABEL, bmi, bmiBand } from "@/lib/body";
 import { muscleRecovery, readyCount, recoveryLine, weeklyReport } from "@/lib/recovery";
 import { detectIntent, MAX_MESSAGE_LENGTH, SUGGESTED_QUESTIONS, type RoziIntent } from "@/lib/rozi-chat";
+import { planWorkout, type RoziPlan } from "@/lib/rozi-plan";
+import { routinePlan } from "@/lib/pro-tracking";
+import { saveRoutine } from "@/lib/routines-store";
+import { getExerciseDefinition } from "@/lib/templates";
+import type { WorkoutSession } from "@/lib/types";
 
-interface Message { from: "me" | "rozi"; text: string; link?: { href: string; label: string }; tip?: boolean }
+interface Message { from: "me" | "rozi"; text: string; link?: { href: string; label: string }; tip?: boolean; plan?: RoziPlan }
 
 /**
  * Ask Rozi (version 0): questions answered from the person's own saved workouts on this device.
  * Nothing is sent anywhere and nothing is made up: with no data, Rozi says so.
  */
 export function RoziChatScreen() {
-  const { state, recordedSessions, currentDate } = useFitTrack();
+  const { state, recordedSessions, currentDate, planningProfile, upsertSession, isDemo, browserClient, setNotice } = useFitTrack();
+  const router = useRouter();
   const { plan, session: today } = useWorkoutDay(currentDate, DEFAULT_CHECK_IN);
   const name = state.profile.displayName;
   const [messages, setMessages] = useState<Message[]>([{ from: "rozi", text: `Hey ${name}! I’m Rozi. Ask me about your workouts, streak, progress or stretches — I answer from what you’ve logged.` }]);
@@ -32,8 +39,13 @@ export function RoziChatScreen() {
 
   const completed = recordedSessions.filter((item) => item.status === "completed" && item.date <= currentDate).sort((a, b) => a.date.localeCompare(b.date));
 
-  function answer(intent: RoziIntent): Message {
+  function answer(intent: RoziIntent, question: string): Message {
     switch (intent) {
+      case "PLAN_WORKOUT": {
+        const made = planWorkout(question, planningProfile);
+        if (!made) return { from: "rozi", text: "I couldn’t find moves for that with your equipment. Add equipment in Settings → Your plan, or try another body area.", link: { href: "/settings?section=plan", label: "Your plan" } };
+        return { from: "rozi", plan: made, text: `Here’s a ${made.routine.name.replace(" · by Rozi", "").toLowerCase()} for you — ${made.routine.exercises.length} moves, about ${made.minutes} minutes. ${made.note}` };
+      }
       case "HELLO": return { from: "rozi", text: `Hi ${name}! Try one of the questions below.` };
       case "TODAY_WORKOUT":
         if (today?.status === "completed") return { from: "rozi", text: `You already finished today’s ${today.plan.title}. Nice work!`, link: { href: "/today", label: "View session" } };
@@ -99,12 +111,29 @@ export function RoziChatScreen() {
     setDraft("");
     // A short "thinking" moment with Rozi, so the answer feels like a reply (the answer itself is instant).
     setThinking(true);
-    const reply = answer(detectIntent(question));
+    const reply = answer(detectIntent(question), question);
     window.setTimeout(() => { setMessages((current) => [...current, reply]); setThinking(false); }, 650);
+  }
+
+  /** Start Rozi's plan as today's workout (same rules as My routines). */
+  function startPlan(plan: RoziPlan) {
+    const today = sessionForDate(state, currentDate);
+    if (today && today.status !== "planned") { setNotice(today.status === "completed" ? "You already trained today. Save it as a routine for another day." : "A workout is already in progress today."); router.push("/today"); return; }
+    const session: WorkoutSession = { id: today?.id ?? (state.mode === "demo" ? `demo-${currentDate}-planned` : crypto.randomUUID()), date: currentDate, status: "planned", plan: routinePlan(plan.routine, currentDate), exerciseLogs: [] };
+    void upsertSession(session);
+    router.push("/today");
+  }
+
+  async function savePlan(plan: RoziPlan) {
+    try {
+      const saved = await saveRoutine(isDemo ? null : browserClient, { ...plan.routine, id: `local-${Date.now()}` });
+      setNotice(`Saved “${saved.name}” to My routines.`);
+    } catch (error) { setNotice(error instanceof Error ? error.message : "That couldn’t be saved."); }
   }
 
   return (
     <section className="rozi-chat">
+      <button type="button" className="text-button rozi-back" onClick={() => (window.history.length > 1 ? router.back() : router.push("/"))}><ArrowLeft aria-hidden="true" /> Back</button>
       <div className="chat-hero" aria-hidden="true"><Image src="/rozi/chat-hello.webp" alt="" width={480} height={480} sizes="150px" priority data-motion="wave" /></div>
       <div className="chat-log" aria-live="polite">
         {messages.map((message, index) => (
@@ -113,6 +142,13 @@ export function RoziChatScreen() {
             {message.from === "rozi" && <img src={message.tip ? "/rozi/chat-idea.webp" : "/rozi/faces/v1/happy.webp"} alt="" width={34} height={34} className={`chat-face ${message.tip ? "tip" : ""}`} />}
             <div className="chat-bubble">
               <p>{message.text}</p>
+              {message.plan && <div className="rozi-plan">
+                <ol>{message.plan.routine.exercises.map((item) => <li key={item.exerciseId}><span>{getExerciseDefinition(item.exerciseId)?.name ?? "Exercise"}</span><small>{item.sets} × {item.reps}</small></li>)}</ol>
+                <div className="rozi-plan-actions">
+                  <button type="button" className="button button-primary small" onClick={() => startPlan(message.plan!)}><Play aria-hidden="true" /> Start now</button>
+                  <button type="button" className="button button-subtle small" onClick={() => void savePlan(message.plan!)}><Bookmark aria-hidden="true" /> Save as routine</button>
+                </div>
+              </div>}
               {message.link && <Link href={message.link.href} className="chat-link">{message.link.label} <ArrowRight aria-hidden="true" /></Link>}
             </div>
           </div>
@@ -121,7 +157,7 @@ export function RoziChatScreen() {
           <Image src="/rozi/chat-thinking.webp" alt="" width={480} height={480} sizes="46px" className="chat-face tip" />
           <div className="chat-bubble"><span className="typing-dots"><i /><i /><i /></span></div>
         </div>}
-        <div ref={end} />
+        <div ref={end} className="rozi-chat-end" />
       </div>
       <div className="chat-suggestions">{SUGGESTED_QUESTIONS.map((question) => <button key={question} type="button" className="chip" onClick={() => ask(question)}>{question}</button>)}</div>
       <form className="chat-input" onSubmit={(event) => { event.preventDefault(); ask(draft); }}>

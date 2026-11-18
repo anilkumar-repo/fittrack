@@ -64,6 +64,13 @@ function WorkoutDayView({ date, extraDay = false, startAtReview = false }: { dat
   /** True while a saved session is reopened to correct its entries. */
   const [editing, setEditing] = useState(false);
   const [sharing, setSharing] = useState(false);
+  // Start button: a small round button while you're at the top of the page, the full bar once you scroll down.
+  const [ctaWide, setCtaWide] = useState(false);
+  useEffect(() => {
+    const onScroll = () => setCtaWide(window.scrollY > 120);
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
   // "Post to feed?" after a finished workout (signed in, last week only); which days are already posted.
   const [posting, setPosting] = useState(false);
   const [postedDates, setPostedDates] = useState<Set<string>>(new Set());
@@ -284,7 +291,7 @@ function WorkoutDayView({ date, extraDay = false, startAtReview = false }: { dat
             <p>This workout is planned for <strong>{dateLabel(date)}</strong>. It opens for logging on that day, so it is saved on the right date.</p>
             <button className="button button-primary" onClick={() => router.push(state.profile.trainingDays.includes(weekdayOf(currentDate)) ? "/today" : "/today?extra=1")}>Train today instead <Play aria-hidden="true" /></button>
           </div>
-            : <div className="train-cta"><button className="button button-primary" onClick={() => { setFormError(""); setFlowStep("checkin"); }}>Start workout <Play aria-hidden="true" /></button></div>}
+            : <div className={`train-cta ${ctaWide ? "wide" : "compact"}`}><button className="button button-primary" aria-label="Start workout" onClick={() => { setFormError(""); setFlowStep("checkin"); }}><span className="train-cta-label">Start workout</span> <Play aria-hidden="true" /></button></div>}
         </>}
 
         {plan && preStart && displayFlowStep === "checkin" && <article className="panel flow-card">

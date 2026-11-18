@@ -130,7 +130,8 @@ export function validateRoutine(routine: Pick<Routine, "name" | "exercises">): s
   for (const item of routine.exercises) {
     if (!getExerciseDefinition(item.exerciseId)) errors.push("One exercise is no longer in the library.");
     if (!Number.isInteger(item.sets) || item.sets < 1 || item.sets > 10) errors.push("Sets must be 1–10.");
-    if (!/^\d{1,2}(–\d{1,2})?$/.test(item.reps)) errors.push("Reps look like 8 or 8–12.");
+    // Plain numbers ("8", "8–12"), or the move's own wording from the library ("20–30 sec", "8 each side").
+    if (!/^\d{1,2}(–\d{1,2})?$/.test(item.reps) && item.reps !== getExerciseDefinition(item.exerciseId)?.reps) errors.push("Reps look like 8 or 8–12.");
   }
   return [...new Set(errors)];
 }

@@ -166,12 +166,13 @@ export function daysLeft(challenge: Pick<Challenge, "endsOn">, today: string): n
 }
 
 /** "Today", "Yesterday", "3 days ago". */
-export function lastWorkoutLabel(lastWorkoutDate: string | null, today: string): string {
-  if (!lastWorkoutDate) return "No workouts yet";
+/** When someone last trained. `short` is for tight rows: "today", "yesterday", "9d ago", "no workouts yet". */
+export function lastWorkoutLabel(lastWorkoutDate: string | null, today: string, short = false): string {
+  if (!lastWorkoutDate) return short ? "no workouts yet" : "No workouts yet";
   const days = Math.round((Date.parse(`${today}T12:00:00Z`) - Date.parse(`${lastWorkoutDate}T12:00:00Z`)) / 86_400_000);
-  if (days <= 0) return "Trained today";
-  if (days === 1) return "Trained yesterday";
-  return `Last trained ${days} days ago`;
+  if (days <= 0) return short ? "today" : "Trained today";
+  if (days === 1) return short ? "yesterday" : "Trained yesterday";
+  return short ? `${days}d ago` : `Last trained ${days} days ago`;
 }
 
 export const NUDGE_MESSAGES = [

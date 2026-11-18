@@ -55,6 +55,10 @@ test("invite codes are 8 characters without look-alikes", () => {
 test("last workout labels read naturally", () => {
   assert.equal(lastWorkoutLabel(null, "2026-11-13"), "No workouts yet");
   assert.equal(lastWorkoutLabel("2026-11-13", "2026-11-13"), "Trained today");
+  assert.equal(lastWorkoutLabel("2026-11-13", "2026-11-13", true), "today");
+  assert.equal(lastWorkoutLabel("2026-11-12", "2026-11-13", true), "yesterday");
+  assert.equal(lastWorkoutLabel("2026-11-04", "2026-11-13", true), "9d ago");
+  assert.equal(lastWorkoutLabel(null, "2026-11-13", true), "no workouts yet");
   assert.equal(lastWorkoutLabel("2026-11-12", "2026-11-13"), "Trained yesterday");
   assert.equal(lastWorkoutLabel("2026-11-09", "2026-11-13"), "Last trained 4 days ago");
 });

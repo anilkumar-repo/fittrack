@@ -105,6 +105,9 @@ function mapProfile(row: DbRow, id: string, trainerRole: boolean, deadliftEnable
     ...(typeof row.share_lifts === "boolean" ? { shareLifts: row.share_lifts } : {}),
     ...(typeof row.buddy_anchor === "string" && row.buddy_anchor ? { buddyAnchor: row.buddy_anchor } : {}),
     ...(typeof row.light_week_start === "string" && row.light_week_start ? { lightWeekStart: row.light_week_start } : {}),
+    ...(typeof row.username === "string" && row.username ? { username: row.username } : {}),
+    ...(typeof row.bio === "string" && row.bio ? { bio: row.bio } : {}),
+    ...(typeof row.findable === "boolean" ? { findable: row.findable } : {}),
   };
 }
 

@@ -100,14 +100,14 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const missedDays = unexplainedMissedDays(state.profile, state.sessions, currentDate);
 
   const active = navItems.find((item) => item.href === pathname);
-  const pageTitle = active?.title ?? (pathname === "/sign-in" ? "Sign in" : pathname === "/streak" ? "Your streak" : pathname === "/install" ? "Install the app" : pathname === "/mobility" ? "Stretch & mobility" : pathname === "/recovery" ? "Recovery" : pathname === "/report" ? "Your week" : pathname === "/routines" ? "My routines" : pathname === "/clients" ? "My clients" : pathname === "/buddies" ? "Train together" : pathname === "/chats" ? "Chats" : pathname === "/feed" ? "Feed" : pathname?.startsWith("/chats/") ? "Chat" : pathname?.startsWith("/join/") ? "Add your trainer" : "RozFit");
+  const pageTitle = active?.title ?? (pathname === "/sign-in" ? "Sign in" : pathname === "/streak" ? "Your streak" : pathname === "/install" ? "Install the app" : pathname === "/mobility" ? "Stretch & mobility" : pathname === "/recovery" ? "Recovery" : pathname === "/report" ? "Your week" : pathname === "/routines" ? "My routines" : pathname === "/clients" ? "My clients" : pathname === "/buddies" ? "Train together" : pathname === "/chats" ? "Chats" : pathname === "/feed" ? "Feed" : pathname === "/discover" ? "Find friends" : pathname?.startsWith("/people/") ? "Profile" : pathname?.startsWith("/chats/") ? "Chat" : pathname?.startsWith("/join/") ? "Add your trainer" : "RozFit");
   const dueToday = state.profile.trainingDays.includes(weekdayOf(currentDate)) || Boolean(sessionForDate(state, currentDate));
   const saveLabel = isDemo
     ? accountLoading ? "Loading your account…" : "Saved on this device"
     : savingSession ? "Saving workout…" : saveError ? "Sync needs attention" : "Synced to your account";
 
   return (
-    <div className="app-shell">
+    <div className={`app-shell ${pathname === "/rozi" ? "rozi-mode" : ""}`}>
       {missedDays.length > 0 && <MissedDayPrompt dates={missedDays} />}
       <TourGuide blocked={missedDays.length > 0} />
       <LevelChangePopup />
@@ -167,7 +167,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       {/* Phone navigation: a floating glass pill for the main pages, and a round glass button for Settings. */}
       <nav className="mobile-nav" aria-label="Mobile navigation">
         <div className="dock-pill">{navItems.filter((item) => DOCK_HREFS.includes(item.href)).map((item) => {
-          const on = active?.href === item.href || (item.href === "/profile" && (pathname === "/settings" || pathname === "/library")) || (item.href === "/friends" && (pathname?.startsWith("/chats") === true || pathname === "/buddies" || pathname === "/feed"));
+          const on = active?.href === item.href || (item.href === "/profile" && (pathname === "/settings" || pathname === "/library")) || (item.href === "/friends" && (pathname?.startsWith("/chats") === true || pathname === "/buddies" || pathname === "/feed" || pathname === "/discover" || pathname?.startsWith("/people/") === true));
           return <Link key={item.href} href={item.href} className={on ? "active" : ""} aria-label={item.label} aria-current={on ? "page" : undefined}><Icon>{item.href === "/profile" ? <Avatar value={state.profile.avatar} name={state.profile.displayName} size={24} className="dock-avatar" /> : <item.icon aria-hidden="true" strokeWidth={1.8} />}</Icon><small>{item.shortLabel}</small>{item.href === "/today" && dueToday && active?.href !== "/today" && <span className="dock-dot" aria-hidden="true" />}{item.href === "/friends" && unreadChats > 0 && <span className="dock-dot chat" aria-hidden="true" />}</Link>;
         })}</div>
         <Link href="/rozi" className={`dock-round dock-rozi ${active?.href === "/rozi" ? "active" : ""}`} aria-label="Ask Rozi" aria-current={active?.href === "/rozi" ? "page" : undefined}>
