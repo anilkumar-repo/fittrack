@@ -5,7 +5,7 @@ import type { BodyWeightEntry, EquipmentKey, ExerciseLog, FitTrackState, MissedR
 import { createExerciseLog, normalizeWorkoutSession, persistWorkoutSession, type WorkoutPersistencePort } from "./workout-tracking";
 import { DEFAULT_TRAINER_RULE_SETTINGS, normalizeTrainerRuleSettings, validateTrainerRuleSettings } from "./trainer-rules";
 import { EQUIPMENT_OPTIONS } from "./templates";
-import { FOCUS_OPTIONS, GYM_OPTIONS, type FocusArea, type GymType } from "./onboarding";
+import { ACTIVITY_IDS, FOCUS_OPTIONS, GYM_OPTIONS, type DailyActivity, type FocusArea, type GymType } from "./onboarding";
 import { readShares, type TrainerShares } from "./trainers";
 
 const FOCUS_IDS = new Set<string>(FOCUS_OPTIONS.map((option) => option.id));
@@ -98,10 +98,12 @@ function mapProfile(row: DbRow, id: string, trainerRole: boolean, deadliftEnable
     ...(typeof row.avatar === "string" && row.avatar ? { avatar: row.avatar } : {}),
     ...(row.height_cm !== null && row.height_cm !== undefined ? { heightCm: Number(row.height_cm) } : {}),
     ...(row.birth_year !== null && row.birth_year !== undefined ? { birthYear: Number(row.birth_year) } : {}),
+    ...(typeof row.birth_date === "string" && row.birth_date ? { birthDate: row.birth_date.slice(0, 10) } : {}),
     ...(row.sex === "female" || row.sex === "male" || row.sex === "other" ? { sex: row.sex } : {}),
     ...(typeof row.why === "string" && row.why ? { why: row.why } : {}),
     ...(typeof row.focus_area === "string" && FOCUS_IDS.has(row.focus_area) ? { focusArea: row.focus_area as FocusArea } : {}),
     ...(typeof row.gym_type === "string" && GYM_IDS.has(row.gym_type) ? { gymType: row.gym_type as GymType } : {}),
+    ...(typeof row.daily_activity === "string" && ACTIVITY_IDS.has(row.daily_activity) ? { dailyActivity: row.daily_activity as DailyActivity } : {}),
     ...(typeof row.share_lifts === "boolean" ? { shareLifts: row.share_lifts } : {}),
     ...(typeof row.buddy_anchor === "string" && row.buddy_anchor ? { buddyAnchor: row.buddy_anchor } : {}),
     ...(typeof row.light_week_start === "string" && row.light_week_start ? { lightWeekStart: row.light_week_start } : {}),
@@ -470,12 +472,14 @@ export async function saveCloudProfile(client: SupabaseClient, profile: Profile)
     ...(profile.focusArea ? { focus_area: profile.focusArea } : {}),
     ...(profile.gymType ? { gym_type: profile.gymType } : {}),
     ...(typeof profile.shareLifts === "boolean" ? { share_lifts: profile.shareLifts } : {}),
+    ...(profile.birthDate ? { birth_date: profile.birthDate } : {}),
+    ...(profile.dailyActivity ? { daily_activity: profile.dailyActivity } : {}),
   };
   const { error } = await client.from("profiles").upsert(row, { onConflict: "id" });
-  // Before a migration adds the newer optional columns (focus_area, gym_type, share_lifts), save everything else rather than fail.
-  if (error && (error.code === "PGRST204" || error.code === "42703") && (row.focus_area || row.gym_type || row.share_lifts !== undefined)) {
-    const { focus_area: _focus, gym_type: _gym, share_lifts: _share, ...rest } = row;
-    void _focus; void _gym; void _share;
+  // Before a migration adds the newer optional columns (focus_area, gym_type, share_lifts, birth_date, daily_activity), save everything else rather than fail.
+  if (error && (error.code === "PGRST204" || error.code === "42703") && (row.focus_area || row.gym_type || row.share_lifts !== undefined || row.birth_date || row.daily_activity)) {
+    const { focus_area: _focus, gym_type: _gym, share_lifts: _share, birth_date: _birthDate, daily_activity: _activity, ...rest } = row;
+    void _focus; void _gym; void _share; void _birthDate; void _activity;
     const { error: retryError } = await client.from("profiles").upsert(rest, { onConflict: "id" });
     if (retryError) throw retryError;
     return;

@@ -10,10 +10,13 @@ export const GLASS_ML = 250;
 export const BOTTLE_ML = 500;
 export const WATER_DAY = { startHour: 8, endHour: 21 } as const;
 
-/** Daily water target in ml: 35 ml per kg (clamped 1.8–4 L), plus 500 ml on a workout day. Rounded to 50 ml. */
-export function waterTargetMl(weightKg: number | null, workoutDay: boolean): number {
+/**
+ * Daily water target in ml: 35 ml per kg (clamped 1.8–4 L), plus 500 ml on a workout day, plus `activeMl` for an
+ * active day job (0 / 250 / 500 from the "How active is your typical day?" answer). Rounded to 50 ml.
+ */
+export function waterTargetMl(weightKg: number | null, workoutDay: boolean, activeMl = 0): number {
   const base = weightKg ? Math.min(4000, Math.max(1800, weightKg * 35)) : 2200;
-  return Math.round((base + (workoutDay ? 500 : 0)) / 50) * 50;
+  return Math.round((base + (workoutDay ? 500 : 0) + Math.max(0, Math.min(500, activeMl))) / 50) * 50;
 }
 
 /** How much should be in by this hour (straight line from 8:00 to 21:00). */

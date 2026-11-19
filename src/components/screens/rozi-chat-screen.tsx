@@ -19,9 +19,10 @@ import { routinePlan } from "@/lib/pro-tracking";
 import { saveRoutine } from "@/lib/routines-store";
 import { getExerciseDefinition } from "@/lib/templates";
 import type { WorkoutSession } from "@/lib/types";
-import { isAdult } from "@/lib/discover";
-import type { RoziCard } from "@/lib/rozi-ai/cards";
-import { askRoziAi, chatHistory, readRoziAiChoice, ROZI_AI_CHOICE_EVENT, saveRoziAiChoice, type RoziAiChoice } from "@/lib/rozi-ai/client";
+import { isAdultOn } from "@/lib/discover";
+import { swapCard, type RoziCard } from "@/lib/rozi-ai/cards";
+import { swapSuggestion, SWAP_BLOCK_TEXT } from "@/lib/exercise-swap";
+import { askRoziAi, readRoziAiChoice, ROZI_AI_CHOICE_EVENT, saveRoziAiChoice, type RoziAiChoice } from "@/lib/rozi-ai/client";
 import { RoziCards } from "@/components/app/rozi-cards";
 import { RoziHistorySheet } from "@/components/app/rozi-history-sheet";
 import { loadConversation, saveReply, type RoziStoredMessage } from "@/lib/rozi-ai/history";
@@ -64,7 +65,7 @@ export function RoziChatScreen() {
     window.addEventListener(ROZI_AI_CHOICE_EVENT, sync);
     return () => { window.clearTimeout(timer); window.removeEventListener(ROZI_AI_CHOICE_EVENT, sync); };
   }, []);
-  const canUseAi = !isDemo && Boolean(browserClient) && isAdult(state.profile.birthYear, Number(currentDate.slice(0, 4)));
+  const canUseAi = !isDemo && Boolean(browserClient) && isAdultOn(state.profile, currentDate);
   const aiOn = canUseAi && aiChoice === "on";
   const offerAi = canUseAi && choiceRead && aiChoice === null;
 
@@ -76,6 +77,18 @@ export function RoziChatScreen() {
         const made = planWorkout(question, planningProfile);
         if (!made) return { from: "rozi", text: "I couldn’t find moves for that with your equipment. Add equipment in Settings → Your plan, or try another body area.", link: { href: "/settings?section=plan", label: "Your plan" } };
         return { from: "rozi", plan: made, text: `Here’s a ${made.routine.name.replace(" · by Rozi", "").toLowerCase()} for you — ${made.routine.exercises.length} moves, about ${made.minutes} minutes. ${made.note}` };
+      }
+      case "SWAP_EXERCISE": {
+        // "replace squats with lunges": the part after "with/for/to" is the replacement.
+        const [, out, wanted] = question.match(/^(.*?)\b(?:with|for|to)\b(.*)$/i) ?? [null, question, ""];
+        const suggestion = swapSuggestion(today, plan, planningProfile, { exercise: out, replacement: wanted || undefined });
+        if (suggestion.blocked === "rest-day") return { from: "rozi", text: "Today is a rest day, so there's nothing to swap. You can still train if you like.", link: { href: "/today?extra=1", label: "Train today anyway" } };
+        if (suggestion.blocked === "completed") return { from: "rozi", text: "Today's workout is finished, so it stays as you did it. Your next one can be changed before you start.", link: { href: "/today", label: "View session" } };
+        if (suggestion.blocked) return { from: "rozi", text: SWAP_BLOCK_TEXT[suggestion.blocked], cards: [swapCard(currentDate, { ...suggestion, from: null })] };
+        const notAllowed = suggestion.replacementNotAllowed ? ` ${suggestion.replacementNotAllowed} needs equipment or a trainer approval you don't have set, so here are close matches.` : "";
+        return { from: "rozi", cards: [swapCard(currentDate, suggestion)], text: suggestion.from
+          ? `Sure! Pick what to do instead of ${suggestion.from.name} — the sets and reps stay the same.${notAllowed}`
+          : "Sure — you can swap any exercise. Tap Swap next to the one you want to change." };
       }
       case "HELLO": return { from: "rozi", text: `Hi ${name}! Try one of the questions below.` };
       case "TODAY_WORKOUT":
@@ -138,7 +151,6 @@ export function RoziChatScreen() {
   function ask(text: string) {
     const question = text.trim().slice(0, MAX_MESSAGE_LENGTH);
     if (!question || thinking) return;
-    const history = chatHistory(messages.slice(1));
     setMessages((current) => [...current, { from: "me", text: question }]);
     setDraft("");
     setThinking(true);
@@ -149,7 +161,7 @@ export function RoziChatScreen() {
       return;
     }
     const client = browserClient;
-    void askRoziAi(client, question, history, fetch, conversationId).then((result) => {
+    void askRoziAi(client, question, fetch, conversationId).then((result) => {
       let reply: Message;
       if (result.conversationId) setConversationId(result.conversationId);
       if (result.ok) {

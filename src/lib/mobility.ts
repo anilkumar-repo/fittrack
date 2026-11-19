@@ -131,6 +131,8 @@ export interface DaySuggestionInput {
   recentMissedReason?: string | null;
   /** The last workout reported discomfort or pain. */
   discomfort?: boolean;
+  /** "Mostly seated" in a typical day (onboarding): afternoons get a sitting reset. */
+  seatedDay?: boolean;
 }
 
 /** "Mobility of the day" on Home: knee/pain care first, then travel, soreness, rest-day and evening picks. */
@@ -141,6 +143,7 @@ export function suggestionForDay(input: DaySuggestionInput): { routine: Mobility
   if (input.recentMissedReason === "sore" || input.recentMissedReason === "unwell") return pick("breathing-and-ribs", "Feeling sore or run-down? Breathe and loosen up gently.");
   if (input.restDay) return input.hour < 14 ? pick("morning-wake-up", "Rest day — a few minutes of mobility keeps you loose.") : pick("posture-and-pelvis-reset", "Rest day — undo a day of sitting.");
   if (input.hour >= 20) return pick("breathing-and-ribs", "Wind down before bed.");
+  if (input.seatedDay && input.hour >= 12) return pick("posture-and-pelvis-reset", "You sit most of the day — a few minutes undoes the stiffness.");
   return null;
 }
 

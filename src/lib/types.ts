@@ -41,11 +41,15 @@ export interface Profile {
   /** Body stats from Get started (for BMI and targets). Weight lives in body-weight entries. */
   heightCm?: number;
   birthYear?: number;
+  /** Optional full date of birth (YYYY-MM-DD). Confirms 18+ when the birth year alone can't (see isAdultOn). */
+  birthDate?: string;
   sex?: "female" | "male" | "other";
   /** Why the person started; quoted in comeback reminders. */
   why?: string;
   /** Optional muscle group to give a little extra attention ("balanced" = none). */
   focusArea?: import("./onboarding").FocusArea;
+  /** How active a typical day is, outside workouts (onboarding question; see onboarding.ts ACTIVITY_OPTIONS). */
+  dailyActivity?: import("./onboarding").DailyActivity;
   /** Where the person usually trains; sets the starting equipment list. */
   gymType?: import("./onboarding").GymType;
   /**

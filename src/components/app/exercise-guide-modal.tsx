@@ -2,9 +2,8 @@
 
 import { useScrollLock } from "./use-scroll-lock";
 import { exerciseEquipmentIsAvailable, getExerciseReferenceInstructions, getSafeExerciseAlternatives, isDeadliftVariation } from "@/lib/exercise-library";
-import { deadliftAllowedForPlan, preserveOriginalPlan } from "@/lib/planner";
+import { deadliftAllowedForPlan } from "@/lib/planner";
 import { getExerciseDefinition } from "@/lib/templates";
-import { DEFAULT_TRAINER_RULE_SETTINGS, profileWithTrainerEquipment } from "@/lib/trainer-rules";
 import type { ExerciseDefinition, WorkoutPlan, WorkoutSession } from "@/lib/types";
 import { useEffect, useState } from "react";
 import { Clock, Dumbbell, Play, Repeat, ShieldCheck, X } from "lucide-react";
@@ -13,8 +12,9 @@ import { REGION_LABELS, regionsForExercises } from "@/lib/figure";
 import { TurnableFigure } from "./turnable-figure";
 import { ExerciseLeaderboard } from "./exercise-leaderboard";
 import { MuscleThumb } from "./muscle-thumb";
-import { sessionForDate, useFitTrack } from "./fit-track-provider";
+import { useFitTrack } from "./fit-track-provider";
 import { SheetGrip } from "@/components/ui/sheet-grip";
+import { useExerciseSwap } from "./swap-sheet";
 import { ExerciseStats } from "./exercise-stats";
 
 /** The library guide for an exercise, keeping the sets, reps, and reasons from the plan it was opened from. */
@@ -43,7 +43,7 @@ interface ExerciseGuideModalProps {
 }
 
 export function ExerciseGuideModal({ exercise, workout, onOpen, onClose }: ExerciseGuideModalProps) {
-  const { state, getState, upsertSession, setNotice, figure } = useFitTrack();
+  const { state, figure } = useFitTrack();
   useScrollLock();
   const todaySession = workout?.session;
   const plan = workout?.plan ?? null;
@@ -59,40 +59,11 @@ export function ExerciseGuideModal({ exercise, workout, onOpen, onClose }: Exerc
   const instructions = getExerciseReferenceInstructions(exercise);
   const demoVideo = getDemoVideoLink(exercise);
 
+  const swapExercise = useExerciseSwap(workout?.date ?? "");
   function applyAlternative(alternativeId: string) {
     if (!workout || !plan) return;
-    const currentState = getState();
-    const activeSession = sessionForDate(currentState, workout.date);
-    if (!activeSession || activeSession.status !== "planned") return;
-    const source = plan.exercises.find((item) => item.id === exercise.id);
-    if (!source) return;
-    const effectiveProfile = profileWithTrainerEquipment(currentState.profile, currentState.trainerRuleSettings ?? DEFAULT_TRAINER_RULE_SETTINGS);
-    const alternative = getSafeExerciseAlternatives(source, effectiveProfile, plan.exercises.filter((item) => item.id !== source.id))
-      .find((item) => item.id === alternativeId);
-    if (!alternative) {
-      setNotice("That alternative is not available with the current equipment or session rules.");
-      return;
-    }
-
-    const basePlan = preserveOriginalPlan(plan, activeSession.plan);
-    const reason = `${alternative.name} was selected as an equipment-checked alternative to ${source.name}.`;
-    const replacement: ExerciseDefinition = {
-      ...alternative,
-      sets: source.sets,
-      reps: source.reps,
-      restSeconds: source.restSeconds,
-      substitutedFor: source.substitutedFor ?? source.id,
-      manualOverride: true,
-      selectionReason: reason,
-    };
-    const updatedPlan = {
-      ...basePlan,
-      exercises: basePlan.exercises.map((item) => item.id === source.id ? replacement : item),
-      generationReasons: [...basePlan.generationReasons, reason],
-    };
-    void upsertSession({ ...activeSession, plan: updatedPlan });
-    onClose();
-    setNotice(`${alternative.name} is saved in this workout. The original template remains in its history.`);
+    const alternative = alternatives.find((item) => item.id === alternativeId);
+    if (swapExercise(exercise.id, alternativeId, plan, alternative ? `${alternative.name} was selected as an equipment-checked alternative to ${exercise.name}.` : undefined)) onClose();
   }
 
   const ready = exerciseEquipmentIsAvailable(exercise, state.profile);

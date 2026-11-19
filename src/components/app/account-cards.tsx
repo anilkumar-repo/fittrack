@@ -7,7 +7,7 @@ import { Download, Trash2 } from "lucide-react";
 import { buildDataExport, isCompleteInviteCode, normalizeInviteCode } from "@/lib/account-data";
 import { dateLabel } from "@/lib/dates";
 import { sharesLifts } from "@/lib/friends";
-import { isAdult } from "@/lib/discover";
+import { isAdultOn, needsBirthDate } from "@/lib/discover";
 import { readRoziAiChoice, ROZI_AI_CHOICE_EVENT, saveRoziAiChoice, type RoziAiChoice } from "@/lib/rozi-ai/client";
 import { deleteAllConversations } from "@/lib/rozi-ai/history";
 import { hasSupabaseConfig } from "@/lib/supabase-browser";
@@ -355,7 +355,7 @@ export function RoziAiCard() {
     window.addEventListener(ROZI_AI_CHOICE_EVENT, sync);
     return () => { window.clearTimeout(timer); window.removeEventListener(ROZI_AI_CHOICE_EVENT, sync); };
   }, []);
-  const adult = isAdult(state.profile.birthYear, Number(currentDate.slice(0, 4)));
+  const adult = isAdultOn(state.profile, currentDate);
   const available = !isDemo && Boolean(browserClient) && adult;
   const on = available && choice === "on";
   return (
@@ -371,7 +371,7 @@ export function RoziAiCard() {
           <button type="button" className="text-button" onClick={() => setConfirmDelete(false)}>Cancel</button></div>
         : <button type="button" className="text-button danger-text" onClick={() => setConfirmDelete(true)}><Trash2 aria-hidden="true" className="inline-icon" /> Delete all Rozi chats</button>)}
       {isDemo && <p className="card-note">Sign in to use Rozi AI.</p>}
-      {!isDemo && !adult && <p className="card-note">Rozi AI is for adults (18+). {typeof state.profile.birthYear === "number" ? "" : "Add your birth year in Settings → Your plan."}</p>}
+      {!isDemo && !adult && <p className="card-note">Rozi AI is for adults (18+). {needsBirthDate(state.profile, currentDate) ? "Add your date of birth in Settings → Your plan to confirm." : typeof state.profile.birthYear === "number" ? "" : "Add your age or date of birth in Settings → Your plan."}</p>}
     </article>
   );
 }

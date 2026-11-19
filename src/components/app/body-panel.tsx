@@ -7,6 +7,7 @@ import { upsertBodyWeightEntry } from "@/lib/progress";
 import { saveCloudBodyWeightEntry } from "@/lib/supabase-repository";
 import { BmiCard, BodyFields, bodyDraftValid, draftStats, draftWhy, WhyFields, whyDraftValid, type BodyDraft } from "./body-form";
 import { useFitTrack } from "./fit-track-provider";
+import { needsBirthDate, validBirthDate } from "@/lib/discover";
 
 /** Progress: BMI, healthy range, target, and change since the first weight. */
 export function BodyPanel() {
@@ -61,7 +62,9 @@ export function BodySettings() {
       const current = getState();
       updateState({ ...current, bodyWeightEntries: upsertBodyWeightEntry(current.bodyWeightEntries, entry) });
     }
-    updateProfile({ heightCm: stats.heightCm, birthYear: Number(currentDate.slice(0, 4)) - stats.age, sex: stats.sex, why: draftWhy(draft) });
+    // With a full date of birth saved, the birth year always follows it (the database does the same).
+    const birthYear = profile.birthDate ? Number(profile.birthDate.slice(0, 4)) : Number(currentDate.slice(0, 4)) - stats.age;
+    updateProfile({ heightCm: stats.heightCm, birthYear, sex: stats.sex, why: draftWhy(draft) });
     setBusy(false);
     setEditing(false);
   }
@@ -86,5 +89,28 @@ export function BodySettings() {
         <button type="button" className="button button-subtle" onClick={open}>Edit body and why</button>
       </>}
     </div>
+  );
+}
+
+/**
+ * Settings: optional full date of birth. Only it can confirm 18+ for someone whose birth year is exactly 18 years ago
+ * (Rozi AI and "Let people find me" are for adults). Saving it also sets the birth year.
+ */
+export function BirthDateSetting() {
+  const { state, updateProfile, currentDate } = useFitTrack();
+  const saved = state.profile.birthDate ?? "";
+  const [value, setValue] = useState(saved);
+  const valid = validBirthDate(value);
+  const needed = needsBirthDate(state.profile, currentDate);
+  return (
+    <label className="settings-field birth-date-field">
+      <span>Date of birth <small>(optional)</small></span>
+      <small className="field-hint">{needed ? "Your age alone can’t confirm you’re 18 yet — add your date of birth to use Rozi AI and Find friends." : "Only used to confirm you’re 18+ for Rozi AI and Find friends. Never shown to anyone."}</small>
+      <div className="birth-date-row">
+        <input type="date" value={value} min="1900-01-01" max={currentDate} onChange={(event) => setValue(event.target.value)} aria-label="Date of birth" />
+        <button type="button" className="button button-subtle" disabled={!valid || value === saved || value > currentDate}
+          onClick={() => { if (valid && valid <= currentDate) updateProfile({ birthDate: valid, birthYear: Number(valid.slice(0, 4)) }); }}>Save</button>
+      </div>
+    </label>
   );
 }

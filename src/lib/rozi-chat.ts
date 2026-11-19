@@ -5,10 +5,13 @@
  */
 export type RoziIntent =
   | "TODAY_WORKOUT" | "NEXT_WORKOUT" | "LAST_WORKOUT" | "WEEKLY_WORKOUT_COUNT" | "STREAK_STATUS"
-  | "PROGRESS_CHECK" | "MOBILITY_RECOMMENDATION" | "WATER" | "BODY_GOAL_PROGRESS" | "WEEKLY_REPORT" | "MUSCLE_RECOVERY" | "PLAN_WORKOUT" | "HELLO" | "UNKNOWN";
+  | "PROGRESS_CHECK" | "MOBILITY_RECOMMENDATION" | "WATER" | "BODY_GOAL_PROGRESS" | "WEEKLY_REPORT" | "MUSCLE_RECOVERY" | "PLAN_WORKOUT" | "SWAP_EXERCISE" | "HELLO" | "UNKNOWN";
 
 // Checked in order: the first intent with a matching phrase wins, so more specific ones come first.
 const DICTIONARY: Array<[RoziIntent, RegExp]> = [
+  // "Swap the bench press", "replace squats with lunges", "I want to customise my workout", "I don't like this exercise".
+  // Before PLAN_WORKOUT: "I want to customise the workout" is about changing today's, not planning a new one.
+  ["SWAP_EXERCISE", /\b(swap\w*|replac\w*|switch\w*|substitut\w*|customi[sz]\w*|instead of|different (exercise|move)|don'?t like (this|that|the)|change (my|the|this|that|an?) (exercise|move|workout))\b/],
   // "Plan me a leg workout", "give me a 30 min chest workout", "build a push day", "arm day".
   ["PLAN_WORKOUT", /^(?!.*\brest\b)(?:.*\b(plan|make|build|create|give|suggest|design|write|need|want)\b.*\b(workout|session|routine|day|training)\b|\b(leg|legs|chest|back|arm|arms|shoulder|shoulders|push|pull|glute|glutes|core|abs|upper ?body|lower ?body|full ?body)\s+(day|workout|session|routine)\b)/],
   ["WEEKLY_REPORT", /\b(summar|report|recap|review)\w*\b.*\bweek\b|\bmy week\b/],

@@ -13,7 +13,7 @@ export type RoziAiIntent =
   | "TODAY_WORKOUT" | "NEXT_WORKOUT" | "LAST_WORKOUT" | "WORKOUT_HISTORY" | "WEEKLY_WORKOUT_COUNT" | "MONTHLY_WORKOUT_COUNT"
   | "MUSCLE_HISTORY" | "MUSCLE_RECOVERY" | "PROGRESS_CHECK" | "EXERCISE_PROGRESS" | "WORKOUT_REASON" | "EXERCISE_EXPLANATION"
   | "BODY_GOAL_PROGRESS" | "WEEKLY_REPORT" | "STREAK_STATUS" | "ACHIEVEMENT_STATUS" | "MOBILITY_RECOMMENDATION" | "PLAN_WORKOUT"
-  | "PROFILE" | "GENERAL_FITNESS_QUESTION";
+  | "PROFILE" | "EXERCISE_SWAP" | "GENERAL_FITNESS_QUESTION";
 
 export function intentOf(tool: string | undefined, args: Record<string, unknown> = {}): RoziAiIntent {
   switch (tool) {
@@ -35,6 +35,7 @@ export function intentOf(tool: string | undefined, args: Record<string, unknown>
     case "get_achievements": return "ACHIEVEMENT_STATUS";
     case "plan_custom_workout": return "PLAN_WORKOUT";
     case "get_my_profile": return "PROFILE";
+    case "suggest_exercise_swap": return "EXERCISE_SWAP";
     default: return "GENERAL_FITNESS_QUESTION";
   }
 }

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Calculator, Check } from "lucide-react";
+import { ArrowLeftRight, Calculator, Check } from "lucide-react";
 import { shortDate } from "@/lib/dates";
 import { setKind, setLabels, SET_KINDS } from "@/lib/pro-tracking";
 import { PlatesSheet } from "./plates-sheet";
@@ -23,12 +23,14 @@ interface ExerciseLogCardProps {
   onOpenGuide: () => void;
   /** Called when a set is ticked done, so the rest timer can start. */
   onSetCompleted: () => void;
+  /** Opens "Swap exercise" (shown until a set of this exercise is done). */
+  onSwap?: () => void;
 }
 
 type SetLog = ExerciseLog["sets"][number];
 
 /** One exercise in the workout logger: what to do, what happened last time, and the sets to tick off. */
-export function ExerciseLogCard({ exercise, index, log, substitutedForName, last, unit, onUpdate, onAddSet, onOpenGuide, onSetCompleted }: ExerciseLogCardProps) {
+export function ExerciseLogCard({ exercise, index, log, substitutedForName, last, unit, onUpdate, onAddSet, onOpenGuide, onSetCompleted, onSwap }: ExerciseLogCardProps) {
   const skipped = log.status === "skipped";
   const hintLoad = lastLoadKg(last);
   const labels = setLabels(log.sets);
@@ -100,10 +102,19 @@ export function ExerciseLogCard({ exercise, index, log, substitutedForName, last
       <div className="pro-set-actions">
         <button className="add-set" disabled={skipped} onClick={onAddSet}>＋ Add set</button>
         <button type="button" className="text-button pro-plates-open" disabled={skipped} onClick={() => setPlates(true)}><Calculator aria-hidden="true" /> Warm-up & plates</button>
+        {onSwap && !log.sets.some((set) => set.completed) && <button type="button" className="text-button pro-plates-open" onClick={onSwap} aria-label={`Swap ${exercise.name} for another exercise`}><ArrowLeftRight aria-hidden="true" /> Swap</button>}
       </div>
       {plates && <PlatesSheet exerciseName={exercise.name} barbell={/barbell|smith/i.test(`${exercise.equipment} ${exercise.name}`)} unit={unit}
         workKg={log.sets.find((item) => setKind(item) !== "warmup" && item.loadKg)?.loadKg ?? hintLoad}
-        onAddWarmUps={(sets) => onUpdate((current) => ({ ...current, sets: [...sets.map((item) => ({ plannedReps: item.reps, actualReps: null, loadKg: item.loadKg, completed: false, extra: true, kind: "warmup" as const })), ...current.sets.filter((item) => !(setKind(item) === "warmup" && !item.completed))] }))}
+        onConfirm={(kg, warmUps) => onUpdate((current) => ({
+          ...current,
+          sets: [
+            ...warmUps.map((item) => ({ plannedReps: item.reps, actualReps: null, loadKg: item.loadKg, completed: false, extra: true, kind: "warmup" as const })),
+            // Unfinished warm-ups are replaced by the new ones; working sets not done yet get the working weight.
+            ...current.sets.filter((item) => !(warmUps.length && setKind(item) === "warmup" && !item.completed))
+              .map((item) => (setKind(item) !== "warmup" && !item.completed ? { ...item, loadKg: kg } : item)),
+          ],
+        }))}
         onClose={() => setPlates(false)} />}
 
       <details className="exercise-more">

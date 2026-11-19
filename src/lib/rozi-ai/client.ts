@@ -6,7 +6,6 @@
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { RoziChatBody } from "./handler";
-import type { ChatLine } from "./prompt";
 
 export const ROZI_AI_CHOICE_KEY = "rozfit-rozi-ai";
 export const ROZI_AI_CHOICE_EVENT = "rozfit-rozi-ai-changed";
@@ -28,15 +27,10 @@ export function saveRoziAiChoice(choice: "on" | "off"): void {
   window.dispatchEvent(new CustomEvent(ROZI_AI_CHOICE_EVENT, { detail: choice }));
 }
 
-/** The last few chat lines to send with a question (text only — no cards, no ids). */
-export function chatHistory(lines: Array<{ from: "me" | "rozi"; text: string }>, max = 8): ChatLine[] {
-  return lines.filter((line) => line.text.trim()).slice(-max).map((line) => ({ from: line.from, text: line.text.slice(0, 600) }));
-}
-
 const fallback = (reason: Extract<RoziChatBody, { ok: false }>["reason"], message: string): RoziChatBody => ({ ok: false, reason, message, fallback: true });
 
 /** Asks Rozi's AI. Never throws: network trouble or an odd reply becomes a "fall back" result. */
-export async function askRoziAi(client: SupabaseClient, message: string, history: ChatLine[], fetcher: typeof fetch = fetch, conversationId: string | null = null): Promise<RoziChatBody> {
+export async function askRoziAi(client: SupabaseClient, message: string, fetcher: typeof fetch = fetch, conversationId: string | null = null): Promise<RoziChatBody> {
   let token: string | undefined;
   try {
     const { data } = await client.auth.getSession();
@@ -47,7 +41,8 @@ export async function askRoziAi(client: SupabaseClient, message: string, history
     const response = await fetcher("/api/rozi/chat", {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-      body: JSON.stringify({ message, history, consent: true, ...(conversationId ? { conversationId } : {}) }),
+      // No chat history is sent: the server reads earlier turns from the saved conversation itself.
+      body: JSON.stringify({ message, consent: true, ...(conversationId ? { conversationId } : {}) }),
       signal: AbortSignal.timeout(50_000),
     });
     const body = await response.json().catch(() => null) as RoziChatBody | null;

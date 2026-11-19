@@ -16,6 +16,16 @@ export const FOCUS_OPTIONS: Array<{ id: FocusArea; label: string; note: string; 
   { id: "core", label: "Core", note: "Abs and lower back", regions: ["core"] },
 ];
 
+/** "How active is your typical day?" (outside workouts). Used for the water target, stretch suggestions and Rozi. */
+export type DailyActivity = "seated" | "light" | "on_feet" | "active";
+export const ACTIVITY_OPTIONS: Array<{ id: DailyActivity; label: string; note: string; waterMl: number }> = [
+  { id: "seated", label: "Mostly seated", note: "Desk work, studying, driving", waterMl: 0 },
+  { id: "light", label: "Lightly active", note: "Some walking and standing", waterMl: 0 },
+  { id: "on_feet", label: "Often on my feet", note: "Teaching, retail, lots of walking", waterMl: 250 },
+  { id: "active", label: "Physically active work", note: "Construction, deliveries, farm work", waterMl: 500 },
+];
+export const ACTIVITY_IDS = new Set<string>(ACTIVITY_OPTIONS.map((option) => option.id));
+
 export function focusRegions(focus: FocusArea | undefined): BodyRegion[] {
   return FOCUS_OPTIONS.find((option) => option.id === focus)?.regions ?? [];
 }
