@@ -10,7 +10,8 @@ import { FIGURE_OPTIONS, type FigureChoice } from "@/lib/figure";
 import { GOAL_OPTIONS, goalOf, goalTitle } from "@/lib/program";
 import { LEVEL_OPTIONS, levelOf, levelTitle } from "@/lib/levels";
 import { bodyPlan, MIN_AGE, validBodyStats } from "@/lib/body";
-import { DID_YOU_KNOW, equipmentPicture, FOCUS_OPTIONS, GYM_OPTIONS, gymPicture, gymPreset, type FocusArea, type GymType } from "@/lib/onboarding";
+import { ACTIVITY_OPTIONS, DID_YOU_KNOW, equipmentPicture, FOCUS_OPTIONS, GYM_OPTIONS, gymPicture, gymPreset, type DailyActivity, type FocusArea, type GymType } from "@/lib/onboarding";
+import { haptic } from "@/lib/haptics";
 import { BmiCard, draftStats, draftWhy, EMPTY_BODY_DRAFT, WhyFields, whyDraftValid, type BodyDraft } from "./body-form";
 import { hasSupabaseConfig } from "@/lib/supabase-browser";
 import { EQUIPMENT_OPTIONS } from "@/lib/templates";
@@ -24,11 +25,11 @@ import { SignInForm } from "./sign-in-form";
 import { WheelPicker } from "@/components/ui/wheel-picker";
 import { RulerPicker } from "@/components/ui/ruler-picker";
 
-type Step = "hero" | "slides" | "name" | "height" | "weight" | "birth" | "stats" | "why" | "fact" | "level" | "goal" | "focus" | "figure"
+type Step = "hero" | "slides" | "name" | "height" | "weight" | "activity" | "birth" | "stats" | "why" | "fact" | "level" | "goal" | "focus" | "figure"
   | "days" | "length" | "gym" | "equipment" | "firstday" | "reminders" | "building" | "program" | "account";
-const BASE_QUESTIONS: Step[] = ["name", "height", "weight", "birth", "stats", "why", "fact", "level", "goal", "focus", "figure", "days", "length", "gym", "equipment", "firstday", "reminders", "building", "program"];
+const BASE_QUESTIONS: Step[] = ["name", "height", "weight", "activity", "birth", "stats", "why", "fact", "level", "goal", "focus", "figure", "days", "length", "gym", "equipment", "firstday", "reminders", "building", "program"];
 /** Steps that can be skipped with the top-right "Skip". */
-const SKIPPABLE = new Set<Step>(["fact", "focus", "figure", "gym", "equipment", "firstday", "reminders"]);
+const SKIPPABLE = new Set<Step>(["activity", "fact", "focus", "figure", "gym", "equipment", "firstday", "reminders"]);
 const LENGTHS = [
   { minutes: 30, title: "About 30 minutes", note: "Short and focused" },
   { minutes: 40, title: "About 40 minutes", note: "A steady, unhurried session", recommended: true },
@@ -60,6 +61,7 @@ export function Welcome() {
   const [body, setBody] = useState<BodyDraft>({ ...EMPTY_BODY_DRAFT, heightCm: "170", feet: "5", inches: "7", weight: "70", age: String(THIS_YEAR - 1995) });
   const [goalTouched, setGoalTouched] = useState(false);
   const [focus, setFocus] = useState<FocusArea>(state.profile.focusArea ?? "balanced");
+  const [activity, setActivity] = useState<DailyActivity | null>(state.profile.dailyActivity ?? null);
   const [gym, setGym] = useState<GymType | null>(state.profile.gymType ?? null);
   const [minutes, setMinutes] = useState(state.profile.preferredSessionMinutes);
   const [knowsEquipment, setKnowsEquipment] = useState(state.profile.equipmentAvailability === "verified");
@@ -73,7 +75,7 @@ export function Welcome() {
   const daysValid = trainingDaysValid(days);
   const daysHint = trainingDaysHint(days.length);
   const metric = body.unit === "metric";
-  const canContinue = step === "name" ? Boolean(name.trim()) : step === "stats" ? Boolean(plan) : step === "why" ? whyDraftValid(body) : step === "days" ? daysValid : step === "gym" ? Boolean(gym) : step === "building" ? built >= 100 : true;
+  const canContinue = step === "name" ? Boolean(name.trim()) : step === "stats" ? Boolean(plan) : step === "why" ? whyDraftValid(body) : step === "days" ? daysValid : step === "activity" ? Boolean(activity) : step === "gym" ? Boolean(gym) : step === "building" ? built >= 100 : true;
 
   // "Building your plan": a short progress animation, then on to the summary.
   useEffect(() => {
@@ -103,6 +105,7 @@ export function Welcome() {
       sex: bodyStats.sex,
       why: draftWhy(body),
       focusArea: focus,
+      ...(activity ? { dailyActivity: activity } : {}),
       ...(gym ? { gymType: gym } : {}),
       // The level starts with training (day one is set when setup finishes).
       levelSince: undefined,
@@ -260,6 +263,12 @@ export function Welcome() {
           {metric
             ? <RulerPicker key="kg" label="Weight in kilograms" min={30} max={200} step={0.5} major={5} unit="kg" value={Number(body.weight) || 70} onChange={(kg) => setBody((current) => ({ ...current, weight: String(kg) }))} />
             : <RulerPicker key="lb" label="Weight in pounds" min={66} max={440} step={1} major={10} unit="lb" value={Number(body.weight) || 154} onChange={(lb) => setBody((current) => ({ ...current, weight: String(lb) }))} />}
+        </>}
+
+        {step === "activity" && <>
+          <h1 id="onb-title">How active is your typical day?</h1>
+          <p className="onb-lead">Outside your workouts. It tunes your water target and stretch suggestions.</p>
+          <div className="onb-options" role="radiogroup" aria-label="Typical day">{ACTIVITY_OPTIONS.map((option) => <button key={option.id} type="button" role="radio" aria-checked={activity === option.id} className={`onb-option ${activity === option.id ? "selected" : ""}`} onClick={() => { haptic(); setActivity(option.id); }}><span><strong>{option.label}</strong><small>{option.note}</small></span><span className="onb-check">{activity === option.id && <Check aria-hidden="true" />}</span></button>)}</div>
         </>}
 
         {step === "birth" && <>

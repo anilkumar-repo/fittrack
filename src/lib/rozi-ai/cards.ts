@@ -4,8 +4,17 @@
 // card is real. The model's text explains them; the screen shows them (Stage 5).
 
 import type { RoziPlan } from "../rozi-plan.ts";
+import type { SwapSuggestion } from "../exercise-swap.ts";
 
 export interface CardLink { href: string; label: string }
+
+/**
+ * Card links only ever go to a page inside RozFit: "/today" yes; "//other.site", "/\\other.site", "https://…",
+ * "javascript:…" no. Cards are built by our own code, so this is defence in depth (and covers saved cards).
+ */
+export function isInAppLink(href: unknown): href is string {
+  return typeof href === "string" && /^\/(?![/\\])/.test(href) && !/[\u0000-\u001f]/.test(href);
+}
 
 export type RoziCard =
   | {
@@ -43,4 +52,25 @@ export type RoziCard =
     alternatives: Array<{ name: string; equipment: string }>;
   }
   | { type: "plan"; plan: RoziPlan }
+  /**
+   * Swap an exercise in a day's workout. With `from`: tap an option to use it instead (sets and reps stay). Without:
+   * the workout's exercises, each with a Swap button. The swap itself runs in the app (same rules as the Swap button).
+   */
+  | {
+    type: "swap";
+    date: string;
+    from: { id: string; name: string } | null;
+    options: Array<{ id: string; name: string; equipment: string }>;
+    exercises: Array<{ id: string; name: string }>;
+  }
   | { type: "stat"; title: string; value: string; detail: string; link?: CardLink };
+
+/** The swap card for a swap suggestion (shared by Rozi AI's tool and Rozi's on-phone answer). */
+export function swapCard(date: string, suggestion: SwapSuggestion): RoziCard {
+  return {
+    type: "swap", date,
+    from: suggestion.from ? { id: suggestion.from.id, name: suggestion.from.name } : null,
+    options: suggestion.options.map((item) => ({ id: item.id, name: item.name, equipment: item.equipment })),
+    exercises: suggestion.exercises.map((item) => ({ id: item.id, name: item.name })),
+  };
+}

@@ -70,6 +70,9 @@ test("history counts only what was really logged, and filters by muscle", () => 
   assert.equal(week.from, "2026-11-16");
   assert.equal(week.completed, 1);
   assert.equal(week.skipped, 1, "a skipped day is reported as skipped, not done");
+  const historyTool = ROZI_TOOLS.find((tool) => tool.name === "get_workout_history")!;
+  assert.match(JSON.stringify(historyTool.parameters), /this_month = from the 1st of the CURRENT month/, "periods are spelled out (benchmark: models picked last_month for 'this month')");
+  assert.equal(week.summary, "From Monday, November 16 to Wednesday, November 18: 1 workout completed, 0 partly done, 1 SKIPPED (missed).", "the counts in one plain sentence");
   const last = runRoziTool("get_workout_history", { period: "last_workout" }, ctx).result as { lastWorkout: { date: string; setsDone: number }; daysAgo: number };
   assert.equal(last.lastWorkout.date, "2026-11-16");
   assert.equal(last.lastWorkout.setsDone, 3);

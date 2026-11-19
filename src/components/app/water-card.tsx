@@ -1,5 +1,6 @@
 "use client";
 
+import { ACTIVITY_OPTIONS } from "@/lib/onboarding";
 import { useCallback, useEffect, useState } from "react";
 import { Droplets, Undo2 } from "lucide-react";
 import { BOTTLE_ML, GLASS_ML, waterMood, waterTargetMl, type WaterMood } from "@/lib/wellness";
@@ -39,7 +40,7 @@ export function WaterCard() {
 
   const latestWeight = [...state.bodyWeightEntries].sort((a, b) => a.measuredOn.localeCompare(b.measuredOn)).at(-1)?.weightKg ?? null;
   const workoutDay = state.profile.trainingDays.includes(weekdayOf(currentDate)) || sessionForDate(state, currentDate)?.status === "completed";
-  const target = waterTargetMl(latestWeight, workoutDay);
+  const target = waterTargetMl(latestWeight, workoutDay, ACTIVITY_OPTIONS.find((option) => option.id === state.profile.dailyActivity)?.waterMl ?? 0);
   const total = logs.reduce((sum, log) => sum + log.ml, 0);
   const mood = waterMood(total, target, hourIn(state.profile.timeZone));
   const share = Math.min(1, total / target);

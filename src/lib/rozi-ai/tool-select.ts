@@ -21,6 +21,7 @@ const GROUPS: Array<[RegExp, string[]]> = [
   [/\b(stretch\w*|mobility|flexib\w*|tight|stiff|warm[- ]?up|cool[- ]?down)\b/, ["get_mobility_suggestion"]],
   [/\b(plan me|make me|build me|create|design|give me|suggest)\b.*\b(workout|session|routine|day)\b|\b\d{2,3}\s?(min|mins|minute|minutes)\b|\b(leg|push|pull|arm|chest|back|shoulder|core|full body|upper body|lower body) day\b/, ["plan_custom_workout"]],
   [/\b(level|equipment|my plan|my goal|profile|settings|beginner|intermediate|advanced)\b/, ["get_my_profile"]],
+  [/\b(swap\w*|replac\w*|switch\w*|substitut\w*|customi[sz]\w*|instead|alternative\w*|different (exercise|move)|don'?t like|change (my|the|this|that|an?) (exercise|move|workout))\b/, ["suggest_exercise_swap", "get_workout_for_day"]],
 ];
 
 /** Greetings and thanks need no data, but Rozi may mention the plan: only the profile tool. */

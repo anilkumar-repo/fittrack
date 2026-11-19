@@ -1,18 +1,20 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import { haptic } from "@/lib/haptics";
 
 const TICK = 12;
 
 /**
  * A ruler you slide sideways (like the weight screen in the references): the big number shows the value
- * under the centre line. Steps of `step`; a long tick and a label every whole `major`.
+ * under the centre line. Steps of `step`; a long tick and a label every whole `major`. A light haptic tick each time
+ * a new step passes the line (Android vibration; iPhone with iOS 18+, see lib/haptics).
  */
 export function RulerPicker({ min, max, step, major, value, onChange, unit, label }: {
   min: number; max: number; step: number; major: number; value: number; onChange: (value: number) => void; unit: string; label: string;
 }) {
   const track = useRef<HTMLDivElement>(null);
-  const settle = useRef(0);
+  const lastTick = useRef<number | null>(null);
   const count = Math.round((max - min) / step);
   const clamp = (n: number) => Math.min(max, Math.max(min, n));
   const toIndex = (n: number) => Math.round((clamp(n) - min) / step);
@@ -26,14 +28,16 @@ export function RulerPicker({ min, max, step, major, value, onChange, unit, labe
   function onScroll() {
     const element = track.current;
     if (!element) return;
-    const next = Number(clamp(round(min + Math.round(element.scrollLeft / TICK) * step)).toFixed(2));
+    const at = Math.round(element.scrollLeft / TICK);
+    const next = Number(clamp(round(min + at * step)).toFixed(2));
     if (next !== value) onChange(next);
-    window.clearTimeout(settle.current);
-    settle.current = window.setTimeout(() => navigator.vibrate?.(3), 80);
+    if (lastTick.current !== null && lastTick.current !== at) haptic();
+    lastTick.current = at;
   }
 
   function nudge(delta: number) {
     const next = Number(clamp(value + delta * step).toFixed(2));
+    haptic();
     onChange(next);
     track.current?.scrollTo({ left: toIndex(next) * TICK, behavior: "smooth" });
   }

@@ -11,7 +11,7 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { SettingsMenu, type MenuItem } from "@/components/app/settings-menu";
 import { GOAL_OPTIONS, goalOf } from "@/lib/program";
-import { equipmentPicture, FOCUS_OPTIONS, GYM_OPTIONS, gymPreset } from "@/lib/onboarding";
+import { equipmentPicture, FOCUS_OPTIONS, GYM_OPTIONS, gymPreset, ACTIVITY_OPTIONS } from "@/lib/onboarding";
 import Image from "next/image";
 import { LEVEL_OPTIONS, levelOf } from "@/lib/levels";
 import { MAX_TRAINING_DAYS, MIN_TRAINING_DAYS, trainingDaysValid, WEEKDAY_LABELS } from "@/lib/dates";
@@ -20,7 +20,7 @@ import { EQUIPMENT_OPTIONS, RULE_VERSION, TEMPLATE_VERSION } from "@/lib/templat
 import type { Profile } from "@/lib/types";
 import { useState } from "react";
 import { SaveBar, useUnsavedGuard } from "@/components/app/save-bar";
-import { BodySettings } from "@/components/app/body-panel";
+import { BirthDateSetting, BodySettings } from "@/components/app/body-panel";
 import type { Theme } from "@/components/app/fit-track-provider";
 
 const THEME_OPTIONS: Array<{ id: Theme; label: string; icon: typeof Sun }> = [
@@ -95,7 +95,7 @@ export function SettingsScreen() {
     { group: "Account", id: "profile", href: "/profile", icon: UserRound, color: "#ef7d5c", label: "Your profile", note: "Picture, name, stats", keywords: "avatar photo picture name" },
     { group: "Account", id: "account", icon: KeyRound, color: "#5b9bd5", label: "Account", note: isDemo ? "Not signed in" : state.userEmail ?? "Signed in", keywords: "sign in sign out email login delete" },
     { group: "Account", id: "data", icon: Database, color: "#7a8a99", label: "Your data", note: "Rozi AI, sharing, export or delete", keywords: "export download delete backup ai rozi gemini groq privacy sharing" },
-    { group: "Preferences", id: "plan", icon: CalendarDays, color: "#3fae8c", label: "Your plan", note: "Goal, level, days, equipment", value: `${saved.trainingDays.length} days · ${saved.preferredSessionMinutes} min`, keywords: "goal level days session length equipment body height weight bmi why name" },
+    { group: "Preferences", id: "plan", icon: CalendarDays, color: "#3fae8c", label: "Your plan", note: "Goal, level, days, equipment", value: `${saved.trainingDays.length} days · ${saved.preferredSessionMinutes} min`, keywords: "goal level days session length equipment body height weight bmi why name age birthday date of birth dob 18 adult activity active typical day seated" },
     { group: "Preferences", id: "notifications", icon: Bell, color: "#e5a33b", label: "Notifications", note: "Reminders, water, nudges", keywords: "push reminder morning evening water comeback nudge weigh" },
     { group: "Preferences", id: "appearance", icon: Palette, color: "#9b7be0", label: "Appearance", note: "Theme, figure, units", value: themeLabel, keywords: "dark light theme figure male female units kg lb pounds" },
     { group: "Trainers & safety", id: "safety", icon: ShieldCheck, color: "#3fae8c", label: profile.trainerRole && !isDemo ? "Your clients" : "Safety rules", note: profile.trainerRole && !isDemo ? "Rules for each client" : "Deadlifts, pain = recovery", keywords: "deadlift pain trainer clients rules" },
@@ -133,6 +133,7 @@ export function SettingsScreen() {
               <small>{synced ? <>Shared with your training buddies. <Link href="/buddies">Propose a change in Train together</Link>.</> : "Changing your goal starts its plan from the first workout. Your history and records stay."}</small>
             </div>
             <BodySettings />
+            <BirthDateSetting />
             <div className="settings-field"><span>Level</span>
               <div className="segmented level-switch">{LEVEL_OPTIONS.map((option) => <button key={option.id} type="button" className={levelOf(profile) === option.id ? "selected" : ""} aria-pressed={levelOf(profile) === option.id} onClick={() => edit({ experience: option.id, levelSince: currentDate })}>{option.title}</button>)}</div>
               <small>{LEVEL_OPTIONS.find((option) => option.id === levelOf(profile))?.note}. RozFit moves you up by itself as you train; see Progress → Your level.</small>
@@ -140,6 +141,10 @@ export function SettingsScreen() {
             <div className="settings-field"><span>Focus muscle</span>
               <div className="onb-chips">{FOCUS_OPTIONS.map((option) => <button key={option.id} type="button" className={(profile.focusArea ?? "balanced") === option.id ? "selected" : ""} aria-pressed={(profile.focusArea ?? "balanced") === option.id} onClick={() => edit({ focusArea: option.id })}>{option.label}</button>)}</div>
               <small>A focus muscle gets one extra set when it’s trained. Balanced keeps everything even.</small>
+            </div>
+            <div className="settings-field"><span>Your typical day</span>
+              <div className="onb-chips">{ACTIVITY_OPTIONS.map((option) => <button key={option.id} type="button" className={profile.dailyActivity === option.id ? "selected" : ""} aria-pressed={profile.dailyActivity === option.id} onClick={() => edit({ dailyActivity: option.id })}>{option.label}</button>)}</div>
+              <small>Outside your workouts. Tunes your water target and stretch suggestions.</small>
             </div>
             <div className="settings-field"><span>Where you train</span>
               <div className="onb-chips">{GYM_OPTIONS.map((option) => <button key={option.id} type="button" className={profile.gymType === option.id ? "selected" : ""} aria-pressed={profile.gymType === option.id} onClick={() => edit({ gymType: option.id, equipmentAvailability: option.id === "bodyweight" ? "unknown" : "verified", availableEquipment: gymPreset(option.id) })}>{option.label}</button>)}</div>

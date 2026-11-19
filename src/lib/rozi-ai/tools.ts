@@ -18,10 +18,12 @@ import { buildExercisePerformance, calculatePersonalRecords, recordedSessionStat
 import { GROUP_LABELS, MUSCLE_GROUPS, muscleRecovery, readyCount, sessionGroupSets, STATUS_LABELS, weeklyReport, type MuscleGroup } from "../recovery.ts";
 import { calculateStreak } from "../rozi.ts";
 import { planWorkout } from "../rozi-plan.ts";
+import { ACTIVITY_OPTIONS } from "../onboarding.ts";
 import { EQUIPMENT_OPTIONS, EXERCISE_LIBRARY } from "../templates.ts";
 import { DEFAULT_TRAINER_RULE_SETTINGS, profileWithTrainerEquipment } from "../trainer-rules.ts";
 import type { BodyWeightEntry, ExerciseDefinition, FitTrackState, Profile, TrainerRuleSettings, WorkoutPlan, WorkoutSession } from "../types";
-import type { RoziCard } from "./cards.ts";
+import { swapCard, type RoziCard } from "./cards.ts";
+import { swapSuggestion, SWAP_BLOCK_TEXT } from "../exercise-swap.ts";
 import type { AiTool } from "./provider.ts";
 
 // ---------- What the tools work on ----------
@@ -169,12 +171,18 @@ function workoutHref(date: string, today: string): string {
 
 // ---------- The tools ----------
 
-/** A day's workout: the saved one, or the planner's plan for that day (read only — nothing is saved). */
-function workoutForDay(ctx: RoziContext, date: string): ToolOutcome {
+/** A day's saved session (if any) and its plan: the saved one, or the planner's plan for that day (nothing is saved). */
+function planForDay(ctx: RoziContext, date: string): { session: WorkoutSession | undefined; plan: WorkoutPlan | null } {
   const session = ctx.sessions.find((item) => item.date === date);
   const plan: WorkoutPlan | null = session?.plan ?? generateWorkout({
     date, profile: ctx.profile, sessions: ctx.sessions, trainerRuleSettings: ctx.trainerRuleSettings, trainerRuleRevision: ctx.trainerRuleRevision,
   });
+  return { session, plan };
+}
+
+/** A day's workout: the saved one, or the planner's plan for that day (read only — nothing is saved). */
+function workoutForDay(ctx: RoziContext, date: string): ToolOutcome {
+  const { session, plan } = planForDay(ctx, date);
   const base = { date, day: dateLabel(date), isToday: date === ctx.today, isPast: date < ctx.today };
   if (!plan) {
     return {
@@ -250,10 +258,16 @@ function workoutHistory(ctx: RoziContext, args: Args): ToolOutcome {
   const inRange = recorded.filter((session) => session.date >= range.from && session.date <= range.to);
   const count = (status: string) => inRange.filter((session) => recordedSessionStatus(session) === status).length;
   const completed = count("completed");
+  const partial = count("partial");
+  const skipped = count("skipped");
+  // One plain sentence with the counts, so the model can't overlook them (benchmark 2026-11-18: both gpt-oss models
+  // said "no skipped workouts" when the result listed skipped: 2).
+  const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? "" : "s"}`;
+  const summary = `From ${dateLabel(range.from)} to ${dateLabel(range.to)}: ${plural(completed, "workout")} completed, ${partial} partly done, ${skipped} SKIPPED (missed).`;
   return {
     result: {
-      period, from: range.from, to: range.to, filter: { muscle, exercise: exercise?.name ?? null },
-      completed, partial: count("partial"), skipped: count("skipped"), plannedPerWeek: ctx.profile.sessionsPerWeek,
+      period, from: range.from, to: range.to, filter: { muscle, exercise: exercise?.name ?? null }, summary,
+      completed, partial, skipped, plannedPerWeek: ctx.profile.sessionsPerWeek,
       workouts: inRange.slice(0, 12).map(sessionSummary),
     },
     card: { type: "stat", title: `Workouts · ${period.replace(/_/g, " ")}`, value: String(completed), detail: `${dateLabel(range.from, { month: "short", day: "numeric" })} – ${dateLabel(range.to, { month: "short", day: "numeric" })}${muscle ? ` · ${GROUP_LABELS[muscle]}` : ""}${exercise ? ` · ${exercise.name}` : ""}`, link: { href: "/progress", label: "See progress" } },
@@ -404,7 +418,7 @@ function exerciseInfo(ctx: RoziContext, args: Args): ToolOutcome {
 function mobility(ctx: RoziContext): ToolOutcome {
   const todayPlanned = Boolean(workoutForDay(ctx, ctx.today).result.restDay === false);
   const last = completedSessions(ctx).at(-1);
-  const pick = suggestionForDay({ hour: ctx.hour, restDay: !todayPlanned, discomfort: Boolean(last?.review?.discomfort) })
+  const pick = suggestionForDay({ hour: ctx.hour, restDay: !todayPlanned, discomfort: Boolean(last?.review?.discomfort), seatedDay: ctx.profile.dailyActivity === "seated" })
     ?? suggestionForDay({ hour: 9, restDay: true });
   if (!pick) return { result: { suggestion: null } };
   return {
@@ -444,6 +458,31 @@ function customWorkout(ctx: RoziContext, args: Args): ToolOutcome {
   };
 }
 
+/**
+ * Swap an exercise in a day's workout. Rozi can't change anything itself: this returns the choices (the same rules as
+ * the app's Swap button — trainer rules and equipment) and a card; the person taps a choice to swap.
+ */
+function exerciseSwap(ctx: RoziContext, args: Args): ToolOutcome {
+  const date = resolveDay(text(args, "day", 20) || "today", ctx.today);
+  const { session, plan } = planForDay(ctx, date);
+  const suggestion = swapSuggestion(session, plan, ctx.planningProfile, { exercise: text(args, "exercise", 80) || undefined, replacement: text(args, "replacement", 80) || undefined });
+  const names = suggestion.exercises.map((exercise) => exercise.name);
+  if (suggestion.blocked === "rest-day") return { result: { day: dateLabel(date), restDay: true, note: "No workout that day, so there's nothing to swap." } };
+  return {
+    result: {
+      day: dateLabel(date), workoutExercises: names,
+      exercise: suggestion.from?.name ?? null,
+      ...(text(args, "exercise") && !suggestion.from ? { note: `"${text(args, "exercise", 80)}" isn't in this workout. Ask which one to swap, or let the user pick on the card.` } : {}),
+      canSwap: !suggestion.blocked,
+      ...(suggestion.blocked ? { whyNot: SWAP_BLOCK_TEXT[suggestion.blocked] } : {}),
+      options: suggestion.options.map((exercise) => ({ name: exercise.name, equipment: exercise.equipment })),
+      ...(suggestion.replacementNotAllowed ? { replacementNotAllowed: `${suggestion.replacementNotAllowed} isn't possible with the user's equipment or trainer rules.` } : {}),
+      howItWorks: "The card shows these choices; the user taps one to swap it in (sets and reps stay the same). You can't make the swap yourself — tell them to tap their choice.",
+    },
+    card: suggestion.blocked && suggestion.blocked !== "sets-done" ? undefined : swapCard(date, suggestion),
+  };
+}
+
 function myProfile(ctx: RoziContext): ToolOutcome {
   const profile = ctx.planningProfile;
   const latest = ctx.bodyWeightEntries.at(-1);
@@ -459,6 +498,7 @@ function myProfile(ctx: RoziContext): ToolOutcome {
       equipment: equipment ?? "not set yet (bodyweight moves are used)", deadliftsAllowed: profile.deadliftEnabled,
       heightCm: profile.heightCm ?? null, latestWeightKg: latest?.weightKg ?? null,
       age: typeof profile.birthYear === "number" ? year - profile.birthYear : null, sex: profile.sex ?? null,
+      typicalDay: ACTIVITY_OPTIONS.find((option) => option.id === profile.dailyActivity)?.label ?? null,
       todayIs: `${DAY_NAMES[weekdayOf(ctx.today)]} ${ctx.today}`,
     },
   };
@@ -472,7 +512,7 @@ const EXERCISE_ARG = { type: "string", description: "Exercise name as the user s
 export const ROZI_TOOLS: AiTool[] = [
   { name: "get_workout_for_day", description: "The user's workout for a day from their plan (exercises, sets, reps, minutes, status, and why this workout was chosen), or that it's a rest day. Use for today's/tomorrow's workout and 'why this workout'.", parameters: { type: "object", properties: { day: { type: "string", description: "\"today\", \"tomorrow\", \"yesterday\" or a date YYYY-MM-DD. Default today." } } } },
   { name: "get_next_workout", description: "The next scheduled training day after today and its planned workout.", parameters: { type: "object", properties: {} } },
-  { name: "get_workout_history", description: "Workouts the user actually logged in a period, optionally only those that trained a muscle group or a specific exercise. Use for 'last workout', 'how many workouts this week/month', 'when did I last train legs'.", parameters: { type: "object", properties: { period: { type: "string", enum: [...PERIODS], description: "Default last_30_days." }, muscle: MUSCLE_ARG, exercise: EXERCISE_ARG } } },
+  { name: "get_workout_history", description: "Workouts the user actually logged in a period — completed, partly done and SKIPPED counts — optionally only those that trained a muscle group or a specific exercise. Use for 'last workout', 'how many workouts (or skipped workouts) this week/month', 'when did I last train legs'.", parameters: { type: "object", properties: { period: { type: "string", enum: [...PERIODS], description: "Match the user's words: this_month = from the 1st of the CURRENT month to today; last_month = the whole previous calendar month; this_week = Monday to today; last_week = the previous Monday–Sunday. Default last_30_days." }, muscle: MUSCLE_ARG, exercise: EXERCISE_ARG } } },
   { name: "get_progress", description: "Strength progress from logged sets: overall best sets (personal records) and the exercises that improved most, or one exercise's history and best set.", parameters: { type: "object", properties: { exercise: { ...EXERCISE_ARG, description: "Optional. Leave empty for overall progress." } } } },
   { name: "get_recovery", description: "How recovered each muscle group is, from logged sets and check-ins (just trained / recovering / ready / sore).", parameters: { type: "object", properties: { muscle: MUSCLE_ARG } } },
   { name: "get_streak", description: "The user's current and best workout streak.", parameters: { type: "object", properties: {} } },
@@ -482,6 +522,7 @@ export const ROZI_TOOLS: AiTool[] = [
   { name: "get_mobility_suggestion", description: "A stretching/mobility routine suggestion for right now.", parameters: { type: "object", properties: {} } },
   { name: "get_achievements", description: "Badges earned and the closest ones to earn next.", parameters: { type: "object", properties: {} } },
   { name: "plan_custom_workout", description: "Builds a one-off workout for a body area and length, matched to the user's level, goal and equipment. It can be started or saved as a routine from the card.", parameters: { type: "object", properties: { area: { type: "string", enum: [...PLAN_AREAS] }, minutes: { type: "integer", description: "15–90. Optional." } }, required: ["area"] } },
+  { name: "suggest_exercise_swap", description: "Swap or replace an exercise in the user's workout (they want a different move, the machine is busy, they don't like one, or want to customise the workout). Returns choices that fit their equipment and trainer rules, and a card where the user taps one to swap it in. Leave 'exercise' empty to let them pick which one.", parameters: { type: "object", properties: { exercise: { ...EXERCISE_ARG, description: "The exercise to swap out, as the user said it. Optional." }, replacement: { ...EXERCISE_ARG, description: "What they want instead, if they said. Optional." }, day: { type: "string", description: "\"today\" (default), \"tomorrow\" or YYYY-MM-DD." } } } },
   { name: "get_my_profile", description: "The user's training setup: level, goal, training days, session length, equipment, height, latest weight, age, and today's date.", parameters: { type: "object", properties: {} } },
 ];
 
@@ -504,6 +545,7 @@ export function runRoziTool(name: string, args: Args, ctx: RoziContext): ToolOut
       case "get_mobility_suggestion": return mobility(ctx);
       case "get_achievements": return achievements(ctx);
       case "plan_custom_workout": return customWorkout(ctx, args);
+      case "suggest_exercise_swap": return exerciseSwap(ctx, args);
       case "get_my_profile": return myProfile(ctx);
       default: return { result: { error: `Unknown tool ${name.slice(0, 40)}.` } };
     }

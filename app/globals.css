@@ -1286,6 +1286,10 @@ button.activity-day { cursor: pointer; }
 @media (max-width: 700px) { .settings .panel { padding: 18px; } .profile-stats { width: 100%; justify-content: space-between; } }
 .settings-column, .settings-group, .settings-field { grid-template-columns: minmax(0, 1fr); min-width: 0; }
 .settings-field input[type="text"] { width: 100%; }
+/* Date of birth (Settings → Your plan): the same field look as the name box, with Save beside it. */
+.birth-date-row { display: flex; gap: 10px; align-items: center; }
+.birth-date-row input[type="date"] { flex: 1; min-width: 0; min-height: 52px; padding: 0 16px; border: 1px solid var(--line-strong); border-radius: 16px; background: var(--surface-2); color: var(--ink); font: inherit; font-size: 16px; font-weight: 400; }
+.birth-date-row .button { flex: none; min-height: 52px; }
 .segmented button { min-width: 0; }
 .settings .onb-days button { min-height: 0; font-size: 12px; }
 
@@ -1870,7 +1874,7 @@ img.day-rozi { position: absolute; bottom: -6px; width: 200px; height: 200px; fi
 
 /* ---------- Phone dock: glass pill + round Settings button ---------- */
 @media (max-width: 700px) {
-  .mobile-nav { inset: auto 12px calc(10px + env(safe-area-inset-bottom)) 12px; display: flex; align-items: center; gap: 10px; padding: 0; border: 0; border-radius: 0; background: transparent; box-shadow: none; -webkit-backdrop-filter: none; backdrop-filter: none; }
+  .mobile-nav { inset: auto 12px max(8px, calc(env(safe-area-inset-bottom) - 10px)) 12px; display: flex; align-items: center; gap: 10px; padding: 0; border: 0; border-radius: 0; background: transparent; box-shadow: none; -webkit-backdrop-filter: none; backdrop-filter: none; }
   .dock-pill, .dock-round {
     border: 1px solid rgba(255, 255, 255, .72); background: var(--nav-bg);
     box-shadow: inset 0 1px 0 rgba(255, 255, 255, .9), inset 0 -1px 0 rgba(255, 255, 255, .25), 0 12px 30px rgba(31, 56, 54, .16);
@@ -3646,27 +3650,32 @@ img[data-motion="float"] { --rozi-motion: rozi-float 3.6s ease-in-out infinite; 
 
 /* Rest timer: a floating timer you can drag anywhere (it settles against the nearer side) in two sizes — a small
    round one, or the full card. Tap the ring or the corner button to switch. */
-.rest-float { position: fixed; z-index: 70; right: 12px; bottom: calc(16px + env(safe-area-inset-bottom)); display: flex; align-items: center; gap: 10px; border: var(--glass-edge); background: var(--surface-solid); box-shadow: 0 16px 40px rgba(0, 0, 0, .18); touch-action: none; -webkit-user-select: none; user-select: none; cursor: grab; animation: rest-pop .3s cubic-bezier(.2, .9, .3, 1) backwards; -webkit-tap-highlight-color: transparent; }
-@media (min-width: 701px) { .rest-float { right: 24px; bottom: 24px; } }
-.rest-float.dragging { cursor: grabbing; box-shadow: 0 24px 60px rgba(0, 0, 0, .28); transform: scale(1.04); }
-.rest-float.finished { box-shadow: 0 0 0 3px var(--tone-ready, #5fbf9a), 0 16px 40px rgba(0, 0, 0, .18); }
-.rest-float.finished .rest-ring-value { stroke: var(--tone-ready, #5fbf9a); }
-.rest-float .rest-ring { flex: none; cursor: pointer; }
-.rest-float.full { width: min(360px, calc(100vw - 24px)); padding: 12px 14px; border-radius: 26px; }
-.rest-float.full .rest-ring { width: 88px; height: 88px; }
-.rest-float.full .rest-ring-text { flex: 1; min-width: 0; padding-right: 20px; }
-.rest-float.compact { padding: 6px 8px 6px 6px; border-radius: 999px; }
-.rest-float.compact .rest-ring { width: 60px; height: 60px; }
-.rest-float.compact .rest-ring strong { font-size: 15px; }
-.rest-mini-actions { display: flex; gap: 6px; }
-.rest-mini-actions button { display: grid; min-width: 42px; height: 42px; padding: 0 10px; place-items: center; border: 0; border-radius: 999px; color: var(--ink); background: var(--surface-2); font: inherit; font-size: 14px; font-weight: 800; cursor: pointer; }
-.rest-mini-actions .rest-mini-skip { padding: 0; color: #fff; background: #4f9be0; }
-.rest-mini-skip svg { width: 18px; height: 18px; }
-.rest-size { position: absolute; top: 8px; right: 8px; display: grid; width: 28px; height: 28px; padding: 0; place-items: center; border: 0; border-radius: 50%; color: var(--muted); background: transparent; cursor: pointer; }
-.rest-size svg { width: 15px; height: 15px; }
-.rest-float.compact .rest-size { top: -8px; right: -6px; width: 26px; height: 26px; border: var(--glass-edge); background: var(--surface-solid); box-shadow: 0 2px 8px rgba(0, 0, 0, .15); }
-@keyframes rest-pop { from { opacity: 0; transform: scale(.85); } }
-@media (prefers-reduced-motion: reduce) { .rest-float { animation: none; } .rest-float.dragging { transform: none; } }
+/* Rest timer (2026-11-19 redesign): a bar docked just above the dock — no dragging. Full: ring + time + exercise,
+   −10 / +10 / Skip. Small: a pill with the time. Only transform/opacity animate, so it stays smooth on phones. */
+.rest-bar { position: fixed; z-index: 70; left: 50%; bottom: calc(16px + env(safe-area-inset-bottom)); display: flex; align-items: center; gap: 8px; width: min(440px, calc(100vw - 24px)); padding: 8px; border: var(--glass-edge); border-radius: 26px; background: var(--surface-solid); box-shadow: 0 16px 40px rgba(0, 0, 0, .18); transform: translateX(-50%); touch-action: manipulation; -webkit-user-select: none; user-select: none; -webkit-tap-highlight-color: transparent; animation: rest-rise .32s cubic-bezier(.2, .9, .3, 1) both; }
+.rest-bar.small { width: auto; gap: 4px; padding: 5px; border-radius: 999px; }
+.rest-bar.finished { box-shadow: 0 0 0 3px var(--tone-ready, #5fbf9a), 0 16px 40px rgba(0, 0, 0, .18); }
+.rest-bar.finished .rest-ring-value { stroke: var(--tone-ready, #5fbf9a); }
+.rest-bar-main { display: flex; flex: 1; min-width: 0; align-items: center; gap: 10px; padding: 0 4px 0 0; border: 0; color: var(--ink); background: transparent; font: inherit; text-align: left; cursor: pointer; }
+.rest-bar.small .rest-bar-main { flex: none; gap: 8px; padding-right: 8px; }
+.rest-bar-ring { flex: none; width: 46px; height: 46px; }
+.rest-bar.small .rest-bar-ring { width: 36px; height: 36px; }
+.rest-bar-ring svg { display: block; width: 100%; height: 100%; }
+.rest-bar-text { display: grid; min-width: 0; line-height: 1.15; }
+.rest-bar-text strong, .rest-bar.small .rest-bar-main > strong { font-size: 22px; font-weight: 800; font-variant-numeric: tabular-nums; }
+.rest-bar.small .rest-bar-main > strong { font-size: 17px; }
+.rest-bar-text small { overflow: hidden; color: var(--muted); font-size: 12.5px; text-overflow: ellipsis; white-space: nowrap; }
+.rest-bar-shrink { flex: none; width: 16px; height: 16px; margin-left: auto; color: var(--muted); }
+.rest-bar-actions { display: flex; flex: none; gap: 6px; }
+.rest-bar-actions button, .rest-bar-skip { display: grid; min-width: 46px; height: 46px; padding: 0 12px; place-items: center; border: 0; border-radius: 999px; color: var(--ink); background: var(--surface-2); font: inherit; font-size: 15px; font-weight: 800; font-variant-numeric: tabular-nums; cursor: pointer; transition: transform .12s ease; }
+.rest-bar-actions button:active, .rest-bar-skip:active, .rest-bar-main:active { transform: scale(.95); }
+.rest-bar-actions button:disabled { opacity: .45; }
+.rest-bar .rest-bar-skip { color: #fff; background: #4f9be0; }
+.rest-bar.small .rest-bar-skip { width: 36px; min-width: 36px; height: 36px; padding: 0; }
+.rest-bar-skip svg { width: 18px; height: 18px; }
+@keyframes rest-rise { from { opacity: 0; transform: translate(-50%, 16px); } }
+@media (min-width: 701px) { .rest-bar { bottom: 24px; } }
+@media (prefers-reduced-motion: reduce) { .rest-bar { animation: none; } .rest-bar-actions button:active, .rest-bar-skip:active, .rest-bar-main:active { transform: none; } }
 
 /* Workout mode (logging sets on a phone): the dock slides down out of the way so it never covers the sets, the
    Previous / Next buttons or the rest timer. A small handle at the bottom brings it back. */
@@ -3679,8 +3688,11 @@ img[data-motion="float"] { --rozi-motion: rozi-float 3.6s ease-in-out infinite; 
   body.workout-mode .dock-handle svg { width: 18px; height: 18px; transition: transform .3s ease; }
   body.workout-mode.dock-peek .dock-handle { bottom: calc(88px + env(safe-area-inset-bottom)); }
   body.workout-mode.dock-peek .dock-handle svg { transform: rotate(180deg); }
-  /* The rest timer sits just above the handle by default. */
-  body.workout-mode .rest-float { bottom: calc(40px + env(safe-area-inset-bottom)); }
+  /* The rest timer sits just above the handle (and above the dock when it's brought back). */
+  body.workout-mode .rest-bar { bottom: calc(38px + env(safe-area-inset-bottom)); transition: bottom .35s cubic-bezier(.2, .9, .3, 1); }
+  body.workout-mode.dock-peek .rest-bar { bottom: calc(118px + env(safe-area-inset-bottom)); }
+  /* While resting, leave room so the bar never covers the last set or the Next button. */
+  body.workout-mode:has(.rest-bar) .main-area { padding-bottom: calc(110px + env(safe-area-inset-bottom)); }
 }
 @media (max-width: 700px) and (prefers-reduced-motion: reduce) { .mobile-nav, body.workout-mode .dock-handle, body.workout-mode .dock-handle svg { transition: none; } }
 
@@ -3751,3 +3763,64 @@ img[data-motion="float"] { --rozi-motion: rozi-float 3.6s ease-in-out infinite; 
 .rozi-history-confirm { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: 14px; }
 .rozi-history .inline-icon { width: 15px; height: 15px; vertical-align: -2px; }
 .rozi-ai-setting .inline-icon { width: 15px; height: 15px; vertical-align: -2px; }
+
+/* ===================== 2026-11-19 · DOCK SHRINKS WHILE SCROLLING ===================== */
+/* Like Instagram: scrolling down shrinks the dock to an icon-only pill; scrolling up (or the top of the page)
+   brings it back. Transform and opacity only, so it stays smooth. Not during a workout (the dock is tucked away). */
+@media (max-width: 700px) {
+  .mobile-nav { transform-origin: 50% 100%; transition: transform .32s cubic-bezier(.2, .9, .3, 1), opacity .25s ease; }
+  .mobile-nav .dock-pill a small, .mobile-nav .dock-pill a .nav-icon { transition: opacity .2s ease, transform .3s cubic-bezier(.2, .9, .3, 1); }
+  html.dock-compact body:not(.workout-mode) .mobile-nav { transform: scale(.84) translateY(4px); }
+  html.dock-compact body:not(.workout-mode) .mobile-nav .dock-pill a small { opacity: 0; }
+  html.dock-compact body:not(.workout-mode) .mobile-nav .dock-pill a .nav-icon { transform: translateY(7px) scale(1.08); }
+  /* The page ends just above the (lower) dock. */
+  .main-area { padding-bottom: calc(92px + max(8px, calc(env(safe-area-inset-bottom) - 10px))); }
+}
+@media (max-width: 700px) and (prefers-reduced-motion: reduce) {
+  .mobile-nav, .mobile-nav .dock-pill a small, .mobile-nav .dock-pill a .nav-icon { transition: none; }
+}
+
+/* ===================== 2026-11-19 · SWAP AN EXERCISE ===================== */
+/* Train (before starting): a round swap button beside each exercise. While logging: a small "Swap" pill. */
+.exercise-list > li:has(.exercise-row-swap) { display: flex; align-items: center; gap: 8px; }
+.exercise-list > li:has(.exercise-row-swap) .exercise-row { flex: 1; min-width: 0; }
+.exercise-row-swap { display: grid; flex: none; width: 44px; height: 44px; padding: 0; place-items: center; border: var(--glass-edge); border-radius: 50%; color: var(--ink-2); background: var(--surface); box-shadow: var(--glass-shadow); cursor: pointer; transition: transform .12s ease; -webkit-tap-highlight-color: transparent; }
+.exercise-row-swap svg { width: 18px; height: 18px; }
+.exercise-row-swap:active { transform: scale(.92); }
+.exercise-swap { display: inline-flex; flex: none; align-items: center; gap: 4px; min-height: 32px; padding: 0 10px; border: 0; border-radius: 999px; color: var(--ink-2); background: var(--surface-2); font: inherit; font-size: 12.5px; font-weight: 800; cursor: pointer; }
+.exercise-swap svg { width: 14px; height: 14px; }
+
+/* The Swap sheet: search + rows you tap to use. */
+.modal.swap-sheet { position: relative; display: flex; flex-direction: column; gap: 10px; width: min(520px, 100%); height: min(86dvh, 760px); padding: 22px 18px calc(16px + env(safe-area-inset-bottom)); overflow: hidden; }
+.swap-sheet > * { flex: none; }
+.swap-sheet > .swap-lists { flex: 1 1 auto; }
+.swap-sheet h2 { margin: 0; font-size: 22px; line-height: 1.2; }
+.swap-sheet .card-note { margin: 0; }
+.swap-sheet .onb-kicker svg { width: 14px; height: 14px; }
+.swap-search { display: flex; align-items: center; gap: 8px; min-height: 48px; padding: 0 14px; border: 1px solid var(--line-strong); border-radius: 16px; background: var(--surface-2); }
+.swap-search svg { width: 18px; height: 18px; color: var(--muted); }
+.swap-search input { flex: 1; min-width: 0; border: 0; outline: 0; color: var(--ink); background: transparent; font: inherit; font-size: 16px; }
+.swap-lists { min-height: 0; margin: 0 -6px; padding: 0 6px 6px; overflow-y: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; }
+.swap-lists .train-subhead { margin: 10px 0 6px; }
+.swap-list { display: grid; gap: 6px; margin: 0; padding: 0; list-style: none; }
+.swap-row { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 64px; padding: 8px 10px; border: 1px solid var(--line); border-radius: 18px; color: var(--ink); background: var(--surface-2); font: inherit; text-align: left; cursor: pointer; transition: transform .12s ease; -webkit-tap-highlight-color: transparent; }
+.swap-row:active { transform: scale(.98); }
+.swap-row .exercise-thumb { flex: none; width: 46px; height: 46px; }
+.swap-row-text { display: grid; flex: 1; min-width: 0; }
+.swap-row-text strong { font-size: 15px; }
+.swap-row-text small { overflow: hidden; color: var(--muted); font-size: 12.5px; text-overflow: ellipsis; white-space: nowrap; }
+.swap-row-use { flex: none; padding: 6px 12px; border-radius: 999px; color: #fff; background: var(--accent, #ef7d5c); font-size: 13px; font-weight: 800; }
+
+/* Rozi's swap card. */
+.rozi-swap header strong { display: inline-flex; align-items: center; gap: 6px; }
+.rozi-swap-list { display: grid; gap: 6px; margin: 0; padding: 0; list-style: none; }
+.rozi-swap-list li { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 6px 0; border-top: 1px solid var(--line); }
+.rozi-swap-list li:first-child { border-top: 0; }
+.rozi-swap-list li > span { display: grid; min-width: 0; }
+.rozi-swap-list small { color: var(--muted); font-size: 12px; }
+.rozi-swap-list .button svg { width: 14px; height: 14px; }
+.rozi-swap-done { display: flex; align-items: center; gap: 6px; margin: 0; color: #1f6f55; font-weight: 700; }
+.rozi-swap-done svg { width: 16px; height: 16px; }
+
+/* Warm-up & plates: the confirm button sits at the bottom of the sheet. */
+.plates-target-form { margin: 0; }

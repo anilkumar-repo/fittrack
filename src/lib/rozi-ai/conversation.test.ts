@@ -6,7 +6,7 @@ import type { Profile, WorkoutSession } from "../types";
 import { askRozi, intentOf, MAX_REPLY_CHARS, MAX_TOOL_ROUNDS } from "./conversation.ts";
 import { historyTurns, replyLanguageHint, roziSystemPrompt } from "./prompt.ts";
 import { RoziAiError, type AiProvider, type AiRequest, type AiResult } from "./provider.ts";
-import { roziContext } from "./tools.ts";
+import { ROZI_TOOLS, roziContext } from "./tools.ts";
 
 function session(date: string, id: string, kg: number): WorkoutSession {
   return {
@@ -62,7 +62,7 @@ test("Rozi asks for the facts, gets them from the app, and answers from them", a
   assert.equal(result.kind, "tool-result");
   assert.equal(result.result.heaviestChangeKg, 2.5);
   // Every call offers the tools and Rozi's rules; nothing personal is in the rules.
-  assert.ok(requests.every((request) => request.tools?.length === 13));
+  assert.ok(requests.every((request) => request.tools?.length === ROZI_TOOLS.length && ROZI_TOOLS.length === 14));
   assert.ok(!requests[0].system.includes("Secret Person"));
 });
 
@@ -135,9 +135,15 @@ test("Rozi's rules carry the date and the safety lines, and no personal details"
   assert.deepEqual(historyTurns([{ from: "me", text: "  " }, { from: "rozi", text: "Hi!" }]), [{ role: "model", parts: [{ kind: "text", text: "Hi!" }] }]);
 });
 
-test("plainly English questions get an explicit 'reply in English'; other languages keep the general rule", () => {
+test("English and Indian-script questions get an explicit reply language; others keep the general rule", () => {
   for (const message of ["Am I getting stronger at bench press?", "Explain how to do a goblet squat", "What's my workout today?", "hi"]) assert.equal(replyLanguageHint(message), "English", message);
-  for (const message of ["¿Cómo hago una sentadilla?", "నా వ్యాయామం ఏమిటి?", "मेरा वर्कआउट क्या है?", "Squat 100 kg"]) assert.equal(replyLanguageHint(message), null, message);
-  assert.match(roziSystemPrompt("2026-11-18", 9, "English"), /latest message is in English: reply in English/);
+  assert.equal(replyLanguageHint("నా వ్యాయామం ఏమిటి?"), "Telugu");
+  assert.equal(replyLanguageHint("నా BMI ఎంత?"), "Telugu", "an English word inside doesn't change it");
+  assert.equal(replyLanguageHint("मेरा वर्कआउट क्या है?"), "Hindi");
+  assert.equal(replyLanguageHint("माझा आजचा वर्कआउट काय आहे?"), "Marathi");
+  assert.equal(replyLanguageHint("என் உடற்பயிற்சி என்ன?"), "Tamil");
+  for (const message of ["¿Cómo hago una sentadilla?", "Squat 100 kg", "我的训练是什么？"]) assert.equal(replyLanguageHint(message), null, message);
+  assert.match(roziSystemPrompt("2026-11-18", 9, "English"), /latest message is in English: reply in English, never in another language/);
+  assert.match(roziSystemPrompt("2026-11-18", 9, "Telugu"), /reply in Telugu \(in its own script; exercise names may stay in English\)/);
   assert.match(roziSystemPrompt("2026-11-18", 9), /Reply in the language the user writes in/);
 });
