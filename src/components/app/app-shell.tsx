@@ -49,12 +49,26 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   // Unread chat messages (signed in only): a badge on the chat button and a dot on Friends.
   const { unread: unreadChats } = useChats();
   // Big page titles shrink into a frosted bar once the page scrolls (see "LIQUID GLASS 2" in globals.css).
+  // "scrolled" (top bar shadow) and "dock-compact": like Instagram, the phone dock shrinks to a smaller pill while
+  // you scroll down, and comes back to full size as soon as you scroll up or reach the top. Read once per frame.
   useEffect(() => {
     const root = document.documentElement;
-    const update = () => root.classList.toggle("scrolled", window.scrollY > 12);
+    let last = window.scrollY;
+    let frame = 0;
+    const update = () => {
+      frame = 0;
+      const y = window.scrollY;
+      root.classList.toggle("scrolled", y > 12);
+      const delta = y - last;
+      if (y < 80 || delta < -6) root.classList.remove("dock-compact");
+      else if (delta > 6) root.classList.add("dock-compact");
+      if (Math.abs(delta) > 6 || y < 80) last = y;
+    };
+    const onScroll = () => { if (!frame) frame = window.requestAnimationFrame(update); };
     update();
-    window.addEventListener("scroll", update, { passive: true });
-    return () => window.removeEventListener("scroll", update);
+    root.classList.remove("dock-compact");
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => { window.removeEventListener("scroll", onScroll); if (frame) window.cancelAnimationFrame(frame); root.classList.remove("dock-compact"); };
   }, [pathname]);
   const { state, ready, isDemo, accountLoading, authChecked, currentDate, notice, setNotice, saveError, savingSession, retryPendingSessions, browserClient } = useFitTrack();
   const router = useRouter();

@@ -6,7 +6,7 @@ import { notifyBuddies } from "@/lib/buddies-repository";
 import { levelTitle } from "@/lib/levels";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { ArrowLeft, ArrowRight, Check, ChevronRight, Clock, ListChecks, MessageCircle, Pencil, Play, Repeat } from "lucide-react";
+import { ArrowLeft, ArrowLeftRight, ArrowRight, Check, ChevronRight, Clock, ListChecks, MessageCircle, Pencil, Play, Repeat } from "lucide-react";
 import Link from "next/link";
 import { ShareWorkoutSheet } from "./chats-screen";
 import { PostWorkoutSheet } from "./feed-screen";
@@ -19,6 +19,7 @@ import { MuscleThumb } from "@/components/app/muscle-thumb";
 import { ExerciseGuideModal, toGuideExercise } from "@/components/app/exercise-guide-modal";
 import { ExerciseLogCard } from "@/components/app/exercise-log-card";
 import { RestTimer } from "@/components/app/rest-timer";
+import { SwapSheet, useExerciseSwap } from "@/components/app/swap-sheet";
 import { REGION_LABELS, regionsForExercises } from "@/lib/figure";
 import { calculateStreak, roziMoment, winsForWorkout } from "@/lib/rozi";
 import { lastPerformance } from "@/lib/logging";
@@ -58,6 +59,9 @@ function WorkoutDayView({ date, extraDay = false, startAtReview = false }: { dat
   const reviewRef = useRef(review);
   const [formError, setFormError] = useState("");
   const [guideExercise, setGuideExercise] = useState<ExerciseDefinition | null>(null);
+  /** The exercise being swapped for another (Swap exercise sheet). */
+  const [swapping, setSwapping] = useState<ExerciseDefinition | null>(null);
+  const swapExercise = useExerciseSwap(date);
   const { session: todaySession, plan } = useWorkoutDay(date, flowStep === "preview" || flowStep === "checkin" ? checkIn : undefined, checkInEdited, extraDay);
   // A future day can be looked at, not logged: workouts are saved on the day they are done.
   const isFuture = date > currentDate;
@@ -298,6 +302,7 @@ function WorkoutDayView({ date, extraDay = false, startAtReview = false }: { dat
                     <span className="exercise-text"><strong>{exercise.name}</strong><small>{exercise.sets} × {exercise.reps}{area ? ` · ${REGION_LABELS[area]}` : ""}</small></span>
                     <ChevronRight aria-hidden="true" />
                   </button>
+                  {!isFuture && todaySession?.status === "planned" && <button type="button" className="exercise-row-swap" aria-label={`Swap ${exercise.name} for another exercise`} onClick={() => setSwapping(exercise)}><ArrowLeftRight aria-hidden="true" /></button>}
                 </li>
               );
             })}
@@ -379,6 +384,7 @@ function WorkoutDayView({ date, extraDay = false, startAtReview = false }: { dat
                 onUpdate={(updater) => updateExercise(exercise.id, updater)}
                 onAddSet={() => addSet(exercise.id)}
                 onOpenGuide={() => setGuideExercise(toGuideExercise(exercise))}
+                onSwap={!editing && todaySession.status === "in_progress" ? () => setSwapping(exercise) : undefined}
                 onSetCompleted={() => { if (!editing && restOn && exercise.restSeconds > 0) setRest({ endsAt: Date.now() + exercise.restSeconds * 1000, total: exercise.restSeconds, exerciseName: exercise.name }); }} />;
             })}
           </div>
@@ -405,6 +411,8 @@ function WorkoutDayView({ date, extraDay = false, startAtReview = false }: { dat
       </section>
       {rest && logging && displayFlowStep === "workout" && <RestTimer key={rest.total + rest.exerciseName} endsAt={rest.endsAt} totalSeconds={rest.total} exerciseName={rest.exerciseName}
         onAdjust={(seconds) => setRest((current) => current ? { ...current, endsAt: Math.max(Date.now() + 1000, current.endsAt + seconds * 1000), total: Math.max(1, current.total + seconds) } : current)} onDismiss={dismissRest} />}
+      {swapping && <SwapSheet exercise={swapping} workoutExercises={(todaySession && todaySession.status !== "planned" ? todaySession.plan : plan)?.exercises ?? []}
+        onPick={(replacement) => { if (swapExercise(swapping.id, replacement.id, plan)) setSwapping(null); }} onClose={() => setSwapping(null)} />}
       {guideExercise && <ExerciseGuideModal exercise={guideExercise} workout={{ date, session: todaySession, plan }} onOpen={(exercise) => setGuideExercise(toGuideExercise(exercise))} onClose={() => setGuideExercise(null)} />}
     </>
   );

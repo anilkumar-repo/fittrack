@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { deleteAllConversations, deleteConversation, isMissingFunction, listConversations, loadConversation, saveReply, startQuestion } from "./history.ts";
+import { deleteAllConversations, deleteConversation, isMissingFunction, listConversations, loadConversation, loadHistoryLines, saveAiReply, saveReply, startQuestion } from "./history.ts";
 
 const CONV = "11111111-2222-4333-8444-555555555555";
 
@@ -24,16 +24,36 @@ test("starting a question: ok, limited (minute/day), or unavailable", async () =
   assert.deepEqual(await startQuestion(fakeDb({ rozi_start_question: { error: { code: "PGRST202", message: "Could not find the function" } } }).client, null, "hi"), { kind: "unavailable" });
 });
 
-test("saving a reply trims it and leaves out oversized cards", async () => {
-  const db = fakeDb({});
-  assert.equal(await saveReply(db.client, CONV, { text: "x".repeat(2000), intent: "TODAY_WORKOUT", source: "ai", model: "m", cards: [{ type: "stat", title: "t", value: "v", detail: "d" }] }), true);
-  const args = db.calls[0][1] as { p_message: string; p_cards: unknown[] };
+test("the app can only save on-phone answers; AI replies go through the server-only function", async () => {
+  const app = fakeDb({});
+  assert.equal(await saveReply(app.client, CONV, { text: "On-phone answer", intent: "TODAY_WORKOUT", source: "phone" }), true);
+  assert.deepEqual(app.calls[0], ["rozi_save_reply", { p_conversation: CONV, p_message: "On-phone answer", p_intent: "TODAY_WORKOUT", p_source: "phone" }]);
+  assert.equal(await saveReply(app.client, CONV, { text: "pretend AI", source: "ai" }), false, "the app never even tries to save an AI reply");
+  assert.equal(app.calls.length, 1);
+  assert.equal(await saveReply(app.client, "nope", { text: "x", source: "phone" }), false);
+  assert.equal(await saveReply(fakeDb({ rozi_save_reply: { error: { code: "42501" } } }).client, CONV, { text: "x", source: "phone" }), false);
+
+  const server = fakeDb({});
+  assert.equal(await saveAiReply(server.client, "user-1", CONV, { text: "x".repeat(2000), intent: "TODAY_WORKOUT", model: "m", cards: [{ type: "stat", title: "t", value: "v", detail: "d" }] }), true);
+  const args = server.calls[0][1] as { p_user: string; p_message: string; p_cards: unknown[] };
+  assert.equal(server.calls[0][0], "rozi_save_ai_reply");
+  assert.equal(args.p_user, "user-1");
   assert.equal(args.p_message.length, 1500);
   assert.equal(args.p_cards.length, 1);
-  await saveReply(db.client, CONV, { text: "ok", source: "ai", cards: [{ type: "stat", title: "x".repeat(20_000), value: "", detail: "" }] });
-  assert.equal((db.calls[1][1] as { p_cards: unknown }).p_cards, null);
-  assert.equal(await saveReply(db.client, "nope", { text: "x", source: "ai" }), false);
-  assert.equal(await saveReply(fakeDb({ rozi_save_reply: { error: { code: "42501" } } }).client, CONV, { text: "x", source: "phone" }), false);
+  await saveAiReply(server.client, "user-1", CONV, { text: "ok", cards: [{ type: "stat", title: "x".repeat(20_000), value: "", detail: "" }] });
+  assert.equal((server.calls[1][1] as { p_cards: unknown }).p_cards, null, "oversized cards are left out");
+});
+
+test("history for the model: the person's questions and AI replies only (on-phone answers left out)", async () => {
+  const db = fakeDb({ rozi_conversation: { data: { id: CONV, title: "t", messages: [
+    { id: "1", sender: "me", message: "Q1", created_at: "a" },
+    { id: "2", sender: "rozi", source: "phone", message: "phone answer written by the app", created_at: "b" },
+    { id: "3", sender: "me", message: "Q2", created_at: "c" },
+    { id: "4", sender: "rozi", source: "ai", message: "AI answer", created_at: "d" },
+  ] } } });
+  assert.deepEqual(await loadHistoryLines(db.client, CONV), [{ from: "me", text: "Q1" }, { from: "me", text: "Q2" }, { from: "rozi", text: "AI answer" }]);
+  assert.equal(await loadHistoryLines(db.client, null), null);
+  assert.equal(await loadHistoryLines(fakeDb({ rozi_conversation: { data: null } }).client, CONV), null, "not the person's conversation → nothing");
 });
 
 test("listing, opening and deleting conversations", async () => {

@@ -1,9 +1,10 @@
 import { createClient } from "@supabase/supabase-js";
 import { loadOwnTrainingData } from "@/lib/supabase-repository";
 import { handleRoziChat, type RoziChatSession } from "@/lib/rozi-ai/handler";
-import { createRateLimiter } from "@/lib/rozi-ai/rate-limit";
+import { createRateLimiter, DEGRADED_RATE_LIMITS } from "@/lib/rozi-ai/rate-limit";
 import { createCooldowns } from "@/lib/rozi-ai/fallback";
-import { saveReply, startQuestion } from "@/lib/rozi-ai/history";
+import { loadHistoryLines, saveAiReply, startQuestion } from "@/lib/rozi-ai/history";
+import { roziServiceClient } from "@/lib/rozi-ai/service-client";
 import { roziAiProviders } from "@/lib/rozi-ai/server";
 
 // A question can take a couple of model calls (tools, then the answer), and may fall back to the next model in
@@ -13,7 +14,8 @@ export const maxDuration = 60;
 /** Larger request bodies are refused before parsing (a question is ≤ 300 characters plus a little recent chat). */
 const MAX_BODY_BYTES = 16_000;
 
-const limiter = createRateLimiter();
+/** Used only when the database limit is unavailable: degraded, per-instance protection (see rate-limit.ts). */
+const limiter = createRateLimiter(DEGRADED_RATE_LIMITS);
 /** Models resting after a failure, shared by requests on this server instance. */
 const cooldowns = createCooldowns();
 
@@ -36,12 +38,21 @@ async function sessionFor(token: string): Promise<RoziChatSession | null> {
     userId,
     loadData: () => loadOwnTrainingData(client, userId),
     // Chat history and the daily limit, through the person's own sign-in (database functions check ownership).
-    history: { start: (conversationId, message) => startQuestion(client, conversationId, message), saveReply: (conversationId, reply) => saveReply(client, conversationId, reply) },
+    history: {
+      // Earlier turns from the person's own saved conversation (owner-checked), never from the request body.
+      load: (conversationId) => loadHistoryLines(client, conversationId),
+      start: (conversationId, message) => startQuestion(client, conversationId, message),
+      // AI replies are saved by the server only (service role), after the sign-in above was checked.
+      saveAiReply: async (conversationId, reply) => {
+        const service = roziServiceClient();
+        return service ? saveAiReply(service, userId, conversationId, reply) : false;
+      },
+    },
   };
 }
 
 /**
- * Ask Rozi with AI. POST `{ message, history?, consent: true, conversationId? }` with `Authorization: Bearer <Supabase access token>`.
+ * Ask Rozi with AI. POST `{ message, consent: true, conversationId? }` (any `history` sent is ignored) with `Authorization: Bearer <Supabase access token>`.
  * 200 `{ ok: true, text, cards, intent, model }`, or `{ ok: false, reason, message, fallback }` (then the app answers
  * on the device). Details: docs/ROZI_AI_INTEGRATION.md.
  */

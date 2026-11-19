@@ -6,6 +6,7 @@
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { RoziCard } from "./cards.ts";
+import type { ChatLine } from "./prompt.ts";
 
 export type StartQuestionResult =
   | { kind: "ok"; conversationId: string }
@@ -47,15 +48,45 @@ export async function startQuestion(client: SupabaseClient, conversationId: stri
 
 export interface ReplyToSave { text: string; intent?: string | null; source: "ai" | "phone"; model?: string | null; cards?: RoziCard[] | null }
 
-/** Saves Rozi's reply. Returns false if it couldn't be saved (history is a nice-to-have; the answer still shows). */
+/**
+ * The app saves its own on-phone answer next to the question (source "phone"; the database refuses anything else
+ * from the app). Returns false if it couldn't be saved — history is a nice-to-have; the answer still shows.
+ */
 export async function saveReply(client: SupabaseClient, conversationId: string, reply: ReplyToSave): Promise<boolean> {
-  if (!isConversationId(conversationId) || !reply.text.trim()) return false;
-  const cards = reply.cards?.length ? reply.cards : null;
+  if (!isConversationId(conversationId) || !reply.text.trim() || reply.source !== "phone") return false;
   const { error } = await client.rpc("rozi_save_reply", {
-    p_conversation: conversationId, p_message: reply.text.slice(0, 1500), p_intent: reply.intent ?? null,
-    p_source: reply.source, p_model: reply.model ?? null, p_cards: cards && JSON.stringify(cards).length <= 14_000 ? cards : null,
+    p_conversation: conversationId, p_message: reply.text.slice(0, 1500), p_intent: reply.intent ?? null, p_source: "phone",
   });
   return !error;
+}
+
+/**
+ * SERVER ONLY: saves an AI reply with the service-role client, after /api/rozi/chat checked the person's sign-in.
+ * The database function is callable only by the service role and checks the conversation belongs to `userId`.
+ */
+export async function saveAiReply(serviceClient: SupabaseClient, userId: string, conversationId: string, reply: Omit<ReplyToSave, "source">): Promise<boolean> {
+  if (!isConversationId(conversationId) || !reply.text.trim()) return false;
+  const cards = reply.cards?.length ? reply.cards : null;
+  const { error } = await serviceClient.rpc("rozi_save_ai_reply", {
+    p_user: userId, p_conversation: conversationId, p_message: reply.text.slice(0, 1500), p_intent: reply.intent ?? null,
+    p_model: reply.model ?? null, p_cards: cards && JSON.stringify(cards).length <= 14_000 ? cards : null,
+  });
+  return !error;
+}
+
+/**
+ * The earlier turns the model sees, read from the person's OWN saved conversation (owner-checked in the database) —
+ * never from what the browser sends. Only the person's questions and Rozi's AI replies are used; on-phone answers
+ * (saved by the app) are left out. Null when there's no history to load.
+ */
+export async function loadHistoryLines(client: SupabaseClient, conversationId: string | null, max = 8): Promise<ChatLine[] | null> {
+  if (!isConversationId(conversationId)) return null;
+  const conversation = await loadConversation(client, conversationId);
+  if (!conversation) return null;
+  return conversation.messages
+    .filter((message) => message.sender === "me" || message.source === "ai")
+    .slice(-max)
+    .map((message) => ({ from: message.sender, text: message.message.slice(0, 600) }));
 }
 
 /** The person's recent conversations, newest first; null if history isn't available. */

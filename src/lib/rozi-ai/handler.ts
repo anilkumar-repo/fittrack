@@ -4,18 +4,18 @@
 // ask. Every refusal says whether the app should answer on the device instead (`fallback: true`).
 // The person is identified ONLY from their sign-in token — never from anything in the request body.
 
-import { isAdult } from "../discover.ts";
+import { isAdultOn, needsBirthDate } from "../discover.ts";
 import { hourIn } from "../dates.ts";
 import { MAX_MESSAGE_LENGTH } from "../rozi-chat.ts";
 import type { OwnTrainingData } from "../supabase-repository";
 import type { RoziCard } from "./cards.ts";
-import { ROZI_AI_LIMITS } from "./config.ts";
 import type { RoziAiIntent } from "./conversation.ts";
 import { askRoziWithFallback, RoziAiChainError, type Cooldowns } from "./fallback.ts";
 import type { ChatLine } from "./prompt.ts";
 import { RoziAiError, type AiProvider } from "./provider.ts";
 import type { RateLimiter } from "./rate-limit.ts";
 import { isConversationId, type ReplyToSave, type StartQuestionResult } from "./history.ts";
+import { redactContactDetails } from "./privacy.ts";
 import type { RoziAiProviders } from "./server.ts";
 import { selectTools } from "./tool-select.ts";
 import { roziContext } from "./tools.ts";
@@ -44,8 +44,11 @@ export interface RoziChatSession {
   loadData(): Promise<OwnTrainingData | null>;
   /** Chat history in the database (stage 6). Absent or "unavailable" → no history and the in-memory limit is used. */
   history?: {
+    /** Earlier turns of the person's OWN saved conversation (owner-checked in the database), or null. */
+    load(conversationId: string | null): Promise<ChatLine[] | null>;
     start(conversationId: string | null, message: string): Promise<StartQuestionResult>;
-    saveReply(conversationId: string, reply: ReplyToSave): Promise<boolean>;
+    /** Saves the AI reply — server only (service role), after the sign-in was checked. */
+    saveAiReply(conversationId: string, reply: Omit<ReplyToSave, "source">): Promise<boolean>;
   };
 }
 
@@ -68,27 +71,20 @@ export interface RoziChatInput {
   signal?: AbortSignal;
 }
 
-const MAX_HISTORY_ITEMS = ROZI_AI_LIMITS.maxHistoryTurns;
-
-/** Validates the request body: `{ message, history?, consent: true, conversationId? }`. */
-export function parseChatBody(body: unknown): { message: string; history: ChatLine[]; consent: boolean; conversationId: string | null } | null {
+/**
+ * Validates the request body: `{ message, consent: true, conversationId? }`. Any `history` the browser sends is
+ * IGNORED — earlier turns come only from the person's own saved conversation (see RoziChatSession.history.load), so
+ * they can't be edited to steer the model.
+ */
+export function parseChatBody(body: unknown): { message: string; consent: boolean; conversationId: string | null } | null {
   if (!body || typeof body !== "object" || Array.isArray(body)) return null;
   const value = body as Record<string, unknown>;
   if (typeof value.message !== "string") return null;
   const message = value.message.trim();
   if (!message || message.length > MAX_MESSAGE_LENGTH) return null;
-  const raw = value.history ?? [];
-  if (!Array.isArray(raw) || raw.length > 40) return null;
-  const history: ChatLine[] = [];
-  for (const item of raw.slice(-MAX_HISTORY_ITEMS)) {
-    if (!item || typeof item !== "object") return null;
-    const line = item as Record<string, unknown>;
-    if ((line.from !== "me" && line.from !== "rozi") || typeof line.text !== "string") return null;
-    history.push({ from: line.from, text: line.text.slice(0, ROZI_AI_LIMITS.maxHistoryChars) });
-  }
   // An unknown or malformed conversation id just starts a new conversation (the database never attaches to
   // someone else's).
-  return { message, history, consent: value.consent === true, conversationId: isConversationId(value.conversationId) ? value.conversationId : null };
+  return { message, consent: value.consent === true, conversationId: isConversationId(value.conversationId) ? value.conversationId : null };
 }
 
 /** Today (YYYY-MM-DD) in a time zone, at `now`. */
@@ -130,12 +126,19 @@ export async function handleRoziChat(input: RoziChatInput, deps: RoziChatDeps): 
     return refuse(502, "error", "Your workouts couldn't be loaded right now.", true);
   }
   if (!data) return refuse(409, "no-profile", "Finish setting up RozFit first.", true);
-  if (!isAdult(data.profile.birthYear, Number(dayIn(data.profile.timeZone, now).slice(0, 4)))) {
-    return refuse(403, "adults-only", "Rozi AI is for adults (18+). Add your birth year in Settings → Your plan.", true);
+  const today = dayIn(data.profile.timeZone, now);
+  if (!isAdultOn(data.profile, today)) {
+    return refuse(403, "adults-only", needsBirthDate(data.profile, today)
+      ? "Rozi AI is for adults (18+). Add your date of birth in Settings → Your plan to confirm."
+      : "Rozi AI is for adults (18+). Add your age or date of birth in Settings → Your plan.", true);
   }
 
-  // Record the question in history; the database enforces the limits (6 a minute, 60 a day) across all servers.
-  // Without history (migration not applied, or a database hiccup) the in-memory limit is used instead.
+  // Earlier turns: only from the person's own saved conversation, read BEFORE this question is recorded.
+  const history = (session.history ? await session.history.load(request.conversationId).catch(() => null) : null) ?? [];
+
+  // Record the question in history; the database enforces the limits (6 a minute, 60 a day) across all servers and
+  // concurrent requests. Without history (migration not applied, or a database hiccup) the in-memory limit is used —
+  // DEGRADED protection (per server instance, stricter numbers), logged as such.
   let conversationId: string | null = null;
   const started: StartQuestionResult = session.history
     ? await session.history.start(request.conversationId, request.message).catch(() => ({ kind: "unavailable" as const }))
@@ -145,13 +148,16 @@ export async function handleRoziChat(input: RoziChatInput, deps: RoziChatDeps): 
   }
   if (started.kind === "ok") conversationId = started.conversationId;
   else {
+    log({ event: "rozi_ai_limiter", mode: "memory-degraded" });
     const decision = deps.limiter.take(session.userId, now.getTime());
     if (!decision.allowed) return refuse(429, "limit", "That's a lot of questions! Try again in a little while.", true, decision.retryAfterSeconds);
   }
 
-  const result = await ask(available.providers, deps.cooldowns, data, request, now, input.signal, log, conversationId);
+  // Contact details typed into a question (or earlier ones) never go to a provider.
+  const question = { message: redactContactDetails(request.message), history: history.map((line) => ({ ...line, text: redactContactDetails(line.text) })) };
+  const result = await ask(available.providers, deps.cooldowns, data, question, now, input.signal, log, conversationId);
   if (result.body.ok && conversationId && session.history) {
-    const saved = await session.history.saveReply(conversationId, { text: result.body.text, intent: result.body.intent, source: "ai", model: result.body.model, cards: result.body.cards }).catch(() => false);
+    const saved = await session.history.saveAiReply(conversationId, { text: result.body.text, intent: result.body.intent, model: result.body.model, cards: result.body.cards }).catch(() => false);
     if (!saved) log({ event: "rozi_ai_history", ok: false });
   }
   return result;

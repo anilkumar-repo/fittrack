@@ -31,7 +31,7 @@ export function MobilitySuggestion() {
   const lastDone = [...state.sessions].filter((session) => session.status === "completed" && session.date <= currentDate).sort((a, b) => b.date.localeCompare(a.date))[0];
   const discomfort = Boolean(lastDone && (lastDone.review?.discomfort || lastDone.checkIn?.pain) && lastDone.date >= shiftDate(currentDate, -3));
   const restDay = !state.profile.trainingDays.includes(weekdayOf(currentDate));
-  const pick = suggestionForDay({ hour: hourIn(state.profile.timeZone), restDay, recentMissedReason: missed, discomfort });
+  const pick = suggestionForDay({ hour: hourIn(state.profile.timeZone), restDay, recentMissedReason: missed, discomfort, seatedDay: state.profile.dailyActivity === "seated" });
   if (!pick) return null;
   return <RoutineSuggestionCard routine={pick.routine} label="Mobility for today" reason={pick.reason} />;
 }

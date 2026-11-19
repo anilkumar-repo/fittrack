@@ -1,5 +1,7 @@
 "use client";
 
+import { todayInTimeZone } from "@/lib/demo-data";
+
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -9,7 +11,7 @@ import { useFitTrack } from "@/components/app/fit-track-provider";
 import { MessageButton } from "@/components/app/message-button";
 import { Rozi } from "@/components/app/rozi";
 import { EmptyState } from "@/components/ui/empty-state";
-import { BIO_LIMIT, isAdult, normalizeUsername, profileChecklist, relationAction, suggestUsername, usernameProblem, type Relation } from "@/lib/discover";
+import { BIO_LIMIT, isAdultOn, needsBirthDate, normalizeUsername, profileChecklist, relationAction, suggestUsername, usernameProblem, type Relation } from "@/lib/discover";
 import {
   cancelFriendRequest, loadFriendRequests, loadPersonProfile, respondFriendRequest, searchPeople, sendFriendRequest, setPublicProfile, suggestedPeople, usernameAvailable,
   type FriendRequests, type Person, type PersonProfile,
@@ -102,7 +104,7 @@ export function DiscoverScreen() {
   return (
     <section className="discover-page">
       <label className="library-find"><Search aria-hidden="true" /><input type="search" value={query} placeholder="Search by name or @username" aria-label="Search people" onChange={(event) => setQuery(event.target.value)} />{query && <button type="button" onClick={() => setQuery("")} aria-label="Clear search"><X aria-hidden="true" /></button>}</label>
-      {!findable && <p className="discover-note">You’re hidden from search. {isAdult(state.profile.birthYear, Number(currentYear())) ? <Link href="/profile">Turn on “Let people find me”</Link> : "People under 18 (or without a birth year) can’t be found — share your friend code instead."}</p>}
+      {!findable && <p className="discover-note">You’re hidden from search. {isAdultOn(state.profile, state.profile.timeZone ? todayIn(state.profile.timeZone) : new Date().toISOString().slice(0, 10)) ? <Link href="/profile">Turn on “Let people find me”</Link> : "Only people confirmed as 18 or older can be found — share your friend code instead."}</p>}
 
       {results !== null && <article className="panel">
         <div className="panel-title"><h3>Results</h3><span className="panel-count">{results.length}</span></div>
@@ -134,7 +136,8 @@ export function DiscoverScreen() {
   );
 }
 
-const currentYear = () => new Date().getFullYear();
+/** Today (YYYY-MM-DD) in the person's time zone. */
+const todayIn = (timeZone: string) => todayInTimeZone(timeZone);
 
 /** Someone's profile: name, picture, @username and bio; for friends (and you) streaks, this month and their posts. */
 export function PersonScreen({ userId }: { userId: string }) {
@@ -212,7 +215,8 @@ export function PublicProfileCard() {
   const [taken, setTaken] = useState(false);
   const [busy, setBusy] = useState(false);
   const [posts, setPosts] = useState(0);
-  const adult = isAdult(profile.birthYear, currentYear());
+  const today = todayIn(profile.timeZone);
+  const adult = isAdultOn(profile, today);
   const workouts = recordedSessions.filter((session) => session.status === "completed").length;
   const checklist = useMemo(() => profileChecklist({ avatar: profile.avatar, username: profile.username, bio: profile.bio, birthYear: profile.birthYear, workouts, posts }),
     [profile.avatar, profile.username, profile.bio, profile.birthYear, workouts, posts]);
@@ -270,7 +274,7 @@ export function PublicProfileCard() {
       </button>}
 
       <div className="settings-toggle-row">
-        <span><strong>Let people find me</strong><small>{adult ? "Show your name, picture and @username in search and suggestions" : "Needs a birth year showing you’re 18 or older"}</small></span>
+        <span><strong>Let people find me</strong><small>{adult ? "Show your name, picture and @username in search and suggestions" : needsBirthDate(profile, today) ? "Add your date of birth (Settings → Your plan) to confirm you’re 18" : "Needs your age showing you’re 18 or older"}</small></span>
         <button type="button" role="switch" aria-checked={profile.findable === true} aria-label="Let people find me" className={`toggle ${profile.findable ? "on" : ""}`} disabled={busy || !adult}
           onClick={() => void save({ username: profile.username ?? "", bio: profile.bio ?? "", findable: !profile.findable })}><span /></button>
       </div>

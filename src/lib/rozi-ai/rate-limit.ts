@@ -11,6 +11,16 @@ export const ROZI_RATE_LIMITS: RateLimitRule[] = [
   { limit: 60, windowMs: 24 * 3_600_000 }, // 60 a day
 ];
 
+/**
+ * DEGRADED fallback, used only when the database limit isn't available (migration missing or a database error).
+ * Kept in each server instance's memory — Vercel may run several, so this is weaker protection than the database
+ * limit and is stricter to compensate.
+ */
+export const DEGRADED_RATE_LIMITS: RateLimitRule[] = [
+  { limit: 3, windowMs: 60_000 },          // 3 questions a minute
+  { limit: 20, windowMs: 24 * 3_600_000 }, // 20 a day
+];
+
 export type RateDecision = { allowed: true } | { allowed: false; retryAfterSeconds: number };
 
 export interface RateLimiter {

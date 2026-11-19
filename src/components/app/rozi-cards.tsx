@@ -1,9 +1,14 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
-import { ArrowRight, Dumbbell } from "lucide-react";
-import type { RoziCard } from "@/lib/rozi-ai/cards";
+import { ArrowLeftRight, ArrowRight, Check, Dumbbell } from "lucide-react";
+import { isInAppLink, type RoziCard } from "@/lib/rozi-ai/cards";
 import { shortDate } from "@/lib/dates";
+import { getExerciseDefinition } from "@/lib/templates";
+import type { ExerciseDefinition } from "@/lib/types";
+import { sessionForDate, useFitTrack } from "./fit-track-provider";
+import { SwapSheet, useExerciseSwap } from "./swap-sheet";
 
 /**
  * Cards under an AI answer. Everything here comes from RozFit's own tools on the server (never from the model's
@@ -18,7 +23,7 @@ export function RoziCards({ cards }: { cards: RoziCard[] }) {
 const WORKOUT_STATUS: Record<string, string> = { planned: "Planned", in_progress: "In progress", completed: "Done", partial: "Partly done", skipped: "Skipped", rest_day: "Rest day" };
 
 function CardLink({ link }: { link?: { href: string; label: string } }) {
-  if (!link || !link.href.startsWith("/")) return null;
+  if (!link || !isInAppLink(link.href)) return null;
   return <Link href={link.href} className="chat-link">{link.label} <ArrowRight aria-hidden="true" /></Link>;
 }
 
@@ -67,6 +72,8 @@ function RoziCardView({ card }: { card: RoziCard }) {
           {card.alternatives.length > 0 && <p className="rozi-alternatives"><small>Alternatives:</small> {card.alternatives.map((item) => item.name).join(" · ")}</p>}
         </section>
       );
+    case "swap":
+      return <SwapCard card={card} />;
     case "stat":
       return (
         <section className="rozi-card rozi-stat" aria-label={card.title}>
@@ -79,4 +86,31 @@ function RoziCardView({ card }: { card: RoziCard }) {
     default:
       return null;
   }
+}
+
+/**
+ * Rozi's swap card: tap an option to use it instead, or "More choices" for the full Swap sheet. Without a named
+ * exercise, the workout's exercises are listed, each with Swap. The swap runs in the app with the same checks as the
+ * Swap button (a stale card can't swap something that's no longer allowed).
+ */
+function SwapCard({ card }: { card: Extract<RoziCard, { type: "swap" }> }) {
+  const { getState } = useFitTrack();
+  const swap = useExerciseSwap(card.date);
+  const [done, setDone] = useState<string | null>(null);
+  const [sheetFor, setSheetFor] = useState<ExerciseDefinition | null>(null);
+  const workoutExercises = () => sessionForDate(getState(), card.date)?.plan.exercises ?? [];
+  const open = (id: string) => { const exercise = workoutExercises().find((item) => item.id === id) ?? getExerciseDefinition(id); if (exercise) setSheetFor(exercise); };
+  const use = (fromId: string, toId: string, toName: string) => { if (swap(fromId, toId)) setDone(toName); };
+  return (
+    <section className="rozi-card rozi-swap" aria-label={card.from ? `Swap ${card.from.name}` : "Swap an exercise"}>
+      <header><strong><ArrowLeftRight aria-hidden="true" className="inline-icon" /> {card.from ? `Instead of ${card.from.name}` : "Pick one to swap"}</strong><small>{shortDate(card.date)}</small></header>
+      {done ? <p className="rozi-swap-done"><Check aria-hidden="true" /> {done} is in your workout now.</p>
+        : card.from ? <>
+          <ul className="rozi-swap-list">{card.options.map((option) => <li key={option.id}><span><strong>{option.name}</strong><small>{option.equipment}</small></span><button type="button" className="button button-subtle small" onClick={() => use(card.from!.id, option.id, option.name)}>Use instead</button></li>)}</ul>
+          <button type="button" className="text-button" onClick={() => open(card.from!.id)}>More choices</button>
+        </> : <ul className="rozi-swap-list">{card.exercises.map((exercise) => <li key={exercise.id}><span><strong>{exercise.name}</strong></span><button type="button" className="button button-subtle small" onClick={() => open(exercise.id)}><ArrowLeftRight aria-hidden="true" /> Swap</button></li>)}</ul>}
+      {sheetFor && <SwapSheet exercise={sheetFor} workoutExercises={workoutExercises()} onClose={() => setSheetFor(null)}
+        onPick={(replacement) => { if (swap(sheetFor.id, replacement.id)) { setDone(replacement.name); setSheetFor(null); } }} />}
+    </section>
+  );
 }

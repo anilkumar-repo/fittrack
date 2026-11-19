@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { isAdult, normalizeUsername, profileChecklist, relationAction, suggestUsername, usernameProblem } from "./discover.ts";
+import { isAdultOn, needsBirthDate, normalizeUsername, profileChecklist, relationAction, suggestUsername, usernameProblem } from "./discover.ts";
 
 test("usernames: saved lower case without @, 3–20 letters/numbers/dots/underscores", () => {
   assert.equal(normalizeUsername("  @Anil.K "), "anil.k");
@@ -18,9 +18,29 @@ test("username suggestion from the display name", () => {
 });
 
 test("adults: 18 or older this year; unknown age is not an adult (same as the database)", () => {
-  assert.equal(isAdult(2008, 2026), true);
-  assert.equal(isAdult(2009, 2026), false);
-  assert.equal(isAdult(undefined, 2026), false);
+  // A birth year alone only counts when it's certain: 19+ years ago.
+  assert.equal(isAdultOn({ birthYear: 2007 }, "2026-01-01"), true);
+  assert.equal(isAdultOn({ birthYear: 2008 }, "2026-11-18"), false, "born 2008 could still be 17 (December birthday)");
+  assert.equal(isAdultOn({ birthYear: 2009 }, "2026-11-18"), false);
+  assert.equal(isAdultOn({}, "2026-11-18"), false, "unknown counts as not adult");
+  assert.equal(needsBirthDate({ birthYear: 2008 }, "2026-11-18"), true);
+  assert.equal(needsBirthDate({ birthYear: 2007 }, "2026-11-18"), false);
+  assert.equal(needsBirthDate({ birthYear: 2008, birthDate: "2008-12-20" }, "2026-11-18"), false);
+});
+
+test("a full date of birth decides exactly: 18th birthday yesterday, today, tomorrow", () => {
+  assert.equal(isAdultOn({ birthYear: 2008, birthDate: "2008-11-17" }, "2026-11-18"), true, "yesterday");
+  assert.equal(isAdultOn({ birthYear: 2008, birthDate: "2008-11-18" }, "2026-11-18"), true, "today");
+  assert.equal(isAdultOn({ birthYear: 2008, birthDate: "2008-11-19" }, "2026-11-18"), false, "tomorrow");
+  assert.equal(isAdultOn({ birthYear: 2008, birthDate: "2008-12-20" }, "2026-11-18"), false, "December birthday");
+  // The date wins over a (wrong) year.
+  assert.equal(isAdultOn({ birthYear: 1990, birthDate: "2010-01-01" }, "2026-11-18"), false);
+  // 29 February: an adult on 1 March in a non-leap year.
+  assert.equal(isAdultOn({ birthDate: "2008-02-29" }, "2026-02-28"), false);
+  assert.equal(isAdultOn({ birthDate: "2008-02-29" }, "2026-03-01"), true);
+  // Nonsense dates are ignored (then the year rule applies).
+  assert.equal(isAdultOn({ birthYear: 2008, birthDate: "2008-02-31" }, "2026-11-18"), false);
+  assert.equal(isAdultOn({ birthYear: 2000, birthDate: "not a date" }, "2026-11-18"), true);
 });
 
 test("profile checklist", () => {

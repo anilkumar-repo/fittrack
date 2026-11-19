@@ -1540,3 +1540,151 @@ The dry run applied it inside a transaction with 7 temporary accounts and rolled
 - **Security check:** only the expected notes.
 - **Live behaviour test (rolled back):** ownership, limits, delete-all with separate calls, and account-deletion cascade all passed; nothing was left behind.
 - **End to end with the real account:** two questions were saved as one conversation, New chat worked, and History reopened it with its cards.
+
+### 2026-11-19 — Rozi AI security audit, Phase A (same branch; migration applied)
+
+Approved as "Approve Phase A". Full details are in `docs/ROZI_AI_INTEGRATION.md` §16.
+
+**Database (migration `20261119090000_age_and_rozi_security.sql`):**
+- Optional `profiles.birth_date`. A trigger keeps `birth_year` in step and refuses future dates.
+- A strict 18+ rule (`private.is_adult(year, date)`), used by all 6 functions that decide "adult".
+- A per-person lock in `rozi_start_question`.
+- `rozi_save_reply` is now phone-only. The new server-only `rozi_save_ai_reply` is for the service role.
+
+**App:**
+- **Settings → Your plan → Date of birth.** Settings search finds it under "birth", "age" or "dob".
+- **Age:** `isAdultOn` / `needsBirthDate` replace `isAdult` everywhere.
+- **History:** the route ignores browser-sent history and reads earlier turns from the database.
+- **Saving AI replies:** the server saves them with the service-role client (`src/lib/rozi-ai/service-client.ts`).
+- **Masking and links:** emails and phone numbers are masked before providers see them (`privacy.ts`). Card links must be same-site.
+- **Fallback limit:** a stricter in-memory limit (3 a minute, 20 a day), logged as degraded.
+
+**Tests:**
+- 286 app tests pass, including the new privacy end-to-end test.
+- New repeatable database script `supabase/tests/rozi_ai_security.sql`: 31 checks, passed in a rolled-back dry run with the migration.
+- Type check, lint and build pass.
+- Settings checked on phone width and desktop.
+
+**Applied 2026-11-19 after "Yes, apply it":**
+- **Structure:** all as expected.
+- **Security advisors:** only the earlier notices. The server-only function isn't callable by signed-in users.
+- **Security script on the live database (rolled back):** 31/31 checks pass.
+- **Cleanup:** nothing left behind.
+
+**Next:**
+- Deploy the app. Until then, the live app's AI replies aren't saved to history.
+- **Live limit test (done, with OK):**
+  - **Setup:** one temporary account, 10 questions.
+  - **Result:** exactly 6 allowed and 4 refused, with only 6 saved.
+  - **Caveat:** the calls arrived about 2 s apart, not at the same moment, so the lock wasn't exercised by truly simultaneous requests.
+  - **Cleanup:** the account was deleted, and nothing is left.
+- **Truly simultaneous test (done, with OK):**
+  - **Setup:** 10 questions fired at once from the signed-in tab (database only, no AI). They finished within 184–232 ms.
+  - **Result:** exactly 6 allowed and 4 refused. The 6 saved questions were counted in turn, with no duplicates, which confirms the lock works.
+  - **Cleanup:** the test chats were deleted, and nothing is left.
+
+### 2026-11-19 — Rozi AI benchmark, Phase B (same branch; no database change)
+
+Approved as "next phase B". Full details are in `docs/ROZI_AI_INTEGRATION.md` §17.
+
+- **60 questions** (40 English, 10 Telugu, 10 Hindi) on 4 made-up accounts (`src/lib/rozi-ai/bench/`):
+  - each is scored on tools, facts, safety and language;
+  - expected facts come from the real tools.
+- **B1, offline:** 78 new tests in `npm test`. They cover every question, the scorer, malformed and unknown tool calls, several rounds of tools, fallbacks, and the edge accounts.
+- **B2, live** (`npm run rozi:bench`; results in `docs/benchmark/` and `docs/ROZI_AI_BENCHMARK.md`):
+  - gpt-oss-20b **55/60**;
+  - gpt-oss-120b **55/60**;
+  - Gemini 3.5 Flash-Lite **51/60** (8 timeouts);
+  - Qwen 3.8 27B **43/60** (15 hit its daily limit).
+  - Total cost under $0.20.
+- **Recommendation:** keep the current chain (20b → 120b → Flash-Lite). Nothing was changed. Two fixes are suggested: an explicit Telugu/Hindi reply hint, and a plain skipped-count sentence.
+- **Checked:** 364 tests, type check and lint pass.
+
+### 2026-11-19 — Rozi AI: fixes from the benchmark (same branch; no database change)
+
+After "Yes, fix both". Details are in `docs/ROZI_AI_INTEGRATION.md` §17, "Fixes from the benchmark".
+
+**Fixes:**
+- **Reply language:** an explicit reply language for Telugu, Hindi/Marathi and other Indian scripts (`prompt.ts`).
+- **History tool** (`tools.ts`):
+  - a plain sentence with the completed, partly done and skipped counts;
+  - the periods are spelled out, because the models fetched last month for "this month".
+
+**Re-run of the 26 affected questions:**
+- **gpt-oss-120b:** 55/60 → **60/60**.
+- **gpt-oss-20b:** only partly re-tested (Groq daily limit reached). Re-run tomorrow.
+
+**Checked:** 364 tests, type check and lint pass.
+
+**Waiting for approval:** no model order changed. Making gpt-oss-120b the first model needs your OK.
+
+**Decision (2026-11-19):**
+- **Order:** keep 20b → 120b → Flash-Lite, unchanged until 20b is fully re-tested.
+- **20b so far:** Q38 now passes (56/60). Its Telugu/Hindi questions are waiting for Groq's daily limit to reset (`npm run rozi:bench -- --only groq:openai/gpt-oss-20b --cases 42-60`).
+
+### 2026-11-19 — Swap any exercise (also through Rozi), warm-up confirm, new rest timer, haptics, typical-day question, shrinking dock (same branch; migration applied)
+
+From your screenshots and the Instagram recording.
+
+**1. Swap exercises (and "customise my workout" in Rozi)**
+- **The problem:** Rozi's rules said it "can't change their plan". Also, "I want to customise the workout" matched the on-phone *plan a new workout* answer.
+- **New shared module, `src/lib/exercise-swap.ts`:**
+  - **What can come in:** any library exercise the trainer rules allow (deadlift approval) and the person's equipment covers. These are the same rules the planner uses, so a swap is kept when the plan is rebuilt.
+  - **What's kept:** sets, reps and rest stay the same, and the original stays in the plan history.
+  - **When:** before a workout starts, any exercise can be swapped; once it has started, only one with no sets done yet.
+- **Where you can swap:**
+  - **Train (before starting):** a round swap button beside every exercise.
+  - **While logging:** "Swap" next to "Warm-up & plates".
+  - **The sheet (`swap-sheet.tsx`):** closest matches first, then searchable "any other exercise", ranked by the same movement and shared muscles.
+  - **The exercise guide:** "Use instead" now uses the same module, so the swap code isn't repeated.
+- **Rozi:**
+  - **Rozi AI:** a new tool, `suggest_exercise_swap`. Its card lists choices you tap ("Use instead" or "More choices"). The rules now say people can swap any exercise.
+  - **On-phone Rozi:** a new `SWAP_EXERCISE` intent, checked before "plan a workout". It gives the same card.
+- **Tests:** `exercise-swap.test.ts` covers the rules, choices, kept sets/reps, the fresh log for a started workout, the restricted account, the tool and the intents.
+
+**2. Warm-up & plates**
+- **The problem:** a working weight below the bar (for example 10 kg on a 20 kg bar) showed "Type a working weight…" and no button, so nothing could be confirmed or saved.
+- **The fix:**
+  - A clear message is shown for that case.
+  - One confirm button always appears: "Use 10 kg + add 2 warm-up sets", or "Use 10 kg for my sets". It also works with the keyboard's Go/Done key.
+  - It saves the working weight into the sets not done yet, and the warm-ups, in one update.
+
+**3. Rest timer, redesigned (`rest-timer.tsx`)**
+- **No more dragging:** the timer is a bar docked just above the dock handle, with ring and time, the exercise, then −10 / +10 / Skip.
+- **Two sizes:** tap it to shrink it to a small pill, and tap again to expand. The size is remembered.
+- **Room to work:** the page leaves space so the bar never covers the Next button.
+- **Removed:** `rest-timer-place.ts` and its test, which were only for dragging.
+
+**4. Haptics and the typical-day question**
+- **`src/lib/haptics.ts`:**
+  - Android uses its vibration API.
+  - iPhone (iOS 18+) uses the switch-control trick. Best effort.
+- **Used by:** the height and weight pickers (a tick per step), the rest-timer buttons, and the onboarding activity answers.
+- **New onboarding step, "How active is your typical day?":** Mostly seated / Lightly active / Often on my feet / Physically active work.
+  - **Water target:** +0 / +0 / +250 / +500 ml.
+  - **Stretches:** "Mostly seated" gets a sitting-reset stretch suggestion in the afternoon.
+  - **Rozi:** sees it in the profile tool.
+  - **Settings:** editable in Settings → Your plan.
+- **Saving to the account:** needs migration `20261119120000_profile_daily_activity.sql` (one optional column). **Applied 2026-11-19 after "Yes, apply it":**
+  - **Column:** text, optional, with a check limiting it to seated / light / on_feet / active.
+  - **Security advisors:** only the earlier notices.
+  - **Behaviour test (rolled back):** your own update works, a bad value is refused, and another person can't change it (0 rows).
+  - **Cleanup:** nothing left behind.
+  - **Note:** the deployed app needs the new code to start saving it.
+
+**5. Dock**
+- **Like Instagram:** the dock shrinks to an icon-only pill (about 84%) while you scroll down, and comes back on scroll-up or at the top. It's not active during a workout.
+- **Lower:** it sits closer to the bottom (safe area − 10px, about 24pt on iPhone instead of 44pt).
+
+**Checked:**
+- 366 tests, type check, lint and production build pass.
+- In a production build on a separate test origin (made-up demo data, your account untouched):
+  - onboarding question;
+  - swap before and during a workout;
+  - Rozi swap card (list and named swap);
+  - warm-up confirm, including Enter;
+  - rest bar in both sizes;
+  - Settings field;
+  - dock full / compact / back.
+- No console errors.
+- **Not checkable here:** the iPhone haptics and the real iPhone safe area. Please try those on your phone after deploying.

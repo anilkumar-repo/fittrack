@@ -209,7 +209,7 @@ pictures first: they only have muscle maps today), and short real clips.
 - 💡 **Rozi evolves**: outfits, accessories, a little gym unlocked by streak and level (idea 1).
 - 💡 **Rest-day missions** with a "rest streak" (idea 3); 💡 **Streak shield** earned every 7 days (idea 4); 💡 **"Why" wall** photo card (idea 6).
 - **Ask Rozi v1**: saved chats, follow-up questions ("what about last month?"), more answers.
-- **Rozi AI (Google Gemini `gemini-3.8-flash`)** — plan in `docs/ROZI_AI_INTEGRATION.md`. ✅ Stage 2 connection · ✅ Stage 3 tools + conversation · ✅ Groq provider · ✅ Stage 4 API and security · ✅ Stage 5 screen · ✅ Stage 6 history (applied) (2026-11-18) · Stage 5 screen · Stage 6 history (DB) · Stage 7 verify.
+- **Rozi AI (Google Gemini `gemini-3.8-flash`)** — plan in `docs/ROZI_AI_INTEGRATION.md`. ✅ Stage 2 connection · ✅ Stage 3 tools + conversation · ✅ Groq provider · ✅ Stage 4 API and security · ✅ Stage 5 screen · ✅ Stage 6 history (applied) (2026-11-18) · ✅ Security audit Phase A (date of birth for 18+, server-only AI replies, history from the database, per-person lock, masking; migration applied, deploy pending) (2026-11-19) · ✅ Phase B benchmark (60 questions, English/Telugu/Hindi, 4 models) + language and skipped-count fixes (gpt-oss-120b 60/60 after fixes) (2026-11-19) · ✅ Swap any exercise (Train, logger, guide and Rozi AI/on-phone card) (2026-11-19) · ⬜ Stage 7 verify.
 
 ### Phase 9 — Native app + Apple Health + Apple Watch · ~3–4 weeks · small DB
 - App Store / Play Store app (Capacitor wrapper around the same code).
