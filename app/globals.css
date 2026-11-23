@@ -3824,3 +3824,41 @@ img[data-motion="float"] { --rozi-motion: rozi-float 3.6s ease-in-out infinite; 
 
 /* Warm-up & plates: the confirm button sits at the bottom of the sheet. */
 .plates-target-form { margin: 0; }
+
+/* ===================== 2026-11-19 · ROZI ACTIONS (Level 3): approval card + history ===================== */
+.rozi-action { gap: 8px; border: 1px solid var(--line); }
+.rozi-action.tone-waiting { border-color: color-mix(in srgb, var(--accent, #ef7d5c) 45%, var(--line)); }
+.rozi-action-kind { display: inline-flex; align-items: center; gap: 5px; color: var(--muted); font-size: 12px; font-weight: 800; letter-spacing: .3px; text-transform: uppercase; }
+.rozi-action-title { font-size: 16px; line-height: 1.3; }
+.rozi-action-why { margin: 0; color: var(--ink-2); font-size: 14px; }
+.rozi-action-changes { display: grid; gap: 4px; margin: 0; padding: 8px 10px 8px 26px; border-radius: 12px; background: var(--surface-solid); font-size: 14px; }
+.rozi-action-buttons { display: flex; flex-wrap: wrap; gap: 8px; }
+.rozi-action-buttons .button { flex: 1 1 120px; min-height: 44px; }
+.rozi-action-buttons svg { width: 16px; height: 16px; }
+.rozi-action-note { color: var(--muted); font-size: 12.5px; }
+.rozi-action-problem { margin: 0; color: #a3324a; font-size: 13px; font-weight: 600; }
+.rozi-action-status { display: inline-flex; align-items: center; gap: 4px; }
+.rozi-action-status svg { width: 13px; height: 13px; }
+.rozi-action-status.tone-waiting { color: #8a4b20; background: #fde3d4; }
+.rozi-action-status.tone-working { color: #1f5f99; background: #dcebf9; }
+.rozi-action-status.tone-done { color: #1f6f55; background: #d8f1e6; }
+.rozi-action-status.tone-problem { color: #8f2f45; background: #f7dbe2; }
+.rozi-action-status.tone-closed { color: var(--muted); background: var(--surface-solid); }
+:root[data-theme="dark"] .rozi-action-status.tone-waiting { color: #ffc6a8; background: rgba(239, 125, 92, .2); }
+:root[data-theme="dark"] .rozi-action-status.tone-working { color: #a9d0f5; background: rgba(79, 155, 224, .2); }
+:root[data-theme="dark"] .rozi-action-status.tone-done { color: #a8e6cf; background: rgba(63, 174, 140, .22); }
+:root[data-theme="dark"] .rozi-action-status.tone-problem { color: #f2b3c3; background: rgba(217, 87, 122, .22); }
+:root[data-theme="dark"] .rozi-action-problem { color: #f2b3c3; }
+.spin { animation: rozi-spin 1s linear infinite; }
+@keyframes rozi-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .spin { animation: none; } }
+
+.modal.rozi-actions-sheet { position: relative; display: flex; flex-direction: column; gap: 10px; width: min(520px, 100%); max-height: min(86dvh, 760px); padding: 22px 18px calc(16px + env(safe-area-inset-bottom)); overflow: hidden; }
+.rozi-actions-sheet > * { flex: none; }
+.rozi-actions-sheet h2 { margin: 0; font-size: 22px; }
+.rozi-actions-sheet .card-note { margin: 0; }
+.rozi-actions-sheet .onb-kicker svg { width: 14px; height: 14px; }
+.rozi-actions-list { flex: 1 1 auto; display: grid; align-content: start; gap: 8px; min-height: 0; margin: 0 -6px; padding: 0 6px 6px; overflow-y: auto; list-style: none; overscroll-behavior: contain; }
+.rozi-actions-list li { display: grid; gap: 4px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 16px; background: var(--surface-2); }
+.rozi-actions-list li > small { color: var(--muted); font-size: 12.5px; }
+.rozi-actions-row-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }

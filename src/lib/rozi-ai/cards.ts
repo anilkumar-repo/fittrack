@@ -5,6 +5,7 @@
 
 import type { RoziPlan } from "../rozi-plan.ts";
 import type { SwapSuggestion } from "../exercise-swap.ts";
+import type { ActionStatus, ActionSummary, ActionType } from "./actions/action-types.ts";
 
 export interface CardLink { href: string; label: string }
 
@@ -63,7 +64,15 @@ export type RoziCard =
     options: Array<{ id: string; name: string; equipment: string }>;
     exercises: Array<{ id: string; name: string }>;
   }
-  | { type: "stat"; title: string; value: string; detail: string; link?: CardLink };
+  | { type: "stat"; title: string; value: string; detail: string; link?: CardLink }
+  /**
+   * A change Rozi proposed (Level 3). Approve / Reject act on THIS action id and hash only; the payload itself is
+   * fetched from the server on approval, never taken from the card.
+   */
+  | {
+    type: "action";
+    action: { id: string; type: ActionType; status: ActionStatus; summary: ActionSummary; payloadHash: string; expiresAt: string };
+  };
 
 /** The swap card for a swap suggestion (shared by Rozi AI's tool and Rozi's on-phone answer). */
 export function swapCard(date: string, suggestion: SwapSuggestion): RoziCard {

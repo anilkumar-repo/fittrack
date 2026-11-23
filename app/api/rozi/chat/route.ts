@@ -1,5 +1,6 @@
-import { createClient } from "@supabase/supabase-js";
 import { loadOwnTrainingData } from "@/lib/supabase-repository";
+import { actionsEnabled, proposeAction } from "@/lib/rozi-ai/actions/action-service";
+import { bearerToken, userClientFromToken } from "@/lib/rozi-ai/user-client";
 import { handleRoziChat, type RoziChatSession } from "@/lib/rozi-ai/handler";
 import { createRateLimiter, DEGRADED_RATE_LIMITS } from "@/lib/rozi-ai/rate-limit";
 import { createCooldowns } from "@/lib/rozi-ai/fallback";
@@ -24,17 +25,13 @@ const cooldowns = createCooldowns();
  * key + their token), so row-level security decides what it can read. No service-role key is used here.
  */
 async function sessionFor(token: string): Promise<RoziChatSession | null> {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const key = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
-  if (!url || !key) return null;
-  const client = createClient(url, key, {
-    global: { headers: { Authorization: `Bearer ${token}` } },
-    auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
-  });
-  const { data, error } = await client.auth.getUser(token);
-  if (error || !data.user) return null;
-  const userId = data.user.id;
+  const signedIn = await userClientFromToken(token);
+  if (!signedIn) return null;
+  const { client, userId } = signedIn;
+  const service = roziServiceClient();
   return {
+    // Level 3: Rozi may PROPOSE changes (recorded for the person to approve on a card) — only with ROZI_ACTIONS=on.
+    ...(actionsEnabled() && service ? { actions: { propose: (ctx, args, conversationId) => proposeAction({ service, userId, ctx, conversationId }, args) } } : {}),
     userId,
     loadData: () => loadOwnTrainingData(client, userId),
     // Chat history and the daily limit, through the person's own sign-in (database functions check ownership).
@@ -65,7 +62,7 @@ export async function POST(request: Request) {
   let body: unknown = null;
   try { body = raw ? JSON.parse(raw) : null; } catch { body = null; }
 
-  const token = (request.headers.get("authorization") ?? "").match(/^Bearer\s+(\S+)$/i)?.[1] ?? null;
+  const token = bearerToken(request);
   const result = await handleRoziChat({ token, body, signal: request.signal }, {
     session: sessionFor,
     providers: () => roziAiProviders(),
