@@ -135,6 +135,12 @@ It's a strong plan and matches the code. My changes:
 9. **Gym check-in by QR.** A gym prints a RozFit QR; members scan it to log "at the gym", see gym leaderboards and find gym buddies.
 10. **Form-check video (later).** Record a set; the trainer gets it in the chat with timestamped comments.
 
+**Where each idea lands (2026-11-19):**
+- **Done:** 5 Plate calculator + warm-up (Phase 4, warm-up confirm improved 2026-11-19) · 7 Trainer broadcast (Phase 6).
+- **Phase 8 (motivation), roadmap item 12:** 1 Rozi grows with you · 3 Rest-day missions · 4 Streak shield (streak repairs already exist) · 6 "Why" wall (your "why" is already saved and quoted in comeback reminders).
+- **Community extras, roadmap item 13:** 2 Gym-buddy live mode · 8 Monthly report card · 9 Gym check-in QR.
+- **Phase 10:** 10 Form-check video.
+
 ---
 
 ## 9. All phases (updated 2026-11-16; you pick the order)
@@ -209,7 +215,7 @@ pictures first: they only have muscle maps today), and short real clips.
 - 💡 **Rozi evolves**: outfits, accessories, a little gym unlocked by streak and level (idea 1).
 - 💡 **Rest-day missions** with a "rest streak" (idea 3); 💡 **Streak shield** earned every 7 days (idea 4); 💡 **"Why" wall** photo card (idea 6).
 - **Ask Rozi v1**: saved chats, follow-up questions ("what about last month?"), more answers.
-- **Rozi AI (Google Gemini `gemini-3.8-flash`)** — plan in `docs/ROZI_AI_INTEGRATION.md`. ✅ Stage 2 connection · ✅ Stage 3 tools + conversation · ✅ Groq provider · ✅ Stage 4 API and security · ✅ Stage 5 screen · ✅ Stage 6 history (applied) (2026-11-18) · ✅ Security audit Phase A (date of birth for 18+, server-only AI replies, history from the database, per-person lock, masking; migration applied, deploy pending) (2026-11-19) · ✅ Phase B benchmark (60 questions, English/Telugu/Hindi, 4 models) + language and skipped-count fixes (gpt-oss-120b 60/60 after fixes) (2026-11-19) · ✅ Swap any exercise (Train, logger, guide and Rozi AI/on-phone card) (2026-11-19) · ⬜ Stage 7 verify.
+- **Rozi AI (Google Gemini `gemini-3.8-flash`)** — plan in `docs/ROZI_AI_INTEGRATION.md`. ✅ Stage 2 connection · ✅ Stage 3 tools + conversation · ✅ Groq provider · ✅ Stage 4 API and security · ✅ Stage 5 screen · ✅ Stage 6 history (applied) (2026-11-18) · ✅ Security audit Phase A (date of birth for 18+, server-only AI replies, history from the database, per-person lock, masking; migration applied, deploy pending) (2026-11-19) · ✅ Phase B benchmark (60 questions, English/Telugu/Hindi, 4 models) + language and skipped-count fixes (gpt-oss-120b 60/60 after fixes) (2026-11-19) · ✅ Swap any exercise (Train, logger, guide and Rozi AI/on-phone card) (2026-11-19) · ✅ Rozi agent Phase 0 audit (2026-11-19) · ⬜ Stage 7 verify · ⬜ Agent Phases 1–9 (see section 10).
 
 ### Phase 9 — Native app + Apple Health + Apple Watch · ~3–4 weeks · small DB
 - App Store / Play Store app (Capacitor wrapper around the same code).
@@ -230,3 +236,41 @@ pictures first: they only have muscle maps today), and short real clips.
 4. Community, native app and nutrition after that.
 
 Each phase: `feature/*` branch → dev site → `main`, with tests, phone/desktop light/dark checks, and a history entry.
+
+## 10. Complete roadmap (updated 2026-11-19)
+
+Supersedes the order in "My recommendation" above. ✅ done · 🟡 partly done · ⬜ not started.
+
+### Done
+| Area | Status |
+| --- | --- |
+| Phase 0 fixes · Phase 1 Liquid Glass 2 · Phase 2 Onboarding v2 · Phase 3 Recovery · Phase 4 Pro tracking · Phase 6 Trainers v2 | ✅ (migrations applied) |
+| Phase 7 Community: Chats, Feed, Discover + profiles, 2026-11-18 improvements | ✅ (migrations applied) |
+| Rozi AI stages 1–6: Gemini + Groq, tools, secure route, screen, chat history, 3-model fallback | ✅ |
+| Security audit Phase A (date of birth 18+, server-only AI replies, DB history, per-person lock, masking, SQL security script) | ✅ applied + live concurrency test |
+| Benchmark Phase B (60 questions EN/TE/HI, 4 models) + language and skipped-count fixes | ✅ (120b 60/60; 20b re-test pending) |
+| Swap any exercise (Train, logger, guide, Rozi card), warm-up confirm, rest-timer bar, haptics, typical-day question, shrinking dock | ✅ (migration applied) |
+| Rozi agent Phase 0 audit: `ROZI_AGENT_ARCHITECTURE.md`, `ROZI_AGENT_PERMISSION_MODEL.md`, `ROZI_AGENT_IMPLEMENTATION_PLAN.md` | ✅ waiting for your review |
+
+### Pending — in the order I recommend
+| # | Item | Size | DB | Needs from you |
+| --- | --- | --- | --- | --- |
+| 1 | **Ship what's built:** commit + push (GitHub Desktop) → deploy; check on iPhone: haptics, dock height, rest bar, swap, warm-up, Rozi AI replies saved | — | — | push; phone check |
+| 2 | **Rozi AI stage 7 — verify:** live check after deploy; Vercel env (`ROZI_AI_CHAIN`, keys, `SUPABASE_SERVICE_ROLE_KEY`); optional Groq zero data retention; turn on leaked-password protection (Supabase Auth) | ½ day | — | dashboard steps |
+| 3 | **Re-test gpt-oss-20b** Telugu/Hindi (Q42–60) when Groq's daily limit resets; add swap questions to the benchmark; then decide the model order | ½ day | — | OK on order |
+| 4 | 🟡 **Rozi agent Phase 1 — Level 3 actions** (approval-bound, idempotent, audited; swap, start plan, save routine, preferences, body weight, water): **built + tested 2026-11-19**, migration applied (live security script 22/22), flag off until Phase 2 | done | `rozi_actions` | — |
+| 5 | ✅ **Agent Phase 2 — action screens** (approval card with live status, "What Rozi changed" history): built + checked 2026-11-23; on with `ROZI_ACTIONS=on` | done | — | set the Vercel variable |
+| 6 | **Agent Phases 3–4 — Level 4 plans** (goal → fixed task templates → validator → resumable steps → monitor → proposals only) | ~2 wk | `rozi_plans`, `rozi_plan_tasks` | "apply" |
+| 7 | **Agent Phase 7 — security review** of actions and plans (RLS, races, injection, privacy) | 3 d | — | — |
+| 8 | **Agent Phase 5 — fitness intelligence** (post-workout recap, weekly insights, plateau detection, recovery-aware day, "why this workout"). Replaces the earlier "Phase C" proposals. | ~1 wk | — | — |
+| 9 | **Agent Phase 6 — memory** (only what the profile doesn't already hold; view/edit/delete) | 3–4 d | small | "apply" |
+| 10 | **Agent Phases 8–9 — agent benchmark (≥ 50 scenarios) + docs + feature-flag release** | 3–4 d | — | — |
+| 11 | **Scheduled reviews** (weekly review, missed-workout check-in) via existing `pg_cron` + push, opt-in, proposals only | 3 d | small | consent design OK |
+| 12 | **Phase 8 — motivation:** Rozi evolves (outfits, gym by streak/level), rest-day missions + rest streak, streak shield, "Why" wall | ~1 wk | small | — |
+| 13 | **Phase 7 extras:** gym-buddy live mode, gym check-in QR, monthly report card for Instagram | ~1 wk | small | — |
+| 14 | **Phase 5 — Motion, the rest:** frames for ~125 stretches, moving strength pictures (new art first), short clips | ~2 wk | — | art direction |
+| 15 | **Phase 9 — native app:** App Store / Play (Capacitor), Apple Health / Health Connect, Watch, Live Activity | 3–4 wk | small | Apple USD 99/yr, Google USD 25 |
+| 16 | **Phase 10 — nutrition + voice:** calorie/protein targets, food log, voice Rozi, form-check video | ~2 wk | yes | — |
+
+### Still to check on a real phone (from earlier work)
+Progress page cut on the right (iPhone Safari, #14) · notifications after deploy (#13) · "BMI asked twice" on a real new sign-up (#10) · haptics on iOS 18+.

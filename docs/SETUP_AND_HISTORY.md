@@ -1688,3 +1688,56 @@ From your screenshots and the Instagram recording.
   - dock full / compact / back.
 - No console errors.
 - **Not checkable here:** the iPhone haptics and the real iPhone safe area. Please try those on your phone after deploying.
+
+### 2026-11-19 — Rozi agent upgrade: Phase 0 audit + complete roadmap (docs only)
+
+From your "Level 4 Supervised Autonomous Fitness Agent" brief.
+- **No application code changed.**
+- **New docs:** `docs/ROZI_AGENT_ARCHITECTURE.md` (today's Level 2 flow; inventory of tools, writes and tables; Level 3/4 design), `docs/ROZI_AGENT_PERMISSION_MODEL.md` (categories A/B/C, lifecycle, approval binding, idempotency, plan limits) and `docs/ROZI_AGENT_IMPLEMENTATION_PLAN.md` (phases 1–9, files, migrations, risks, tests).
+- **Key finding:** all writes currently run in the browser, so server-run actions need a version check against stale browser saves first.
+- **Roadmap:** `docs/ROADMAP.md` section 10 is the complete, ordered list of what's done and pending.
+- **Waiting for:** your review and approval before agent Phase 1.
+
+### 2026-11-19 — Rozi agent Phase 1: Level 3 actions with approval (same branch; migration applied; off by default)
+
+After "approve phase 1". Full details are in `docs/ROZI_AGENT_IMPLEMENTATION_PLAN.md` ("Phase 1 — status") and decision D1 in `ROZI_AGENT_ARCHITECTURE.md`.
+
+**How it works:**
+- Rozi can now **propose** six changes: swap an exercise, make a plan today's workout, save a routine, update plan settings, log weight, log water.
+- The server builds the exact change from your data with the existing FitTrack logic, refuses anything not allowed, and records it.
+- You approve that exact change (hash-bound, 30 minutes, single use). The app applies it through its normal save path, only once. The server re-reads your data and records completed or failed.
+- Everything else (deleting data, security, trainer rules, posting, purchases, diagnoses) is refused, with where to do it yourself.
+
+**Checked:**
+- 378 tests, type check and lint pass.
+- New `supabase/tests/rozi_actions_security.sql`; rolled-back dry runs passed (21 + 5 checks).
+
+**Not done yet:**
+- applying migration `20261119150000_rozi_actions.sql` (needs your OK);
+- Phase 2, the approval cards and action history;
+- switching it on with `ROZI_ACTIONS=on` (only after Phase 2).
+
+**Applied 2026-11-19 after "Yes, apply it" (`20261119150000_rozi_actions.sql`):**
+- **Structure:** row-level security on; no table access for the app or anon.
+  - **The app can call:** `rozi_start_action`, `rozi_reject_action`, `rozi_my_actions`.
+  - **Only the server can call:** `rozi_propose_action`, `rozi_finish_action`.
+  - All functions are security definer.
+- **Security advisors:** only the expected notices (a closed table, and the three owner-checked functions).
+- **`supabase/tests/rozi_actions_security.sql` on the live database (rolled back):** `PASS 22 checks`.
+- **Cleanup:** 0 rows and 0 test users left.
+- **Still off:** `ROZI_ACTIONS` isn't set, so Rozi doesn't propose anything until Phase 2 adds the approval cards.
+
+### 2026-11-23 — Rozi agent Phase 2: approval cards and "What Rozi changed" (same branch; no database change)
+
+After "Start Phase 2". Details are in `docs/ROZI_AGENT_IMPLEMENTATION_PLAN.md` ("Phase 2 — status").
+
+**What's new:**
+- **Approval card under Rozi's reply:** what will change and why, with Approve / Not now, and a live status: Needs your OK → Saving… → Done or Didn't work, or Not applied / Expired.
+- **"Done" means checked:** it's only shown after the server verified the change.
+- **History:** the **Changes** button opens the list of everything Rozi proposed and what happened.
+
+**Checked:**
+- 379 tests, type check, lint and build pass.
+- All card states and the history sheet checked at phone width, with the network calls intercepted (no real data touched).
+
+**To use it:** add `ROZI_ACTIONS=on` in Vercel and redeploy (after you commit and push).

@@ -54,6 +54,7 @@ export function roziSystemPrompt(today: string, hour: number, replyLanguage: str
     "- Deadlift variations need the user's trainer's approval; if a tool says something isn't allowed, respect it. You can't change trainer rules — explain them, and point to the app.",
     "- People can swap any exercise in their workout for another that fits their equipment and trainer rules. When they want to change, replace or customise exercises, call suggest_exercise_swap: the card lets them tap their choice (you can't make the swap yourself). Never say the workout can't be changed.",
     "- plan_custom_workout only suggests a workout; the user decides on the card whether to start or save it.",
+    "- You never change the user's data yourself. Never say something was changed, saved or logged: changes only happen when the user approves a card.",
     "",
     "BOUNDARIES",
     "- Stay on fitness, training, recovery, wellbeing and the RozFit app. Politely decline anything else.",

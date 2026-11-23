@@ -18,7 +18,8 @@ import { isConversationId, type ReplyToSave, type StartQuestionResult } from "./
 import { redactContactDetails } from "./privacy.ts";
 import type { RoziAiProviders } from "./server.ts";
 import { selectTools } from "./tool-select.ts";
-import { roziContext } from "./tools.ts";
+import { roziContext, type RoziContext, type ToolOutcome } from "./tools.ts";
+import { PROPOSE_ACTION_TOOL } from "./actions/action-service.ts";
 
 export type RoziChatReason =
   | "sign-in"        // 401: no or expired sign-in
@@ -50,6 +51,11 @@ export interface RoziChatSession {
     /** Saves the AI reply — server only (service role), after the sign-in was checked. */
     saveAiReply(conversationId: string, reply: Omit<ReplyToSave, "source">): Promise<boolean>;
   };
+  /**
+   * Level 3 actions (only when ROZI_ACTIONS=on and the server key is set): runs the propose_action tool. It records a
+   * proposal for the person to approve on a card; it never changes their data.
+   */
+  actions?: { propose(ctx: RoziContext, args: Record<string, unknown>, conversationId: string | null): Promise<ToolOutcome> };
 }
 
 export interface RoziChatDeps {
@@ -155,7 +161,7 @@ export async function handleRoziChat(input: RoziChatInput, deps: RoziChatDeps): 
 
   // Contact details typed into a question (or earlier ones) never go to a provider.
   const question = { message: redactContactDetails(request.message), history: history.map((line) => ({ ...line, text: redactContactDetails(line.text) })) };
-  const result = await ask(available.providers, deps.cooldowns, data, question, now, input.signal, log, conversationId);
+  const result = await ask(available.providers, deps.cooldowns, data, question, now, input.signal, log, conversationId, session.actions);
   if (result.body.ok && conversationId && session.history) {
     const saved = await session.history.saveAiReply(conversationId, { text: result.body.text, intent: result.body.intent, model: result.body.model, cards: result.body.cards }).catch(() => false);
     if (!saved) log({ event: "rozi_ai_history", ok: false });
@@ -166,11 +172,13 @@ export async function handleRoziChat(input: RoziChatInput, deps: RoziChatDeps): 
 /** Models tried, for the log: "groq:openai/gpt-oss-20b=rate-limited, groq:openai/gpt-oss-120b=answered". */
 const attemptLog = (attempts: Array<{ provider: string; model: string; outcome: string }>) => attempts.map((item) => `${item.provider}:${item.model}=${item.outcome}`).join(", ");
 
-async function ask(providers: AiProvider[], cooldowns: Cooldowns | undefined, data: OwnTrainingData, request: { message: string; history: ChatLine[] }, now: Date, signal: AbortSignal | undefined, log: (entry: Record<string, unknown>) => void, conversationId: string | null): Promise<RoziChatResult> {
+async function ask(providers: AiProvider[], cooldowns: Cooldowns | undefined, data: OwnTrainingData, request: { message: string; history: ChatLine[] }, now: Date, signal: AbortSignal | undefined, log: (entry: Record<string, unknown>) => void, conversationId: string | null, actions?: RoziChatSession["actions"]): Promise<RoziChatResult> {
   const ctx = roziContext(data, dayIn(data.profile.timeZone, now), hourIn(data.profile.timeZone, now));
   const tools = selectTools(request.message, request.history);
+  // With actions on, the model may also PROPOSE a change (the person approves it on a card). Off: unchanged.
+  const extraTools = actions ? { tools: [PROPOSE_ACTION_TOOL], run: (name: string, args: Record<string, unknown>) => (name === PROPOSE_ACTION_TOOL.name ? actions.propose(ctx, args, conversationId) : Promise.resolve({ result: { error: "Unknown tool." } } as ToolOutcome)) } : undefined;
   try {
-    const answer = await askRoziWithFallback({ providers, cooldowns, ctx, message: request.message, history: request.history, signal, tools });
+    const answer = await askRoziWithFallback({ providers, cooldowns, ctx, message: request.message, history: request.history, signal, tools, extraTools });
     log({ event: "rozi_ai", ok: true, model: answer.model, attempts: attemptLog(answer.attempts), intent: answer.intent, toolsOffered: tools.length, tools: answer.toolsUsed, latencyMs: answer.latencyMs, tokens: answer.usage.totalTokens });
     return { status: 200, body: { ok: true, text: answer.text, cards: answer.cards, intent: answer.intent, model: answer.model, ...(conversationId ? { conversationId } : {}) } };
   } catch (error) {

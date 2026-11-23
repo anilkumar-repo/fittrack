@@ -119,6 +119,13 @@ export function findInWorkout(exercises: ExerciseDefinition[], text: string): Ex
   return best;
 }
 
+/** A library exercise named in text ("goblet squat"), preferring one this person can do, then the shortest name. */
+export function findNamedExercise(text: string, profile: Profile): ExerciseDefinition | null {
+  if (!text.trim()) return null;
+  return EXERCISE_LIBRARY.filter((exercise) => exerciseSearchRank(exercise, text) === 0)
+    .sort((a, b) => Number(canUseExercise(b, profile)) - Number(canUseExercise(a, profile)) || a.name.length - b.name.length)[0] ?? null;
+}
+
 export interface SwapSuggestion {
   /** Why nothing can be swapped ("rest-day": no workout that day). */
   blocked: SwapBlock | "rest-day" | null;
@@ -143,11 +150,7 @@ export function swapSuggestion(session: WorkoutSession | undefined, workoutPlan:
   const from = request.exercise ? findInWorkout(exercises, request.exercise) : null;
   if (!from) return { blocked: null, from: null, options: [], exercises, replacementNotAllowed: null };
   const blocked = swapBlock(session, workoutPlan, from.id);
-  // A named replacement: an exercise whose name matches, preferring one this person can do, then the shortest name.
-  const wanted = request.replacement
-    ? EXERCISE_LIBRARY.filter((exercise) => exerciseSearchRank(exercise, request.replacement!) === 0)
-      .sort((a, b) => Number(canUseExercise(b, profile)) - Number(canUseExercise(a, profile)) || a.name.length - b.name.length)[0] ?? null
-    : null;
+  const wanted = request.replacement ? findNamedExercise(request.replacement, profile) : null;
   const wantedOk = wanted && wanted.id !== from.id && !exercises.some((exercise) => exercise.id === wanted.id) && canUseExercise(wanted, profile) ? wanted : null;
   const choices = swapChoices(from, profile, exercises);
   const options = [...(wantedOk ? [wantedOk] : []), ...choices.suggested, ...choices.others].filter((item, index, list) => list.findIndex((other) => other.id === item.id) === index).slice(0, 4);

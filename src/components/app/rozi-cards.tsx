@@ -9,6 +9,7 @@ import { getExerciseDefinition } from "@/lib/templates";
 import type { ExerciseDefinition } from "@/lib/types";
 import { sessionForDate, useFitTrack } from "./fit-track-provider";
 import { SwapSheet, useExerciseSwap } from "./swap-sheet";
+import { RoziActionCard } from "./rozi-action-card";
 
 /**
  * Cards under an AI answer. Everything here comes from RozFit's own tools on the server (never from the model's
@@ -74,6 +75,8 @@ function RoziCardView({ card }: { card: RoziCard }) {
       );
     case "swap":
       return <SwapCard card={card} />;
+    case "action":
+      return <RoziActionCard action={card.action} />;
     case "stat":
       return (
         <section className="rozi-card rozi-stat" aria-label={card.title}>
