@@ -1741,3 +1741,227 @@ After "Start Phase 2". Details are in `docs/ROZI_AGENT_IMPLEMENTATION_PLAN.md` (
 - All card states and the history sheet checked at phone width, with the network calls intercepted (no real data touched).
 
 **To use it:** add `ROZI_ACTIONS=on` in Vercel and redeploy (after you commit and push).
+
+### 2026-11-23 — Milestone 0: Level 4 + exercise library audit (docs only; no code, database or Git change)
+
+After you shared the ChatGPT "Level 4 agent + complete exercise library" plan ("Start with Milestone 0 only").
+
+**New docs:**
+- `docs/ROZI_LEVEL_4_CURRENT_STATE_AUDIT.md`: Git state and the 19-row status matrix.
+- `docs/ROZI_LEVEL_4_REMAINING_ROADMAP.md`: steps R1–R13, where I disagree with the plan, extra ideas, and where your "8. New ideas" land.
+- `docs/EXERCISE_LIBRARY_AUDIT.md`: all 77 exercises, 10 metadata problems, and the 212 candidate names classified.
+- `docs/EXERCISE_LIBRARY_COVERAGE.md`: coverage by muscle, equipment, location, category and difficulty; 50 high-priority and 59 optional missing exercises.
+
+**Main findings:**
+- **Level 3 is built** but `origin/main` doesn't contain it yet, so `ROZI_ACTIONS=on` does nothing in production until the branch is merged.
+- **Level 4 is not started.**
+- **Library gaps:** no traps, almost no real cardio, no band or kettlebell equipment keys, and no time or distance logging.
+- **Equipment keys need a migration:** `profiles_available_equipment_check` lists the allowed keys, so adding new ones needs a small migration.
+
+### 2026-11-23 — R3: exercise library foundation (no new exercises; no database change)
+
+After "Start R3". Every exercise ID is unchanged, and no exercise was added or removed.
+
+**What changed:**
+- **New `src/lib/exercise-taxonomy.ts`** holds the structured data for the library:
+  - **Controlled muscles:** 20 fixed values, such as `chest`, `lats` and `rear_shoulders`. Each exercise gets `muscles`, with the main muscle first; the friendly muscle text stays for display.
+  - **Other names (`aliases`):** for example "OHP", "military press", "pec deck fly", "bent-over row", "farmer's walk" and "treadmill".
+  - **Variation groups (`variationGroup`):** 19 groups, such as bench press, squat and row.
+- **One shared list of other names.** Rozi's separate short list in `rozi-ai/tools.ts` was removed.
+  - **How they match:** a whole other name counts as a name match in search, swaps and Rozi.
+  - **Ties:** when several exercises match, the one you logged or can do with your equipment still wins.
+  - **One-word names:** a one-word other name must be the whole search. So "farmers walk" doesn't also find the comfortable walk.
+- **Library screen:** the "Muscle group" filter now lists the 20 fixed muscles instead of about 30 overlapping texts ("Front shoulders", "Side shoulders", "Shoulders").
+- **Metadata fixes:**
+  - Comfortable walk and march in place now use the cardio pattern.
+  - Relaxed breathing now uses the recovery pattern, so it no longer counts as core training on the recovery map.
+- **New quality test `src/lib/exercise-taxonomy.test.ts`** checks that:
+  - all 77 saved IDs still exist;
+  - names and other names are unique;
+  - every muscle text has a fixed value;
+  - equipment keys and patterns are valid;
+  - fallback chains don't loop;
+  - variation groups are valid;
+  - common other names find the right exercise.
+
+**Behaviour changes (old vs new on 35 common phrases):**
+- "OHP" and "overhead press" → Seated dumbbell press (before: the machine press).
+- "leg curl" → Hamstring curl (before: Sliding leg curl).
+- "treadmill" → Easy cardio and "farmers walk" → Farmer carry (before: nothing found).
+- In swaps, "rdl", "pull ups", "chin up" and "pushup" are now recognised.
+- Everything else is the same.
+
+**Checked:**
+- 388 tests, type check and build pass; lint shows 1 warning, in `welcome.tsx`, a file this change doesn't touch.
+- In the browser (production build), the Library muscle filter shows the 20 muscles, and "Shoulders" lists the front and side shoulder exercises together.
+
+**Not done in R3, and where it goes:**
+- Band and kettlebell equipment: R4, which needs a small migration.
+- Time and distance tracking: R5.
+- Real cardio-machine exercises: R6.
+
+### 2026-11-23 — R4: resistance bands and kettlebell equipment (migration applied)
+
+After "Start R4".
+
+**What changed:**
+- **Two new equipment choices:** "Resistance bands" (`resistance_band`) and "Kettlebell" (`kettlebell`). They appear in onboarding, in Settings → Your plan and in the trainer's equipment settings. The "Large gym" preset now includes both.
+- **Exercises can accept other equipment** (`equipmentAlternatives`, kept in `exercise-taxonomy.ts`). An exercise is usable with its required equipment *or* any one of its alternatives:
+  - Goblet squat and Farmer carry: dumbbells or a kettlebell.
+  - Pallof press: a cable machine or a band.
+
+  The planner, swaps, Rozi and the Library equipment filter all use the same check.
+- **Pictures:** the two new tiles show simple drawings (`public/equipment/v1/*.svg`) until you make the artwork. The prompts are in `docs/IMAGE_PROMPTS.md` G1.
+- **Migration `supabase/migrations/20261123100000_equipment_bands_kettlebell.sql`:** widens the allowed equipment list from 15 to 17 keys in two places:
+  - the `profiles_available_equipment_check` constraint;
+  - `private.is_valid_trainer_rule_settings`. It is the same function body, checked byte for byte against the live one (md5), with only the key list and the limit changed.
+
+**Dry run on the live database (rolled back):** `PASS`.
+- **Accepted:** the new keys and all 17 keys together; the old keys are still accepted.
+- **Refused:** an unknown key (`jump_rope`) and a repeated key.
+- **Existing data:** all 5 existing profiles still pass the new constraint.
+- **Permissions:** no anon/public grants on the function.
+- **Afterwards:** the live constraint and function were confirmed unchanged.
+
+**Checked:**
+- 389 tests, type check and build pass; lint shows the same single old warning in `welcome.tsx`.
+- New tests: a kettlebell alone unlocks goblet squat; a band alone unlocks Pallof press; a band doesn't unlock the lat pulldown; unconfirmed equipment still counts as none; the kettlebell filter lists exactly goblet squat and farmer carry.
+
+**Applied 2026-11-23 after "Yes, apply it"** (recorded as `20261123171948 equipment_bands_kettlebell`):
+- **Structure:** the constraint now allows 17 keys and has been checked against all 5 existing profiles. The function has the new keys and the 17 limit, is still security invoker with `search_path=''`, and its grants are unchanged (authenticated, postgres).
+- **Security advisors:** nothing new. Only the long-standing notices remain: the closed tables, the owner-checked functions and leaked-password protection.
+- **Live behaviour test (rolled back):** `PASS`. New keys and old keys are accepted; unknown and duplicate keys are refused.
+- **Cleanup:** no test objects were left behind.
+
+The database is now ready for the band/kettlebell code, so it's safe to deploy it whenever you push.
+
+### 2026-11-23 — R5: time and distance tracking (migration applied)
+
+After "Start R5".
+
+**Design decision: no change to stored numbers.**
+- A set has always stored one number (`actual_reps`), so a plank's "30–60 sec" was already saved as 30 and a walk's "10 min" as 10. Converting old rows would have been risky and would gain nothing.
+- Instead, each exercise now says what that number means (`tracking.unit`): reps, seconds (holds), minutes (cardio) or rounds (intervals).
+- `src/lib/exercise-taxonomy.ts` works the unit out from the reps text. A test checks that every workout template uses the same unit as its exercise, so each stored number keeps one meaning.
+- Only **distance** is new.
+
+**What changed:**
+- **Logger:**
+  - Plank / side plank / farmer carry show a **Sec** column, and their header reads "× 30 sec" (it used to read "× 30 reps"). Holds keep the weight column, for a farmer carry or a weighted plank.
+  - Walk and easy cardio show **km** and **Min**, so you can log 25 min · 2.4 km. Interval cardio shows **Rounds**.
+  - "Warm-up & plates" and the load/rep advice note only appear on rep exercises.
+  - "Last time" reads "30, 45 sec" or "25 min · 2.4 km".
+- **Stats kept honest:**
+  - Timed sets never feed the estimated 1RM, volume (kg × reps) or load records. Before this, a 24 kg farmer carry held for 40 seconds counted as "24 kg × 40 reps".
+  - In the weekly report, timed sets still count as sets but add no reps or volume.
+  - The exercise guide's records and charts say "Longest hold", "Longest session" or "Total time" instead of "Most reps".
+- **Rozi:** `get_progress` and `get_exercise_info` now include `repsAreIn` ("seconds" / "minutes" / "rounds"), so Rozi doesn't call seconds "reps".
+- **Saving:** sets carry an optional `distanceKm`.
+  - `upsertSets` writes `distance_km`. If the column doesn't exist yet, it saves without it, the same fallback as `set_type`.
+  - Loading reads `distance_km` back.
+  - Validation allows 0–1000 km.
+
+**Migration `supabase/migrations/20261123120000_set_distance.sql`:**
+- Adds `workout_set_logs.distance_km numeric(6,2)`: nullable, 0–1000.
+- Replaces `save_workout_session` with the same body plus `distance_km`. Before editing, its text was confirmed identical to the live function (md5 `8abad03c…`). It stays security invoker with `search_path=''`, and its grants (authenticated, postgres, service_role) are kept.
+
+**Dry run on the live database (rolled back):** `PASS`. It ran as a real signed-in user through RLS, on a far-future date:
+- a walk saved and read back as 25 min · 2.4 km;
+- the old app's payload, with no distance, still saves;
+- 5000 km is refused.
+
+Afterwards the database was unchanged: no column, the same function, 136 sets / 15 sessions, and no test rows.
+
+**Checked:**
+- 394 tests, type check and build pass; lint shows the same single old warning.
+- New `src/lib/tracking.test.ts` covers: units for every exercise and template; labels; old saved copies; timed sets kept out of 1RM, volume and records; weekly totals; distance surviving a reload.
+- In the browser (production build, local demo data, phone width): Burn A showed kg/Reps for lifts, kg/Sec for the plank and km/Min for easy cardio. Ticking the cardio set saved 10 min and 2.4 km.
+
+**Applied 2026-11-23 after "Yes, apply it"** (recorded as `20261123173126 set_distance`). Just before applying, I re-checked that the live `save_workout_session` still matched the version the migration was built from.
+- **Structure:**
+  - `distance_km numeric(6,2)`, nullable, with its 0–1000 check. Existing rows were not touched: 136 sets, 0 with a distance.
+  - The function writes `distance_km`, stays security invoker with `search_path=''`, and keeps its grants (authenticated, postgres, service_role).
+  - RLS is still on.
+- **Security advisors:** nothing new; only the long-standing notices.
+- **Live behaviour test (rolled back), as a signed-in user:**
+  - 25 min · 2.4 km saved and read back;
+  - the old app's payload still saves, with no distance;
+  - 5000 km is refused;
+  - a different signed-in person can't see the set.
+- **Cleanup:** no test rows left (still 136 sets / 15 sessions).
+
+The database is ready for the R5 code, so it's safe to deploy whenever you push.
+
+### 2026-11-23 — Claude Code skills set up (machine settings, not the app)
+
+After you asked to set up three skill repositories. Each was read before install.
+- **cloudflare/security-audit-skill:** a defensive security review skill. It contains instructions plus two small local validator scripts, with no hooks and no network use.
+  - Installed to `~/.claude/skills/security-audit` (the test files are left out).
+  - Available now as `security-audit`.
+- **mattpocock/skills:** about 40 engineering skills, such as TDD, code review and spec/ticket flows. It has no hooks.
+  - Enabled as `mattpocock-skills@claude-plugins-official`, which is in the official marketplace you already had.
+- **DietrichGebert/ponytail:** a "lazy senior dev" plugin. Its marketplace is added and the plugin enabled in `~/.claude/settings.json`.
+  - Its hooks run Node on every session start and every prompt. They turn on a "smallest change, short reply" mode, including for subagents.
+  - It also writes a local cost/turn log to `~/.config/ponytail/band/`, built by reading session transcripts.
+  - Its webhook stays off unless you set one.
+  - To switch the mode off: "stop ponytail", or `/ponytail lite`.
+- **When they load:** both plugins install and load when the app starts a new session.
+
+### 2026-11-23 — R6 batch A: 22 upper-body exercises (no database change)
+
+After "start R6".
+
+**New exercises** (in `src/lib/library-additions.ts`):
+- **Chest:** Machine chest press · Barbell incline bench press · Close-grip bench press · Dumbbell floor press · Knee push-up
+- **Back:** Pull-up · Chin-up · Machine row · Inverted row · Resistance band row · Conventional deadlift · Dumbbell shrug
+- **Shoulders:** Barbell overhead press · Pike push-up · Reverse dumbbell fly · Reverse pec deck · Resistance band pull-apart
+- **Arms:** Cable biceps curl · Resistance band curl · Skull crusher · Bench dips · Dead hang
+
+**What each one has:** steps, cues, cautions, muscles, equipment, a fallback, a body-map region, a variation group, other names and a tracking unit (the dead hang is timed).
+
+**Rules and safety:**
+- **Conventional deadlift:** locked behind trainer approval, like the RDLs, and trainers can't put it in a template.
+- **Accepted alternatives:**
+  - Inverted row: a rack or a Smith machine.
+  - Skull crusher: an EZ bar or dumbbells.
+  - Bench dips: a bench or a chair.
+- **Existing plans are unchanged.** The planner fills a skipped slot with the alphabetically first free exercise. In 512 generated plans, that made one case pick bench dips for a beginner at home. New exercises are therefore never automatic fill-ins (`NOT_AUTO_PICKED`). They're offered in the library, swaps and Rozi. After the change, 0 of 512 generated plans contain a new exercise.
+
+**Name changes:**
+- "OHP" and "military press" now find the barbell overhead press, not the seated dumbbell press.
+- "pull ups" / "chin ups" now find the real pull-up / chin-up, not the assisted version.
+- "incline bench press" now means the barbell version.
+
+**Checked:**
+- 396 tests, type check and build pass; lint shows the same single old warning.
+- New tests check: all 22 are complete; their IDs are now permanent; the deadlift stays locked; a home user with only a chair or only bands gets real options, and a home dumbbell-bench swap offers the knee push-up.
+- In the browser (production build): the library lists 99 exercises. 96 show, because 3 deadlift variations are hidden until a trainer approves them. The skull crusher guide renders correctly at phone width.
+
+### 2026-11-23 — R6 batch B: 12 lower-body and core exercises (no database change)
+
+After "Start batch B".
+
+**New exercises:**
+- **Legs:** Walking lunge · Wall sit (timed) · Single-leg Romanian deadlift · Barbell hip thrust · Single-leg glute bridge · Single-leg calf raise
+- **Core:** Crunch · Bicycle crunch · Lying leg raise · Russian twist · Wood chop (cable, band or dumbbell) · Mountain climber (timed)
+
+**What each one has:** steps, cues, cautions, a fallback, body-map regions, a variation group and other names. The new groups are calf raise, leg raise and rotation.
+
+**Single-leg Romanian deadlift:** it is a deadlift variation, so, like the RDLs, it is locked until your trainer approves it. Say if you'd rather the single-leg version be open to everyone.
+
+**Name matching improved:**
+- **Exact names win.** An exact name or other name now wins before any ranking. For example, "walk" stays the comfortable walk and doesn't become the walking lunge.
+- **Plain words name the standard exercise:** "bench", "curl", "squat", "deadlift", "calf raise", "hip thrust".
+- **Swaps stand in the closest version you can do.** If you can't do the named exercise, the swap offers the closest version you can, in the variation group's order:
+  - "bench" with only dumbbells → dumbbell bench;
+  - "squat" → goblet squat;
+  - "ohp" → seated dumbbell press;
+  - "leg curl" with no machine → sliding leg curl.
+- **If none fits,** the swap still names the exercise you asked for, so it can explain why.
+
+**Generated plans still unchanged:** 0 of 512 test plans contain a new exercise.
+
+**Checked:**
+- 397 tests, type check and build pass; lint shows the same single old warning.
+- A 35-phrase lookup comparison against the original code: every change is an improvement listed above.
+- In the browser: the library has 111 exercises; 107 show, because 4 deadlift variations are hidden until a trainer approves them. The Mountain climber guide renders correctly at phone width: 3 × 20–30 sec, with core, shoulders and quads on the body map.

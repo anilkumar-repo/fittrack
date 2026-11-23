@@ -155,3 +155,13 @@ Update the three agent docs, `ROZI_AGENT_BENCHMARK.md`, setup/env docs (`ROZI_AC
 **To switch it on (your step):** in Vercel add `ROZI_ACTIONS=on` (`SUPABASE_SERVICE_ROLE_KEY` is already set) and redeploy. Off again: remove it, and Rozi goes back to Level 2 behaviour.
 
 **Not in this phase:** the existing swap and "Start now / Save as routine" plan cards still apply directly when you tap them. They're your own taps, not the model's, so they stay as they are.
+
+## Milestone 0 audit (2026-11-23)
+
+The ChatGPT Level 4 plan has been audited against this plan.
+- **Current state:** `ROZI_LEVEL_4_CURRENT_STATE_AUDIT.md`.
+- **Order from here:** `ROZI_LEVEL_4_REMAINING_ROADMAP.md`, steps R1–R13. This order replaces the Phase 3–9 order above.
+- **Changes from the Phase 3–4 design:**
+  - A goal plan is a short ordered list of weekly steps, not a dependency graph.
+  - You approve the whole plan once. Anything outside it still needs its own approval.
+- **The exercise library foundation (R3–R6) now comes before Level 4.**

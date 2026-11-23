@@ -2790,6 +2790,7 @@ html:not(.scroll-locked), html:not(.scroll-locked) body { overflow-x: clip; }
 .pro-set { position: relative; min-height: 50px; padding: 4px 6px; border-radius: 14px; transition: background-color .25s ease; }
 .pro-set.done { background: color-mix(in srgb, var(--tone-ready, #5fbf9a) 22%, transparent); }
 .pro-set-cell { position: relative; }
+.pro-set-empty { color: var(--muted); text-align: center; }
 .pro-set-label { display: grid; width: 36px; height: 36px; place-items: center; border: 0; border-radius: 11px; color: var(--ink); background: var(--surface-2); font-size: 15px; font-weight: 800; cursor: pointer; }
 .kind-warmup .pro-set-label, .pro-kind-menu .kind-warmup b, .ex-history li.kind-warmup b { color: #c98a10; }
 .kind-drop .pro-set-label, .pro-kind-menu .kind-drop b, .ex-history li.kind-drop b { color: #7b61d6; }

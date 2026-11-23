@@ -14,9 +14,24 @@ export type TrainingPhase = "foundation_1" | "foundation_2" | "return";
 export type ExerciseDifficulty = "beginner" | "intermediate";
 export type ExerciseRestriction = "trainer_deadlift_approval";
 export type EquipmentKey = "dumbbells" | "bench" | "cable_machine" | "leg_press" | "leg_curl_machine" | "rack" | "mat" | "chair"
-  | "barbell" | "smith_machine" | "gym_machines" | "pullup_bar" | "step" | "back_extension" | "cardio_machine";
+  | "barbell" | "smith_machine" | "gym_machines" | "pullup_bar" | "step" | "back_extension" | "cardio_machine"
+  | "resistance_band" | "kettlebell";
 export type MovementPattern = "squat" | "single_leg" | "horizontal_push" | "vertical_push" | "horizontal_pull" | "vertical_pull" | "hip_extension" | "hamstring_curl" | "core" | "carry" | "recovery"
   | "shoulder_raise" | "chest_fly" | "arm_curl" | "arm_extension" | "knee_extension" | "calf_raise" | "cardio";
+/**
+ * What a set's number means for an exercise: reps, seconds (holds such as a plank), minutes (cardio such as a walk) or
+ * rounds (intervals). The number is stored the same way for all of them (actualReps / plannedReps).
+ */
+export type TrackingUnit = "reps" | "seconds" | "minutes" | "rounds";
+export interface ExerciseTracking {
+  unit: TrackingUnit;
+  /** Cardio that can also log a distance (walk, run, ride). */
+  distance?: boolean;
+}
+
+/** Controlled muscle values for filters and Rozi; `targetMuscles` keeps the friendly display text. */
+export type TargetMuscle = "chest" | "lats" | "upper_back" | "traps" | "lower_back" | "shoulders" | "rear_shoulders" | "biceps" | "triceps"
+  | "forearms" | "abs" | "obliques" | "core" | "glutes" | "quads" | "hamstrings" | "hips" | "calves" | "cardio" | "relaxation";
 export type ProgressionAction = "choose_comfortable_load" | "hold_load_add_reps" | "consider_small_load_step" | "repeat_or_reduce" | "recovery";
 export type FormQuality = "not_rated" | "sound" | "needs_practice";
 
@@ -118,11 +133,21 @@ export interface ExerciseDefinition {
   cues: string[];
   instructions: string[];
   targetMuscles: string[];
+  /** `targetMuscles` as controlled values, main muscle first. Set on every library exercise; may be missing on old saved copies. */
+  muscles?: TargetMuscle[];
+  /** Other names people use ("RDL", "military press"). Searched like the name. */
+  aliases?: string[];
+  /** How sets are counted (reps, seconds, minutes or rounds). Set on every library exercise; missing on old saved copies means reps. */
+  tracking?: ExerciseTracking;
+  /** Exercises that are versions of the same movement share a group ("bench_press", "squat"). */
+  variationGroup?: string;
   difficulty: ExerciseDifficulty;
   cautionNotes: string[];
   restriction?: ExerciseRestriction;
   movementPattern?: MovementPattern;
   requiredEquipment?: EquipmentKey[];
+  /** Other equipment that works instead of `requiredEquipment` (each entry is a full set), e.g. a kettlebell for a goblet squat. */
+  equipmentAlternatives?: EquipmentKey[][];
   fallbackId?: string;
   substitutedFor?: string;
   manualOverride?: boolean;
@@ -145,6 +170,8 @@ export interface ExerciseLog {
     loadKg: number | null;
     completed: boolean;
     extra: boolean;
+    /** Distance in kilometres, for cardio that tracks it (R5). Missing or null means none. */
+    distanceKm?: number | null;
     /** Set type (Phase 4): warm-up, drop set or to failure. Missing means a normal working set. */
     kind?: "warmup" | "drop" | "failure";
   }>;

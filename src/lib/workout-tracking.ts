@@ -75,6 +75,7 @@ export function validateWorkoutSession(session: WorkoutSession): string[] {
           if (set.plannedReps !== null && (!Number.isInteger(set.plannedReps) || set.plannedReps < 1 || set.plannedReps > 1000)) errors.push(`${log.exerciseId}, set ${index + 1}: planned reps are invalid.`);
           if (set.actualReps !== null && (!Number.isInteger(set.actualReps) || set.actualReps < 1 || set.actualReps > 1000)) errors.push(`${log.exerciseId}, set ${index + 1}: actual reps must be between 1 and 1000.`);
           if (set.loadKg !== null && (!Number.isFinite(set.loadKg) || set.loadKg < 0 || set.loadKg > 2000)) errors.push(`${log.exerciseId}, set ${index + 1}: weight must be between 0 and 2000 kg.`);
+          if (set.distanceKm !== undefined && set.distanceKm !== null && (!Number.isFinite(set.distanceKm) || set.distanceKm < 0 || set.distanceKm > 1000)) errors.push(`${log.exerciseId}, set ${index + 1}: distance must be between 0 and 1000 km.`);
           if (set.completed && set.actualReps === null) errors.push(`${log.exerciseId}, set ${index + 1}: enter actual reps before marking the set complete.`);
           if (log.status === "skipped" && set.completed) errors.push(`${log.exerciseId}: a skipped exercise cannot contain completed sets.`);
         }
@@ -200,6 +201,7 @@ export function normalizeWorkoutSession(raw: WorkoutSession | Record<string, unk
           plannedReps: typeof set.plannedReps === "number" ? set.plannedReps : null,
           actualReps: typeof set.actualReps === "number" ? set.actualReps : null,
           loadKg: typeof set.loadKg === "number" ? set.loadKg : null,
+          ...(typeof set.distanceKm === "number" ? { distanceKm: set.distanceKm } : {}),
           completed: set.completed === true,
           extra: set.extra === true,
           ...(set.kind === "warmup" || set.kind === "drop" || set.kind === "failure" ? { kind: set.kind as "warmup" | "drop" | "failure" } : {}),

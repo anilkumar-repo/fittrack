@@ -166,7 +166,7 @@ export function SettingsScreen() {
               {profile.equipmentAvailability === "verified" && <div className="equip-tiles">{EQUIPMENT_OPTIONS.map((item) => {
                 const on = profile.availableEquipment.includes(item.id);
                 return <button key={item.id} type="button" className={`equip-tile ${on ? "selected" : ""}`} aria-pressed={on} onClick={() => toggleAvailableEquipment(item.id)}>
-                  <Image src={equipmentPicture(item.id)} alt="" width={96} height={96} sizes="72px" /><span>{item.label}</span>{on && <i className="equip-tile-check"><Check aria-hidden="true" /></i>}
+                  <Image src={equipmentPicture(item.id)} unoptimized={equipmentPicture(item.id).endsWith(".svg")} alt="" width={96} height={96} sizes="72px" /><span>{item.label}</span>{on && <i className="equip-tile-check"><Check aria-hidden="true" /></i>}
                 </button>;
               })}</div>}
               <small>{profile.equipmentAvailability === "verified" ? (profile.availableEquipment.length ? "Your plan uses only what is ticked." : "Nothing ticked yet, so your plan uses bodyweight movements.") : "Your plan uses bodyweight movements only."}</small>

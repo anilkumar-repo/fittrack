@@ -9,7 +9,7 @@
 import { BMI_BAND_LABEL, bmi, bmiBand } from "../body.ts";
 import { calculateAchievements } from "../achievements.ts";
 import { dateLabel, nextTrainingDate, shiftDate, weekDates, weekdayOf } from "../dates.ts";
-import { exerciseEquipmentIsAvailable, exerciseSearchRank, getExerciseReferenceInstructions, getSafeExerciseAlternatives, isDeadliftVariation, isExerciseAllowedForProfile } from "../exercise-library.ts";
+import { exactExerciseMatch, exerciseEquipmentIsAvailable, exerciseSearchRank, getExerciseReferenceInstructions, getSafeExerciseAlternatives, isDeadliftVariation, isExerciseAllowedForProfile } from "../exercise-library.ts";
 import { levelOf, levelTitle } from "../levels.ts";
 import { mobilityMove, routineMinutes, suggestionForDay } from "../mobility.ts";
 import { generateWorkout } from "../planner.ts";
@@ -25,6 +25,7 @@ import type { BodyWeightEntry, ExerciseDefinition, FitTrackState, Profile, Train
 import { swapCard, type RoziCard } from "./cards.ts";
 import { swapSuggestion, SWAP_BLOCK_TEXT } from "../exercise-swap.ts";
 import type { AiTool } from "./provider.ts";
+import { trackingOf, UNIT_WORD } from "../tracking.ts";
 
 // ---------- What the tools work on ----------
 
@@ -91,12 +92,6 @@ export function resolveDay(value: string, today: string): string {
   return today;
 }
 
-/** Short forms people type for exercises. */
-const EXERCISE_ALIASES: Record<string, string> = {
-  rdl: "romanian deadlift", ohp: "shoulder press", "overhead press": "shoulder press", "pull up": "pull-up", pullup: "pull-up",
-  "push up": "push-up", pushup: "push-up", "chin up": "pull-up", chinup: "pull-up", "lat pull down": "lat pulldown", curl: "biceps curl", "bicep curl": "biceps curl",
-};
-
 const COMMON_VERSION = /^(barbell|dumbbell|bodyweight)\b/i;
 const SPECIALTY_VERSION = /^(hack|smith|wrist|reverse|assisted|sliding|supported|incline|prone|ez-bar|landmine|straight-arm)\b/i;
 
@@ -110,7 +105,8 @@ export function findExercise(query: string, ctx?: Pick<RoziContext, "planningPro
   const cleaned = query.toLowerCase().replace(/[^a-z0-9\s-]/g, " ").replace(/\b(the|my|an?|exercises?|how to do|do)\b/g, " ").replace(/\s+/g, " ").trim();
   if (cleaned.length < 2) return null;
   const singular = cleaned.split(" ").map((word) => (word.length > 2 && word.endsWith("s") && !word.endsWith("ss") ? word.slice(0, -1) : word)).join(" ");
-  const tries = [...new Set([cleaned, singular].flatMap((value) => [EXERCISE_ALIASES[value] ?? value, value]))];
+  // Other names ("RDL", "OHP", "pull ups") are on the exercises themselves (exercise-taxonomy.ts) and match like a name.
+  const tries = [...new Set([cleaned, singular])];
   const logged = new Set(ctx?.sessions.flatMap((session) => session.exerciseLogs.filter((log) => log.sets.some((set) => set.completed)).map((log) => log.exerciseId)) ?? []);
   const score = (exercise: ExerciseDefinition) => [
     logged.has(exercise.id) ? 0 : 1,
@@ -119,7 +115,7 @@ export function findExercise(query: string, ctx?: Pick<RoziContext, "planningPro
     exercise.name.split(/\s+/).length,
   ];
   for (const attempt of tries) {
-    const exact = EXERCISE_LIBRARY.find((exercise) => exercise.name.toLowerCase() === attempt);
+    const exact = exactExerciseMatch(EXERCISE_LIBRARY, attempt);
     if (exact) return exact;
     const named = EXERCISE_LIBRARY.filter((exercise) => exerciseSearchRank(exercise, attempt) === 0).sort((a, b) => {
       const [x, y] = [score(a), score(b)];
@@ -290,6 +286,8 @@ function progress(ctx: RoziContext, args: Args): ToolOutcome {
     return {
       result: {
         exercise: exercise.name, logged: true, timesLogged: performance.records.length, history,
+        // Timed exercises store seconds (holds) or minutes (cardio) in the "reps" fields.
+        repsAreIn: UNIT_WORD[trackingOf(exercise).unit],
         bestSet: best ? { kg: best.loadKg, reps: best.reps, date: best.date } : null,
         heaviestChangeKg: loads.length >= 2 ? Math.round((loads[loads.length - 1] - loads[0]) * 10) / 10 : null,
         note: loads.length ? null : "Sets are logged without weights, so only sets and reps can be compared.",
@@ -409,7 +407,7 @@ function exerciseInfo(ctx: RoziContext, args: Args): ToolOutcome {
       steps, cues: exercise.cues.slice(0, 5), cautions: exercise.cautionNotes.slice(0, 4),
       allowedForYou: allowed, equipmentAvailable: equipmentReady,
       restrictedReason: !allowed && isDeadliftVariation(exercise) ? "Deadlift variations need your trainer's approval." : null,
-      alternatives, lastTime: last ? { date: last.date, heaviestKg: last.heaviestRecordedLoadKg, sets: last.completedSets, reps: last.completedReps } : null,
+      alternatives, lastTime: last ? { date: last.date, heaviestKg: last.heaviestRecordedLoadKg, sets: last.completedSets, reps: last.completedReps, repsAreIn: UNIT_WORD[trackingOf(exercise).unit] } : null,
     },
     card: { type: "exercise", name: exercise.name, muscles: exercise.targetMuscles, equipment: exercise.equipment, steps, cues: exercise.cues.slice(0, 4), allowed: allowed && equipmentReady, alternatives },
   };
