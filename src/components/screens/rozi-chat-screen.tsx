@@ -1,10 +1,10 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
-import { ArrowLeft, ArrowRight, Bookmark, History, Play, Plus, SendHorizontal, Smartphone, Sparkles } from "lucide-react";
+import { ArrowLeft, ArrowRight, Bookmark, History, ListChecks, Play, Plus, SendHorizontal, Smartphone, Sparkles } from "lucide-react";
 import { sessionForDate, useFitTrack } from "@/components/app/fit-track-provider";
 import { DEFAULT_CHECK_IN, useWorkoutDay } from "@/components/app/use-workout-day";
 import { dateLabel, hourIn, nextTrainingDate, weekDates } from "@/lib/dates";
@@ -25,6 +25,10 @@ import { swapSuggestion, SWAP_BLOCK_TEXT } from "@/lib/exercise-swap";
 import { askRoziAi, readRoziAiChoice, ROZI_AI_CHOICE_EVENT, saveRoziAiChoice, type RoziAiChoice } from "@/lib/rozi-ai/client";
 import { RoziCards } from "@/components/app/rozi-cards";
 import { RoziHistorySheet } from "@/components/app/rozi-history-sheet";
+import { RoziActionsContext } from "@/components/app/rozi-action-card";
+import { RoziActionsSheet } from "@/components/app/rozi-actions-sheet";
+import { useRoziAction } from "@/components/app/use-rozi-action";
+import type { RoziAction } from "@/lib/rozi-ai/actions/action-types";
 import { loadConversation, saveReply, type RoziStoredMessage } from "@/lib/rozi-ai/history";
 
 interface Message {
@@ -68,6 +72,22 @@ export function RoziChatScreen() {
   const canUseAi = !isDemo && Boolean(browserClient) && isAdultOn(state.profile, currentDate);
   const aiOn = canUseAi && aiChoice === "on";
   const offerAi = canUseAi && choiceRead && aiChoice === null;
+
+  // Rozi actions (Level 3): the latest state of each proposed change, shared by the cards, and "What Rozi changed".
+  // null = actions are off on this server (or not loaded): the Changes button stays hidden.
+  const { list: listActions } = useRoziAction();
+  const [actions, setActions] = useState<RoziAction[] | null>(null);
+  const [showActions, setShowActions] = useState(false);
+  useEffect(() => {
+    if (!aiOn) return;
+    let cancelled = false;
+    void listActions().then((loaded) => { if (!cancelled) setActions(loaded); });
+    return () => { cancelled = true; };
+  }, [aiOn, listActions]);
+  const actionsContext = useMemo(() => ({
+    byId: new Map((actions ?? []).map((action) => [action.id, action])),
+    remember: (action: RoziAction) => setActions((current) => [action, ...(current ?? []).filter((item) => item.id !== action.id)]),
+  }), [actions]);
 
   const completed = recordedSessions.filter((item) => item.status === "completed" && item.date <= currentDate).sort((a, b) => a.date.localeCompare(b.date));
 
@@ -219,12 +239,14 @@ export function RoziChatScreen() {
   }
 
   return (
+    <RoziActionsContext.Provider value={actionsContext}>
     <section className="rozi-chat">
       <div className="rozi-chat-top">
         <button type="button" className="text-button rozi-back" onClick={() => (window.history.length > 1 ? router.back() : router.push("/"))}><ArrowLeft aria-hidden="true" /> Back</button>
         {aiOn && <div className="rozi-chat-actions">
           <button type="button" className="text-button" onClick={() => setShowHistory(true)}><History aria-hidden="true" /> History</button>
           <button type="button" className="text-button" onClick={newChat} disabled={messages.length <= 1}><Plus aria-hidden="true" /> New chat</button>
+          {actions !== null && <button type="button" className="text-button" onClick={() => { setShowActions(true); void listActions().then((loaded) => { if (loaded) setActions(loaded); }); }}><ListChecks aria-hidden="true" /> Changes</button>}
         </div>}
       </div>
       <div className="chat-hero" aria-hidden="true"><Image src="/rozi/chat-hello.webp" alt="" width={480} height={480} sizes="150px" priority data-motion="wave" /></div>
@@ -265,6 +287,7 @@ export function RoziChatScreen() {
         <div ref={end} className="rozi-chat-end" />
       </div>
       <div className="chat-suggestions">{SUGGESTED_QUESTIONS.map((question) => <button key={question} type="button" className="chip" onClick={() => ask(question)}>{question}</button>)}</div>
+      {showActions && <RoziActionsSheet actions={actions} onClose={() => setShowActions(false)} />}
       {showHistory && browserClient && <RoziHistorySheet client={browserClient} today={currentDate} currentId={conversationId}
         onOpen={(id) => void openConversation(id)} onDeleted={(id) => { if (id === null || id === conversationId) newChat(); }} onClose={() => setShowHistory(false)} />}
       <form className="chat-input" onSubmit={(event) => { event.preventDefault(); ask(draft); }}>
@@ -272,5 +295,6 @@ export function RoziChatScreen() {
         <button type="submit" className="icon-button" aria-label="Send" disabled={!draft.trim()}><SendHorizontal aria-hidden="true" /></button>
       </form>
     </section>
+    </RoziActionsContext.Provider>
   );
 }

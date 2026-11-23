@@ -6,14 +6,14 @@
 import type { RoziCard } from "./cards.ts";
 import { historyTurns, replyLanguageHint, roziSystemPrompt, type ChatLine } from "./prompt.ts";
 import { RoziAiError, type AiProvider, type AiTool, type AiTurn, type AiUsage } from "./provider.ts";
-import { ROZI_TOOLS, runRoziTool, type RoziContext } from "./tools.ts";
+import { ROZI_TOOLS, runRoziTool, type RoziContext, type ToolOutcome } from "./tools.ts";
 
 /** What the question was about (for history and analytics), from the first tool Rozi used. */
 export type RoziAiIntent =
   | "TODAY_WORKOUT" | "NEXT_WORKOUT" | "LAST_WORKOUT" | "WORKOUT_HISTORY" | "WEEKLY_WORKOUT_COUNT" | "MONTHLY_WORKOUT_COUNT"
   | "MUSCLE_HISTORY" | "MUSCLE_RECOVERY" | "PROGRESS_CHECK" | "EXERCISE_PROGRESS" | "WORKOUT_REASON" | "EXERCISE_EXPLANATION"
   | "BODY_GOAL_PROGRESS" | "WEEKLY_REPORT" | "STREAK_STATUS" | "ACHIEVEMENT_STATUS" | "MOBILITY_RECOMMENDATION" | "PLAN_WORKOUT"
-  | "PROFILE" | "EXERCISE_SWAP" | "GENERAL_FITNESS_QUESTION";
+  | "PROFILE" | "EXERCISE_SWAP" | "PROPOSED_CHANGE" | "GENERAL_FITNESS_QUESTION";
 
 export function intentOf(tool: string | undefined, args: Record<string, unknown> = {}): RoziAiIntent {
   switch (tool) {
@@ -35,6 +35,7 @@ export function intentOf(tool: string | undefined, args: Record<string, unknown>
     case "get_achievements": return "ACHIEVEMENT_STATUS";
     case "plan_custom_workout": return "PLAN_WORKOUT";
     case "get_my_profile": return "PROFILE";
+    case "propose_action": return "PROPOSED_CHANGE";
     case "suggest_exercise_swap": return "EXERCISE_SWAP";
     default: return "GENERAL_FITNESS_QUESTION";
   }
@@ -69,10 +70,17 @@ export interface AskRoziInput {
   signal?: AbortSignal;
   /** The tools to offer (default: all of them). See selectTools. */
   tools?: AiTool[];
+  /**
+   * Extra server-side tools (e.g. propose_action when actions are on). They're offered with the others and run
+   * here instead of runRoziTool; they can't change anything by themselves (see actions/action-service.ts).
+   */
+  extraTools?: { tools: AiTool[]; run: (name: string, args: Record<string, unknown>) => Promise<ToolOutcome> };
 }
 
 /** Answers one question. Throws a RoziAiError if the model fails; the caller then answers on the device. */
-export async function askRozi({ provider, ctx, message, history = [], signal, tools = ROZI_TOOLS }: AskRoziInput): Promise<RoziAnswer> {
+export async function askRozi({ provider, ctx, message, history = [], signal, tools: baseTools = ROZI_TOOLS, extraTools }: AskRoziInput): Promise<RoziAnswer> {
+  const tools = extraTools ? [...baseTools, ...extraTools.tools.filter((tool) => !baseTools.some((item) => item.name === tool.name))] : baseTools;
+  const extraNames = new Set(extraTools?.tools.map((tool) => tool.name) ?? []);
   const system = roziSystemPrompt(ctx.today, ctx.hour, replyLanguageHint(message));
   const turns: AiTurn[] = [...historyTurns(history), { role: "user", parts: [{ kind: "text", text: message }] }];
   const usage: AiUsage = { inputTokens: 0, outputTokens: 0, totalTokens: 0 };
@@ -97,17 +105,19 @@ export async function askRozi({ provider, ctx, message, history = [], signal, to
     // Run the tools the model asked for, then send their results back with the model's own turn (and signatures).
     const calls = result.toolCalls.slice(0, MAX_CALLS_PER_ROUND);
     turns.push(result.modelTurn);
-    const results = calls.map((call) => {
+    const results = await Promise.all(calls.map(async (call) => {
       // Arguments that weren't valid JSON: don't guess — tell the model so it can call again properly.
       if (call.invalidArgs !== undefined) {
         return { kind: "tool-result" as const, ...(call.id ? { id: call.id } : {}), name: call.name, result: { error: "The arguments were not valid JSON. Call the tool again with a valid JSON object." } };
       }
-      const outcome = runRoziTool(call.name, call.args, ctx);
+      const outcome = extraTools && extraNames.has(call.name)
+        ? await extraTools.run(call.name, call.args).catch(() => ({ result: { error: "That couldn't be done right now." } }) as ToolOutcome)
+        : runRoziTool(call.name, call.args, ctx);
       toolsUsed.push(call.name);
       intent ??= intentOf(call.name, call.args);
       if (outcome.card && cards.length < MAX_CARDS) cards.push(outcome.card);
       return { kind: "tool-result" as const, ...(call.id ? { id: call.id } : {}), name: call.name, result: outcome.result };
-    });
+    }));
     turns.push({ role: "user", parts: results });
   }
   throw new RoziAiError("empty", "Rozi couldn't put an answer together.", { retryable: true });
