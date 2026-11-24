@@ -93,6 +93,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       frame = 0;
       const y = window.scrollY;
       root.classList.toggle("scrolled", y > 12);
+      // The top bar's real height (it shrinks once the page scrolls), for things that stick under it, such as the
+      // A–Z letter headers in Workouts. A fixed guess let them slide underneath the bar.
+      const bar = document.querySelector<HTMLElement>(".topbar");
+      if (bar) root.style.setProperty("--topbar-h", `${bar.offsetHeight}px`);
       const delta = y - last;
       if (y < 80 || delta < -6) root.classList.remove("dock-compact");
       else if (delta > 6) root.classList.add("dock-compact");
@@ -101,8 +105,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     const onScroll = () => { if (!frame) frame = window.requestAnimationFrame(update); };
     update();
     root.classList.remove("dock-compact");
+    // The bar animates to its smaller size: measure again when that animation ends.
+    const onBarResized = (event: TransitionEvent) => { if (event.target instanceof Element && event.target.matches(".topbar, .topbar *")) onScroll(); };
     window.addEventListener("scroll", onScroll, { passive: true });
-    return () => { window.removeEventListener("scroll", onScroll); if (frame) window.cancelAnimationFrame(frame); root.classList.remove("dock-compact"); };
+    document.addEventListener("transitionend", onBarResized);
+    return () => { window.removeEventListener("scroll", onScroll); document.removeEventListener("transitionend", onBarResized); if (frame) window.cancelAnimationFrame(frame); root.classList.remove("dock-compact"); };
   }, [pathname]);
   const { state, ready, isDemo, accountLoading, authChecked, currentDate, notice, setNotice, saveError, savingSession, retryPendingSessions, browserClient } = useFitTrack();
   const router = useRouter();

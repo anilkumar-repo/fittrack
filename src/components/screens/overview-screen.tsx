@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Activity, ArrowRight, Check, ChevronRight, Flame } from "lucide-react";
+import { Activity, ArrowRight, Check, ChevronRight, Flame, Moon, Sun, Sunrise } from "lucide-react";
 import { NudgeBanner } from "@/components/app/nudge-banner";
 import { SessionLiveCard } from "@/components/app/session-live-card";
 import { WaterCard } from "@/components/app/water-card";
@@ -58,6 +58,8 @@ export function OverviewScreen() {
   const sayTitle = moment.title.startsWith("Good ") ? null : moment.title;
   const recovery = muscleRecovery(recordedSessions, currentDate);
   const ready = readyCount(recovery);
+  const firstName = state.profile.displayName.trim().split(/\s+/)[0] || state.profile.displayName;
+  const TimeIcon = hour < 12 ? Sunrise : hour < 17 ? Sun : Moon;
   const tag = status === "completed" ? "Done today" : status === "in_progress" ? "In progress" : plan?.sessionType === "recovery" ? "Recovery today" : "Today's workout";
   // "Pull B · Back, biceps, forearms": the short name is the title, the muscles go on their own line, so a long
   // title never runs into Rozi.
@@ -72,15 +74,17 @@ export function OverviewScreen() {
 
   return (
     <section className="home today-home">
+      {/* Header (2026-11-25): date and your picture share the top row; the greeting sits below in two tiers, with the
+          first name large, so a long name never wraps under the picture. */}
       <header className="today-head">
-        <div className="today-head-text">
-          <p className="today-date">{dateLabel(currentDate)}</p>
-          <h2 className="today-hello">{greetingFor(hour)}, {state.profile.displayName}</h2>
+        <div className="today-head-row">
+          <p className="today-date"><TimeIcon aria-hidden="true" />{dateLabel(currentDate, { weekday: "long", month: "short", day: "numeric" })}</p>
+          <div className="today-head-actions">
+            {isDemo && hasSupabaseConfig() && <Link className="glass-pill" href="/sign-in">Sign in</Link>}
+            <Link className="round-avatar has-picture" href="/profile" aria-label="Open your profile"><Avatar value={state.profile.avatar} name={state.profile.displayName} size={44} /></Link>
+          </div>
         </div>
-        <div className="today-head-actions">
-          {isDemo && hasSupabaseConfig() && <Link className="glass-pill" href="/sign-in">Sign in</Link>}
-          <Link className="round-avatar has-picture" href="/profile" aria-label="Open your profile"><Avatar value={state.profile.avatar} name={state.profile.displayName} size={40} /></Link>
-        </div>
+        <h2 className="today-hello"><span>{greetingFor(hour)},</span> {firstName}</h2>
       </header>
 
       {/* The streak is the card's footer: a full-width row under a hairline, below the buttons, never touching them. */}
