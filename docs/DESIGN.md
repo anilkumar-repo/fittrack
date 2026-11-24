@@ -29,8 +29,8 @@ mockup at https://claude.ai/artifact/7cTxGV7mMkhBzr4u7rhRi2.
 | `--ink` | `#F4F1EC` | Text |
 | `--muted` | `#A3ABA9` | Secondary text (AA on the page) |
 | `--faint` | `#939B9A` | Least important text (AA: 6.8:1 on the page, 5:1 on cards; light theme `#646F6E`, 4.6:1) |
-| `--accent` | `#FF8A5C` | Actions, highlights, the active tab |
-| `--button-primary-bg` | gradient `#FF9A6E` → `#F0683F`, text `#1A0C06` | The one primary button |
+| `--accent` | `#FF9B72` | Actions, highlights, the active tab |
+| `--button-primary-bg` | gradient `#FFB48F` → `#FF8A5C`, text `#1A0C06` | The one primary button |
 | `--success` / mint | `#6FD3BE` | Recovery, done sets, "ready" — nothing else |
 | `--water` | `#7CC7FF` | Water only |
 | `--warn` / `--danger` | amber / coral red | Warnings, errors |
@@ -83,6 +83,8 @@ Display words (the giant "Day 1", 54–72 px) are the only sizes outside the sca
 - **Dock:** Today · Workouts · (Rozi, raised) · Progress · Together.
   - It is the same on every page and hides in Rozi chat and workout mode.
   - It shrinks to an icon-only pill while scrolling down and returns on scroll up or at the top.
+- **Tab bars** (`.segmented`, `.library-chips`) work like the dock: tap a tab, or press and slide the orange lens.
+  Keep them to one row that fits the screen.
 - **Top bar:** large page title, plus your picture at the top right, which opens Profile. Profile's ☰ holds the plan, settings and the rest.
 - **Targets:** at least 44 × 44 px.
 - **Content:** max 560 px wide on phones and tablets.

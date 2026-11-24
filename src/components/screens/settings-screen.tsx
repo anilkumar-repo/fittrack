@@ -19,7 +19,7 @@ import { MAX_TRAINING_DAYS, MIN_TRAINING_DAYS, trainingDaysValid, WEEKDAY_LABELS
 import { FIGURE_OPTIONS } from "@/lib/figure";
 import { EQUIPMENT_OPTIONS, RULE_VERSION, TEMPLATE_VERSION } from "@/lib/templates";
 import type { Profile } from "@/lib/types";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { SaveBar, useUnsavedGuard } from "@/components/app/save-bar";
 import { BirthDateSetting, BodySettings } from "@/components/app/body-panel";
 import type { Theme } from "@/components/app/fit-track-provider";
@@ -89,6 +89,12 @@ export function SettingsScreen() {
   const workouts = recordedSessions.filter((session) => session.status === "completed").length;
 
   const section = params.get("section");
+  // Opening or leaving a section only changes ?section=, so the browser keeps the old scroll position: the new title
+  // would start hidden under the top bar and the dock could stay shrunk. Start each one at the top with the full dock.
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: "instant" });
+    document.documentElement.classList.remove("dock-compact", "scrolled");
+  }, [section]);
   // In a buddy group the goal and days are shared: they change through Train together, not here.
   const synced = Boolean(saved.buddyAnchor) && !isDemo;
   const themeLabel = THEME_OPTIONS.find((option) => option.id === theme)?.label ?? "Auto";

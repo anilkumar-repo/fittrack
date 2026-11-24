@@ -5,7 +5,7 @@ import { exerciseEquipmentIsAvailable, getExerciseReferenceInstructions, getSafe
 import { deadliftAllowedForPlan } from "@/lib/planner";
 import { getExerciseDefinition } from "@/lib/templates";
 import type { ExerciseDefinition, WorkoutPlan, WorkoutSession } from "@/lib/types";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Clock, Dumbbell, Play, Repeat, ShieldCheck, X } from "lucide-react";
 import { getDemoVideoLink } from "@/lib/exercise-media";
 import { REGION_LABELS, regionsForExercises } from "@/lib/figure";
@@ -71,18 +71,26 @@ export function ExerciseGuideModal({ exercise, workout, onOpen, onClose }: Exerc
   const [shownRegion, setShownRegion] = useState(regions[0]);
   const [tab, setTab] = useState<"about" | "how" | "history" | "charts" | "records" | "friends">("about");
 
+  // Closing plays the sheet's exit (slide down, backdrop fades) before the guide unmounts. Swiping down on the grip
+  // already animates itself, so it still calls onClose directly.
+  const [closing, setClosing] = useState(false);
+  const close = useCallback(() => {
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) { onClose(); return; }
+    setClosing(true);
+    window.setTimeout(onClose, 220);
+  }, [onClose]);
   useEffect(() => {
-    const onKey = (event: KeyboardEvent) => { if (event.key === "Escape") onClose(); };
+    const onKey = (event: KeyboardEvent) => { if (event.key === "Escape") close(); };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [onClose]);
+  }, [close]);
 
   return (
-    <div className="modal-backdrop guide-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
+    <div className={`modal-backdrop guide-backdrop ${closing ? "is-closing" : ""}`} role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) close(); }}>
       <section className="exercise-modal guide" role="dialog" aria-modal="true" aria-labelledby="exercise-modal-title">
         <SheetGrip onClose={onClose} />
         {/* Pinned to the top of the sheet, so it stays in reach while the guide scrolls. */}
-        <div className="guide-close-pin"><button type="button" className="guide-close" aria-label="Close guide" onClick={() => onClose()}><X aria-hidden="true" /></button></div>
+        <div className="guide-close-pin"><button type="button" className="guide-close" aria-label="Close guide" onClick={close}><X aria-hidden="true" /></button></div>
         <div className="guide-head">
           <div><p className="guide-kicker">{exercise.category === "core" ? "Core" : exercise.category === "conditioning" ? "Conditioning" : "Strength"} · {exercise.difficulty}</p><h2 id="exercise-modal-title">{exercise.name}</h2></div>
         </div>
@@ -149,7 +157,7 @@ export function ExerciseGuideModal({ exercise, workout, onOpen, onClose }: Exerc
           </>}
           {inCurrentWorkout && todaySession?.status === "in_progress" && <p className="guide-sub">This workout has started, so the plan stays as it is. If you swap a movement, note it under “Notes, form, and why this exercise”.</p>}
         </>}
-        <button className="button button-primary guide-done" onClick={() => onClose()}>Close</button>
+        <button className="button button-primary guide-done" onClick={close}>Close</button>
       </section>
     </div>
   );

@@ -102,8 +102,8 @@
   --faint: #939b9a;
   --line: rgba(255, 255, 255, .09);
   --line-strong: rgba(255, 255, 255, .18);
-  --accent: #ff8a5c;
-  --accent-strong: #f0683f;
+  --accent: #ff9b72;
+  --accent-strong: #ff7d50;
   --accent-ink: #ffb596;
   --on-accent: #1a0c06;
   --on-accent-soft: #3b2219;
@@ -140,8 +140,8 @@
   --glass-key: inset 0 1px 0 rgba(255, 255, 255, .22), inset 0 -2px 6px rgba(0, 0, 0, .25), 0 4px 12px rgba(0, 0, 0, .32);
   --shadow: 0 16px 40px rgba(0, 0, 0, .4);
   --accent-contrast: #1a0c06;
-  --button-primary-bg: linear-gradient(180deg, #ff9a6e 0%, #f0683f 100%);
-  --button-primary-shadow: inset 0 1px 0 rgba(255, 255, 255, .35), 0 10px 28px rgba(240, 104, 63, .42);
+  --button-primary-bg: linear-gradient(180deg, #ffb48f 0%, #ff8a5c 100%);
+  --button-primary-shadow: inset 0 1px 0 rgba(255, 255, 255, .45), 0 10px 26px rgba(255, 138, 92, .34);
   --hero-bg: linear-gradient(160deg, rgba(255, 255, 255, .10) 0%, rgba(255, 138, 92, .08) 60%, rgba(111, 211, 190, .06) 100%);
   --hero-sky: linear-gradient(172deg, rgba(255, 128, 84, .28) 0%, rgba(64, 180, 158, .14) 52%, rgba(11, 15, 18, 0) 100%);
   --nav-bg: rgba(22, 27, 31, .62);
@@ -2192,27 +2192,13 @@ img.live-rozi { flex: none; width: 72px; height: 72px; animation: rozi-bob 2.6s 
 .gate-card .body-form, .gate-card .why-form { width: 100%; text-align: left; }
 
 /* ---------- Water ---------- */
-.water-card { display: flex; align-items: center; gap: 14px; scroll-margin-top: 20px; }
-.water-bottle { position: relative; flex: none; width: 46px; height: 92px; overflow: hidden; border: 2px solid rgba(255, 255, 255, .9); border-radius: 14px 14px 16px 16px; background: linear-gradient(90deg, rgba(255, 255, 255, .55), rgba(255, 255, 255, .15)); box-shadow: inset 0 0 0 1px rgba(80, 160, 200, .25), var(--glass-key); }
-.water-cap { position: absolute; top: -2px; left: 50%; width: 20px; height: 8px; border-radius: 0 0 5px 5px; background: var(--tint); transform: translateX(-50%); }
-.water-fill { position: absolute; right: 0; bottom: 0; left: 0; background: linear-gradient(180deg, #8fd3f2, #4aa8d8); transition: height .6s cubic-bezier(.3, 1.2, .4, 1); }
-.water-wave { position: absolute; top: -6px; left: -50%; width: 200%; height: 12px; border-radius: 45%; background: #a9def5; animation: water-wave 3s linear infinite; }
-@keyframes water-wave { from { transform: translateX(0) rotate(0deg); } to { transform: translateX(25%) rotate(360deg); } }
 .water-copy { display: grid; flex: 1; gap: 4px; min-width: 0; }
 .water-copy strong { color: var(--ink); font: 800 22px/1.1 Manrope, ui-sans-serif, sans-serif; }
 .water-copy small { color: var(--muted); font-size: var(--text-md); }
 .water-tag { display: inline-flex; align-items: center; gap: 6px; color: var(--tint-ink); font-size: var(--text-sm); font-weight: 800; letter-spacing: .4px; text-transform: uppercase; }
 .water-tag svg { width: 14px; height: 14px; }
-.water-buttons { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 4px; }
-.water-buttons .button { min-height: 36px; padding: 0 12px; font-size: var(--text-md); }
-.water-buttons .icon-button { width: 36px; height: 36px; }
-.water-buttons .icon-button svg { width: 15px; height: 15px; }
-img.water-rozi { flex: none; width: 78px; height: 78px; }
 .water-card.thirsty img.water-rozi { animation: rozi-wiggle 1.2s ease-in-out infinite; }
-.water-card.great .water-fill { background: linear-gradient(180deg, #9be3c8, #3fb38f); }
 @keyframes rozi-wiggle { 0%, 100% { transform: rotate(0); } 25% { transform: rotate(-6deg); } 75% { transform: rotate(6deg); } }
-@media (max-width: 380px) { img.water-rozi { display: none; } }
-@media (prefers-reduced-motion: reduce) { .water-wave, .water-card.thirsty img.water-rozi { animation: none; } }
 
 /* ---------- Monthly weigh-in ---------- */
 .weigh-card { display: flex; align-items: flex-start; gap: 12px; scroll-margin-top: 20px; }
@@ -2473,13 +2459,8 @@ html.scroll-locked body { position: fixed; left: 0; right: 0; width: 100%; }
   .routine-card:hover, .area-card:hover, .suggest-card:hover, .move-tile:hover { transform: translateY(-2px); }
 }
 
-/* Cards and sections fade up as a page opens. */
-@keyframes lg-rise { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
-.main-area > section > .panel, .main-area > section > article, .home > *, .profile-page > *, .settings-menu-group { animation: lg-rise .45s cubic-bezier(.2, .8, .3, 1) both; }
-.main-area > section > :nth-child(2), .home > :nth-child(2) { animation-delay: .04s; }
-.main-area > section > :nth-child(3), .home > :nth-child(3) { animation-delay: .08s; }
-.main-area > section > :nth-child(4), .home > :nth-child(4) { animation-delay: .12s; }
-.main-area > section > :nth-child(n+5), .home > :nth-child(n+5) { animation-delay: .16s; }
+/* Pages open instantly: no fade-up on cards. On iPhone a fading glass card loses its blur for the length of the
+   animation and then snaps back, which looked like the whole page glitching on every tab switch. */
 
 /* Phone sheets: slide up, grab handle, swipe down to close. */
 .sheet-grip { display: none; }
@@ -3951,20 +3932,19 @@ img[data-motion="float"] { --rozi-motion: rozi-float 3.6s ease-in-out infinite; 
 .today-hello { margin: 0; color: var(--ink); font-size: var(--text-3xl); font-weight: 800; line-height: 1.15; }
 .today-head-actions { display: flex; flex: none; align-items: center; gap: var(--space-2); }
 .today-hero { position: relative; display: grid; gap: var(--space-3); overflow: hidden; }
-.today-hero .today-rozi { position: absolute; top: -6px; right: -14px; width: 156px; height: 156px; pointer-events: none; filter: drop-shadow(0 12px 24px var(--shadow-tint)); }
-.today-hero-copy { display: grid; gap: var(--space-1); max-width: calc(100% - 132px); min-height: 136px; align-content: start; }
+.today-hero .today-rozi { position: absolute; top: 4px; right: -6px; width: 120px; height: 120px; pointer-events: none; filter: drop-shadow(0 12px 24px var(--shadow-tint)); }
+.today-hero-copy { display: grid; gap: var(--space-1); max-width: calc(100% - 108px); min-height: 104px; align-content: start; }
 .today-tag { display: inline-flex; align-items: center; gap: var(--space-1); margin: 0; color: var(--accent-ink); font-size: var(--text-sm); font-weight: 800; letter-spacing: .06em; text-transform: uppercase; }
 .today-tag svg { width: 14px; height: 14px; }
-.today-title { margin: 0; color: var(--ink); font-size: var(--text-4xl); font-weight: 800; line-height: 1.1; }
+.today-title { margin: 0; color: var(--ink); font-size: var(--text-4xl); font-weight: 800; line-height: 1.1; overflow-wrap: anywhere; }
+.today-sub { margin: 0; color: var(--ink-2); font-size: var(--text-lg); font-weight: 700; line-height: 1.3; }
 .today-meta { margin: 0; color: var(--muted); font-size: var(--text-md); font-weight: 600; }
 .today-say { margin: 0; color: var(--ink-2); font-size: var(--text-base); line-height: 1.45; }
 .today-say strong { color: var(--ink); }
-.today-chips { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.today-chips { display: flex; flex-wrap: wrap; gap: var(--space-2); margin-bottom: var(--space-1); }
 .today-actions { display: grid; gap: var(--space-2); }
 .today-hero.is-done { border-color: var(--success-line); }
 .today-hero.is-done .today-tag { color: var(--success-ink); }
-.today-streak { display: inline-flex; align-items: center; justify-self: start; gap: var(--space-1); min-height: 44px; padding: 0 var(--space-3); border-radius: var(--radius-pill); background: var(--accent-soft); color: var(--accent-ink); font-size: var(--text-md); font-weight: 800; text-decoration: none; }
-.today-streak svg { width: 16px; height: 16px; }
 .today-row-head { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); margin-bottom: var(--space-3); }
 .today-row-head h3 { margin: 0; font-size: var(--text-lg); font-weight: 800; }
 .today-row-link { display: inline-flex; align-items: center; gap: var(--space-1); min-height: 44px; color: var(--muted); font-size: var(--text-md); font-weight: 700; text-decoration: none; }
@@ -4108,3 +4088,120 @@ a.round-avatar { display: inline-grid; place-items: center; min-width: 44px; min
 @media (prefers-reduced-motion: reduce) {
   .ui-button, .ui-row--tap, .ui-seg__tab, .ui-page-header__back { transition: none; }
 }
+
+/* Progress tidy-up (2026-11-24, after phone review). */
+/* Grid items default to min-width:auto, so one long no-wrap title pushed every history row past the card edge. */
+.recent-rows { grid-template-columns: minmax(0, 1fr); }
+.recent-text small { overflow-wrap: anywhere; }
+/* "Show more" folds on Progress lists (records, history, fine print). */
+.progress-more { margin-top: var(--space-2); }
+.progress-more > summary { display: flex; align-items: center; min-height: 44px; color: var(--accent-ink); font-size: var(--text-md); font-weight: 700; cursor: pointer; list-style: none; }
+.progress-more > summary::-webkit-details-marker { display: none; }
+.progress-more > summary::after { content: ""; width: 7px; height: 7px; margin-left: var(--space-2); border-right: 2px solid currentColor; border-bottom: 2px solid currentColor; transform: translateY(-2px) rotate(45deg); transition: transform var(--dur-fast) var(--ease); }
+.progress-more[open] > summary::after { transform: translateY(2px) rotate(-135deg); }
+.progress-more .record-list, .progress-more .recent-rows { margin-top: 0; }
+.progress-more .recent-rows { margin-bottom: var(--space-1); }
+.progress-more .metric-definition { margin-top: 0; }
+/* Body weight: the date and weight fields are the same height, size and alignment (iOS draws date inputs its own
+   way). 17px text also stops iOS zooming in on focus. */
+.bodyweight-form { align-items: end; gap: var(--space-3) var(--space-2); }
+.bodyweight-form .field-label { gap: var(--space-1); color: var(--muted); font-size: var(--text-sm); font-weight: 700; }
+.bodyweight-form input { height: 48px; min-height: 48px; padding: 0 var(--space-3); border-radius: var(--radius-sm); color: var(--ink); font-size: var(--text-lg); font-weight: 600; line-height: 48px; }
+.bodyweight-form input[type="date"] { display: flex; align-items: center; }
+.bodyweight-form input[type="date"]::-webkit-date-and-time-value { margin: 0; line-height: 46px; }
+.bodyweight-form input::placeholder { color: var(--faint); font-weight: 500; }
+.bodyweight-form .button { min-height: 48px; font-size: var(--text-md); }
+/* Chart readout: the latest value on one line, lowest/highest on the next, never squeezed beside it. */
+.line-chart-readout .line-chart-range { flex-basis: 100%; margin-left: 0; font-size: var(--text-sm); }
+/* A soft fade behind the phone dock, so page text never shows sharp beside the pill (most of all when it shrinks
+   while scrolling). It belongs to the dock, so it hides with it in Rozi chat and workout mode. */
+@media (max-width: 700px) {
+  .mobile-nav::before { content: ""; position: absolute; z-index: -1; top: -36px; left: -12px; right: -12px; bottom: calc(-8px - env(safe-area-inset-bottom)); background: linear-gradient(to bottom, transparent, color-mix(in srgb, var(--page) 82%, transparent) 55%, var(--page)); pointer-events: none; }
+}
+
+/* Tab bars slide like the dock (DockScrub): press lifts the orange lens, dragging moves it with the finger, letting go
+   picks the tab under it. pan-y keeps the page scrolling up and down; the sideways swipe belongs to the bar. */
+.segmented, .library-chips { touch-action: pan-y; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+.segmented > .glider, .library-chips > .glider { transition-property: translate, width, height, opacity, scale, box-shadow; }
+.scrub-pressing > .glider { scale: 1.04 1.06; }
+.scrub-dragging > .glider { scale: 1.1 1.12; transition: width .25s ease, height .25s ease, opacity .2s ease, scale .2s ease, box-shadow .2s ease; }
+.scrub-dragging > :not(.glider) { transition: color .15s ease, scale .2s ease; }
+.scrub-dragging > .dock-hover { scale: 1.05; }
+@media (prefers-reduced-motion: reduce) { .scrub-pressing > .glider, .scrub-dragging > .glider, .scrub-dragging > .dock-hover { scale: none; } }
+/* Workouts categories: four tabs in one row that fits the phone, so there is no sideways scroll to fight the slide. */
+.library-chips { display: flex; overflow-x: auto; }
+.library-chips > button { flex: 1 1 auto; min-width: 0; padding: 0 var(--space-2); font-size: var(--text-md); white-space: nowrap; }
+.library-chips > button .chip-count { margin-left: var(--space-1); }
+
+/* Opening an exercise: the backdrop fades in while the sheet glides up and its content follows a beat later; closing
+   plays it in reverse (the guide waits for it before unmounting). Reduced motion turns it off app-wide. */
+@keyframes guide-fade-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes guide-fade-out { from { opacity: 1; } to { opacity: 0; } }
+@keyframes guide-sheet-in { from { opacity: .4; transform: translateY(48px) scale(.98); } to { opacity: 1; transform: none; } }
+@keyframes guide-sheet-out { from { opacity: 1; transform: none; } to { opacity: 0; transform: translateY(64px) scale(.98); } }
+@keyframes guide-content-in { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+.guide-backdrop { animation: guide-fade-in var(--dur-med) var(--ease) both; }
+.guide-backdrop > .exercise-modal.guide { animation: guide-sheet-in .42s var(--ease) backwards; }
+.guide-backdrop > .exercise-modal.guide > :not(.sheet-grip):not(.guide-close-pin) { animation: guide-content-in .4s var(--ease) .08s both; }
+.guide-backdrop.is-closing { animation: guide-fade-out .22s ease-in both; }
+.guide-backdrop.is-closing > .exercise-modal.guide { animation: guide-sheet-out .22s ease-in both; }
+
+/* Water card (2026-11-25): a round glass orb that fills with two drifting waves and rising bubbles, a splash and a
+   floating "+250 ml" on each drink, and one even row of buttons with undo at the end. */
+.water-card { display: grid; gap: var(--space-3); scroll-margin-top: 20px; }
+.water-top { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: var(--space-3); }
+.water-orb { --level: 0; position: relative; width: 84px; height: 84px; border-radius: 50%; overflow: hidden; isolation: isolate;
+  background: radial-gradient(circle at 32% 26%, color-mix(in srgb, white 22%, transparent), transparent 42%), color-mix(in srgb, var(--water) 10%, var(--surface-2));
+  box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--water) 45%, transparent), inset 0 -10px 22px color-mix(in srgb, black 18%, transparent), 0 8px 22px color-mix(in srgb, var(--water) 22%, transparent); }
+.water-orb::after { content: ""; position: absolute; z-index: 3; inset: 8px 46px 46px 12px; border-radius: 50%; background: color-mix(in srgb, white 22%, transparent); filter: blur(1px); pointer-events: none; }
+.water-sea { position: absolute; inset: 0; transform: translateY(calc((1 - var(--level)) * 100% + 4px)); transition: transform .9s cubic-bezier(.3, 1.25, .4, 1); }
+.water-body { position: absolute; inset: 9px 0 0; background: linear-gradient(180deg, var(--water), color-mix(in srgb, var(--water) 55%, navy)); }
+.water-wave { position: absolute; top: 0; left: 0; width: 200%; height: 10px; }
+.water-wave path { fill: color-mix(in srgb, var(--water) 70%, white); }
+.water-wave.back { opacity: .55; animation: water-drift 3.6s linear infinite; }
+.water-wave.front { top: 1px; animation: water-drift 2.2s linear infinite reverse; }
+.water-wave.front path { fill: var(--water); }
+@keyframes water-drift { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+.water-bubble { position: absolute; bottom: 4px; width: 5px; height: 5px; border-radius: 50%; background: color-mix(in srgb, white 55%, transparent); animation: water-bubble 3s ease-in infinite; }
+.water-bubble:nth-of-type(1) { left: 30%; }
+.water-bubble:nth-of-type(2) { left: 55%; width: 4px; height: 4px; animation-delay: 1.1s; }
+.water-bubble:nth-of-type(3) { left: 70%; width: 3px; height: 3px; animation-delay: 2s; }
+@keyframes water-bubble { 0% { opacity: 0; transform: translateY(0); } 20% { opacity: 1; } 100% { opacity: 0; transform: translateY(-46px); } }
+.water-percent { position: absolute; z-index: 4; inset: 0; display: grid; place-items: center; color: var(--ink); font-size: var(--text-lg); font-weight: 800; font-variant-numeric: tabular-nums; text-shadow: 0 1px 6px color-mix(in srgb, black 45%, transparent); }
+.water-orb.splash { animation: water-splash .6s var(--ease); }
+@keyframes water-splash { 0% { scale: 1; } 30% { scale: 1.08 .95; } 60% { scale: .97 1.04; } 100% { scale: 1; } }
+.water-plus { position: absolute; z-index: 5; left: 50%; top: 10px; color: white; font-size: var(--text-sm); font-weight: 800; white-space: nowrap; text-shadow: 0 1px 6px color-mix(in srgb, black 50%, transparent); animation: water-plus 1.1s var(--ease) both; }
+@keyframes water-plus { 0% { opacity: 0; transform: translate(-50%, 14px); } 25% { opacity: 1; } 100% { opacity: 0; transform: translate(-50%, -18px); } }
+.water-copy { display: grid; gap: var(--space-1); min-width: 0; }
+.water-copy strong { color: var(--ink); font-size: var(--text-2xl); font-weight: 800; line-height: 1.1; font-variant-numeric: tabular-nums; }
+img.water-rozi { width: 72px; height: 72px; align-self: start; }
+.water-card.great .water-body { background: linear-gradient(180deg, var(--success), color-mix(in srgb, var(--success) 60%, darkslategray)); }
+.water-card.great .water-wave.front path { fill: var(--success); }
+.water-buttons { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-2); }
+.water-buttons.has-undo { grid-template-columns: 1fr 1fr 44px; }
+.water-buttons .button { min-height: 44px; padding: 0 var(--space-3); font-size: var(--text-md); font-weight: 700; }
+.water-buttons .button small { margin-left: var(--space-1); color: var(--muted); font-size: var(--text-xs); font-weight: 600; }
+.water-undo { width: 44px; height: 44px; border-radius: var(--radius-pill); }
+.water-undo svg { width: 18px; height: 18px; }
+@media (max-width: 360px) { img.water-rozi { display: none; } .water-top { grid-template-columns: auto minmax(0, 1fr); } }
+@media (prefers-reduced-motion: reduce) { .water-wave, .water-bubble, .water-orb.splash, .water-plus, .water-card.thirsty img.water-rozi { animation: none; } .water-sea { transition: none; } }
+.water-buttons .button { display: inline-flex; align-items: center; justify-content: center; gap: var(--space-1); white-space: nowrap; }
+.water-buttons .button small { margin-left: 0; }
+/* Text links with an arrow ("Check your recovery map ›", "+5 more on Progress"): the arrow sits centred on the text,
+   no underline running under the gap, and a full 44px tap height. */
+a.text-button { display: inline-flex; align-items: center; gap: var(--space-1); min-height: 44px; text-decoration: none; }
+a.text-button > svg { flex: none; width: 16px; height: 16px; }
+
+/* Today hero (2026-11-25): the Card's own "display: block" was beating the hero's grid, so its 12px gap never applied
+   and the text, streak and button touched. The hero is a grid again; the primary button gets a little extra air. */
+.today-hero.ui-card { display: grid; gap: var(--space-3); }
+.today-hero .today-chips + .button, .today-hero .today-say + .today-actions, .today-hero .today-chips + button { margin-top: var(--space-1); }
+/* The streak is the card's footer: a full-width row under a hairline, flame badge on the left, chevron on the right. */
+.today-streak { display: flex; align-items: center; gap: var(--space-3); min-height: 48px; margin: var(--space-1) -20px -20px; padding: var(--space-2) 20px; /* 20px = the hero card padding (ui-card--pad-lg) */ border-top: 1px solid var(--line); color: var(--ink); text-decoration: none; }
+.today-streak-flame { display: grid; place-items: center; flex: none; width: 32px; height: 32px; border-radius: 50%; background: var(--accent-soft); color: var(--accent-ink); }
+.today-streak-flame svg { width: 16px; height: 16px; }
+.today-streak-text { display: flex; flex: 1; align-items: baseline; gap: var(--space-2); min-width: 0; }
+.today-streak-text strong { font-size: var(--text-md); font-weight: 800; }
+.today-streak-text small { color: var(--muted); font-size: var(--text-sm); font-weight: 600; }
+.today-streak > svg { flex: none; width: 18px; height: 18px; color: var(--muted); }
+@media (hover: hover) { .today-streak:hover > svg { color: var(--accent-ink); } }

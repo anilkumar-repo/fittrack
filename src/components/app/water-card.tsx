@@ -1,7 +1,7 @@
 "use client";
 
 import { ACTIVITY_OPTIONS } from "@/lib/onboarding";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Droplets, Undo2 } from "lucide-react";
 import { BOTTLE_ML, GLASS_ML, waterMood, waterTargetMl, type WaterMood } from "@/lib/wellness";
 import { addCloudWater, loadCloudWater, removeCloudWater, type WaterLog } from "@/lib/supabase-repository";
@@ -25,7 +25,7 @@ const LINES: Record<WaterMood, string> = {
   thirsty: "Rozi is thirsty! Grab a big glass.",
 };
 
-/** Home: today's water as a filling bottle. Target from body weight (+ workout days); Rozi reacts to your pace. */
+/** Home: today's water as a glass orb that fills with waves. Target from body weight (+ workout days); Rozi reacts to your pace. */
 export function WaterCard() {
   const { state, isDemo, browserClient, currentDate, setNotice } = useFitTrack();
   const [logs, setLogs] = useState<WaterLog[]>([]);
@@ -44,11 +44,18 @@ export function WaterCard() {
   const total = logs.reduce((sum, log) => sum + log.ml, 0);
   const mood = waterMood(total, target, hourIn(state.profile.timeZone));
   const share = Math.min(1, total / target);
+  // A splash and a floating "+250 ml" each time a drink is added (the key restarts the animation).
+  const [splash, setSplash] = useState<{ key: number; ml: number } | null>(null);
+  const splashTimer = useRef(0);
+  useEffect(() => () => window.clearTimeout(splashTimer.current), []);
 
   async function add(ml: number) {
     const optimistic: WaterLog = { id: `local-${Date.now()}`, ml, at: new Date().toISOString() };
     const next = [...logs, optimistic];
     setLogs(next);
+    setSplash({ key: Date.now(), ml });
+    window.clearTimeout(splashTimer.current);
+    splashTimer.current = window.setTimeout(() => setSplash(null), 1100);
     if (isDemo || !browserClient) { writeLocal(currentDate, next); return; }
     try {
       const saved = await addCloudWater(browserClient, currentDate, ml);
@@ -68,23 +75,33 @@ export function WaterCard() {
     await removeCloudWater(browserClient, last.id).catch(() => undefined);
   }
 
+  const percent = Math.round(share * 100);
   return (
     <article className={`water-card panel ${mood}`} id="water" aria-label="Water today">
-      <div className="water-bottle" role="img" aria-label={`${total} of ${target} ml`}>
-        <span className="water-fill" style={{ height: `${Math.round(share * 100)}%` }}><span className="water-wave" /></span>
-        <span className="water-cap" />
-      </div>
-      <div className="water-copy">
-        <span className="water-tag"><Droplets aria-hidden="true" /> Water today</span>
-        <strong>{loaded ? `${Number((total / 1000).toFixed(2))} / ${Number((target / 1000).toFixed(1))} L` : "…"}</strong>
-        <small>{LINES[mood]}</small>
-        <div className="water-buttons">
-          <button type="button" className="button button-subtle" onClick={() => void add(GLASS_ML)}>+ Glass</button>
-          <button type="button" className="button button-subtle" onClick={() => void add(BOTTLE_ML)}>+ Bottle</button>
-          {logs.length > 0 && <button type="button" className="icon-button" aria-label="Undo last drink" onClick={() => void undo()}><Undo2 aria-hidden="true" /></button>}
+      <div className="water-top">
+        <div className={`water-orb ${splash ? "splash" : ""}`} role="img" aria-label={`${total} of ${target} ml, ${percent}%`} style={{ "--level": share } as React.CSSProperties}>
+          {/* Two wave layers drift at different speeds; their height is the share of today's target. */}
+          <span className="water-sea">
+            <svg className="water-wave back" viewBox="0 0 200 20" preserveAspectRatio="none" aria-hidden="true"><path d="M0 10 Q25 0 50 10 T100 10 T150 10 T200 10 V20 H0Z" /></svg>
+            <svg className="water-wave front" viewBox="0 0 200 20" preserveAspectRatio="none" aria-hidden="true"><path d="M0 10 Q25 18 50 10 T100 10 T150 10 T200 10 V20 H0Z" /></svg>
+            <span className="water-body" />
+            {share > 0 && <><i className="water-bubble" /><i className="water-bubble" /><i className="water-bubble" /></>}
+          </span>
+          <span className="water-percent">{loaded ? `${percent}%` : ""}</span>
+          {splash && <span key={splash.key} className="water-plus" aria-hidden="true">+{splash.ml} ml</span>}
         </div>
+        <div className="water-copy">
+          <span className="water-tag"><Droplets aria-hidden="true" /> Water today</span>
+          <strong>{loaded ? `${Number((total / 1000).toFixed(2))} / ${Number((target / 1000).toFixed(1))} L` : "…"}</strong>
+          <small>{LINES[mood]}</small>
+        </div>
+        <Rozi mood={mood === "great" ? "cheer" : "water"} size={72} className="water-rozi" />
       </div>
-      <Rozi mood={mood === "great" ? "cheer" : "water"} size={78} className="water-rozi" />
+      <div className={`water-buttons ${logs.length ? "has-undo" : ""}`}>
+        <button type="button" className="button button-subtle" onClick={() => void add(GLASS_ML)}>+ Glass <small>{GLASS_ML} ml</small></button>
+        <button type="button" className="button button-subtle" onClick={() => void add(BOTTLE_ML)}>+ Bottle <small>{BOTTLE_ML} ml</small></button>
+        {logs.length > 0 && <button type="button" className="icon-button water-undo" aria-label="Undo last drink" onClick={() => void undo()}><Undo2 aria-hidden="true" /></button>}
+      </div>
     </article>
   );
 }

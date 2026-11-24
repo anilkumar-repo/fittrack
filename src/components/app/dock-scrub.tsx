@@ -6,17 +6,22 @@ import { useEffect } from "react";
 const DRAG_START = 8;
 const EDGE = 4;
 
+/** Bars you can press and slide across: the phone dock and every one-row tab bar (Workouts categories, Together…). */
+const SCRUB = ".dock-pill, .segmented, .library-chips";
+
 /**
- * Press-and-drag on the phone dock, like the iOS tab bar: pressing lifts the glass lens, sliding moves it
- * with the finger (the tab under it lights up, with a tiny vibration on phones that support it), and letting go
- * opens that tab. A plain tap still works exactly as before. The lens itself is the GlassGlider highlight.
+ * Press-and-drag on the phone dock and tab bars, like the iOS tab bar: pressing lifts the glass lens, sliding moves
+ * it with the finger (the tab under it lights up, with a tiny vibration on phones that support it), and letting go
+ * picks that tab. A plain tap still works exactly as before. The lens itself is the GlassGlider highlight.
+ * A bar that scrolls sideways (wider than the screen) keeps its normal scrolling instead.
  */
 export function DockScrub() {
   useEffect(() => {
     let drag: { pill: HTMLElement; glider: HTMLElement; startX: number; pointerId: number; moving: boolean; hovered: HTMLAnchorElement | null } | null = null;
     let swallowClick = false;
 
-    const links = (pill: HTMLElement) => [...pill.querySelectorAll<HTMLAnchorElement>(":scope > a")];
+    const links = (pill: HTMLElement) => [...pill.querySelectorAll<HTMLAnchorElement>(":scope > a, :scope > button")];
+    const isChosen = (item: HTMLElement) => item.getAttribute("aria-current") === "page" || item.classList.contains("selected") || item.classList.contains("active");
 
     function hover(next: HTMLAnchorElement | null) {
       if (!drag || drag.hovered === next) return;
@@ -49,7 +54,7 @@ export function DockScrub() {
       if (!drag) return;
       const { pill, glider, moving, hovered } = drag;
       drag = null;
-      pill.classList.remove("dock-pressing", "dock-dragging");
+      pill.classList.remove("dock-pressing", "dock-dragging", "scrub-pressing", "scrub-dragging");
       hovered?.classList.remove("dock-hover");
       if (!moving) return;
       // Let GlassGlider glide the lens to the chosen tab (it animates when the position "changed").
@@ -57,7 +62,7 @@ export function DockScrub() {
       swallowClick = true; // the browser's own click after a drag must not open the tab the finger started on
       window.setTimeout(() => {
         swallowClick = false;
-        if (open && hovered && hovered.getAttribute("aria-current") !== "page") hovered.click();
+        if (open && hovered && !isChosen(hovered)) hovered.click();
         // Nudge GlassGlider to re-place the lens (it listens for class changes).
         pill.classList.toggle("dock-settled");
       }, 0);
@@ -65,11 +70,12 @@ export function DockScrub() {
 
     function onDown(event: PointerEvent) {
       if (event.button > 0 || !(event.target instanceof Element)) return;
-      const pill = event.target.closest<HTMLElement>(".dock-pill");
+      const pill = event.target.closest<HTMLElement>(SCRUB);
       const glider = pill?.querySelector<HTMLElement>(":scope > .glider");
-      if (!pill || !glider) return;
+      if (!pill || !glider || glider.style.opacity !== "1") return;
+      if (pill.scrollWidth > pill.clientWidth + 1) return; // it scrolls sideways: leave the swipe to the browser
       drag = { pill, glider, startX: event.clientX, pointerId: event.pointerId, moving: false, hovered: null };
-      pill.classList.add("dock-pressing");
+      pill.classList.add(pill.classList.contains("dock-pill") ? "dock-pressing" : "scrub-pressing");
     }
     function onMove(event: PointerEvent) {
       if (!drag || event.pointerId !== drag.pointerId) return;
@@ -77,7 +83,7 @@ export function DockScrub() {
         if (Math.abs(event.clientX - drag.startX) < DRAG_START) return;
         drag.moving = true;
         try { drag.pill.setPointerCapture(event.pointerId); } catch { /* still works without capture */ }
-        drag.pill.classList.add("dock-dragging");
+        drag.pill.classList.add(drag.pill.classList.contains("dock-pill") ? "dock-dragging" : "scrub-dragging");
       }
       event.preventDefault();
       follow(event.clientX);
@@ -85,7 +91,7 @@ export function DockScrub() {
     function onUp(event: PointerEvent) { if (drag && event.pointerId === drag.pointerId) end(true); }
     function onCancel(event: PointerEvent) { if (drag && event.pointerId === drag.pointerId) end(false); }
     function onClick(event: MouseEvent) {
-      if (!swallowClick || !(event.target instanceof Element) || !event.target.closest(".dock-pill")) return;
+      if (!swallowClick || !(event.target instanceof Element) || !event.target.closest(SCRUB)) return;
       event.preventDefault();
       event.stopPropagation();
       swallowClick = false;

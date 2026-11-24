@@ -11,6 +11,8 @@ import { exerciseEquipmentIsAvailable, filterExerciseLibrary, rankSearchResults 
 import { EXERCISE_LIBRARY } from "@/lib/templates";
 
 const CATEGORIES = ["All", "Strength", "Core", "Conditioning"];
+/** Short names so the four tabs fit one row you can slide across (docs/DESIGN.md §7). */
+export const CATEGORY_LABEL: Record<string, string> = { Conditioning: "Cardio" };
 
 /**
  * Pick exercises (from the reference apps): search, category pills with counts, a plain A–Z list, tick several,
@@ -44,7 +46,7 @@ export function ExercisePicker({ already, onAdd, onClose }: { already: string[];
           <button type="button" className="button button-primary picker-add" disabled={!picked.length} onClick={() => { onAdd(picked); onClose(); }}>Add{picked.length ? ` (${picked.length})` : ""}</button>
         </div>
         <label className="library-find"><Search aria-hidden="true" /><input type="search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search exercises" aria-label="Search exercises" /></label>
-        <div className="library-chips" role="group" aria-label="Category">{CATEGORIES.map((cat) => <button key={cat} type="button" className={category === cat ? "selected" : ""} aria-pressed={category === cat} onClick={() => setCategory(cat)}>{cat}<span className="chip-count">{list(cat).length}</span></button>)}</div>
+        <div className="library-chips" role="group" aria-label="Category">{CATEGORIES.map((cat) => <button key={cat} type="button" className={category === cat ? "selected" : ""} aria-pressed={category === cat} onClick={() => setCategory(cat)}>{CATEGORY_LABEL[cat] ?? cat}<span className="chip-count">{list(cat).length}</span></button>)}</div>
         {!results.length && <p className="picker-empty">No exercises match “{query.trim()}”. Try a muscle (chest, biceps, glutes) or equipment (dumbbell, cable).</p>}
         <ul className="library-list grouped picker-list">{ranked.flatMap(({ exercise, best }, index) => {
           // A plain A–Z list (no letter strip); while searching, "Best matches" / "Also matches".
