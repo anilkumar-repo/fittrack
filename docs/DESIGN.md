@@ -29,8 +29,8 @@ mockup at https://claude.ai/artifact/7cTxGV7mMkhBzr4u7rhRi2.
 | `--ink` | `#F4F1EC` | Text |
 | `--muted` | `#A3ABA9` | Secondary text (AA on the page) |
 | `--faint` | `#939B9A` | Least important text (AA: 6.8:1 on the page, 5:1 on cards; light theme `#646F6E`, 4.6:1) |
-| `--accent` | `#FF9B72` | Actions, highlights, the active tab |
-| `--button-primary-bg` | gradient `#FFB48F` → `#FF8A5C`, text `#1A0C06` | The one primary button |
+| `--accent` | `#FF8A5C` | Actions, highlights, the active tab |
+| `--button-primary-bg` | gradient `#FF9A6E` → `#F0683F`, text `#1A0C06` | The one primary button |
 | `--success` / mint | `#6FD3BE` | Recovery, done sets, "ready" — nothing else |
 | `--water` | `#7CC7FF` | Water only |
 | `--warn` / `--danger` | amber / coral red | Warnings, errors |
