@@ -1965,3 +1965,280 @@ After "Start batch B".
 - 397 tests, type check and build pass; lint shows the same single old warning.
 - A 35-phrase lookup comparison against the original code: every change is an improvement listed above.
 - In the browser: the library has 111 exercises; 107 show, because 4 deadlift variations are hidden until a trainer approves them. The Mountain climber guide renders correctly at phone width: 3 × 20–30 sec, with core, shoulders and quads on the body map.
+
+### 2026-11-24 — Model routing rules (AGENTS.md) and helper agents
+
+You noticed small tasks still ran on Opus and asked for written routing rules.
+
+**What changed:**
+- **`AGENTS.md`:** a "Model routing" section, added below the Next.js-managed block (`next dev` only rewrites its own block). It sets out:
+  - Opus 5.5 is the main model and decides the routing.
+  - The three tiers.
+  - A five-step decision order: critical → depends on this conversation → tiny → can be fully briefed → when in doubt go up a tier.
+  - Delegation rules: written briefs, Opus reviews every helper diff, and helpers never commit, run migrations, touch secrets or edit security code.
+  - A one-line "who did what" in each wrap-up.
+- **`CLAUDE.md`:** new, with one line, `@AGENTS.md`, so every Claude Code session in this repo loads the rules.
+- **`.claude/agents/`:** three helper definitions:
+  - `builder` (Sonnet): implementation from a written brief;
+  - `quick-helper` (Haiku): searches and small mechanical work;
+  - `checker` (Haiku): runs tests, type check, lint and build, and returns a 4-line summary.
+- **Loading:** they load in new sessions. This session used the general helper with the same models and rules.
+
+**Note:** a session can't switch its own model mid-conversation. "Routing" means giving self-contained pieces to cheaper helper agents; the main conversation stays on Opus.
+
+### 2026-11-24 — R6 batch C: 16 cardio and home-conditioning exercises (no database change) — R6 complete
+
+After "start batch C". This was the first batch run under the new routing rules:
+- **Sonnet (builder):** wrote the 16 entries from a field-by-field spec.
+- **Opus:** did the shared wiring (names, distance tracking, groups, body map, tests), reviewed the builder's diff and wrote these docs.
+- **Haiku (checker):** ran the checks.
+
+**New exercises:**
+- **Machines (minutes + km):** Treadmill walk · Stationary bike · Elliptical · Rowing machine
+- **Outdoor (minutes + km):** Brisk walk · Jog · Run · Cycling
+- **Home:**
+  - timed: Jumping jack · Low-impact jumping jack · Step touch · High knees · Jump rope;
+  - reps: Jump squat · Burpee · Kettlebell swing (kettlebell or dumbbell).
+
+**Details:**
+- **Low-impact options:** each high-impact move names its low-impact option in its first caution.
+- **Equipment:** the machines need the "Cardio machines" equipment tick; everything at home needs nothing.
+- **Other names:** "treadmill", "elliptical" and "stationary bike" used to be other names for the generic Easy cardio. They now point to their own exercises.
+- **Variation groups:** walk/run, cycle, machine cardio, low-impact cardio, plyometric.
+
+**R6 totals:** 50 exercises added (22 + 12 + 16). The library has 127 exercises; 123 show, because 4 deadlift variations are hidden until a trainer approves them.
+
+**Checked:**
+- 398 tests, type check and build pass; lint shows the same single old warning.
+- Generated plans are still unchanged: 0 of 512 contain a new exercise.
+- In the browser, all 16 appear in the library.
+
+### 2026-11-24 — R7: Rozi understands exercise variations (no database change)
+
+After "Start R7". This is Rozi tool code, so per `AGENTS.md` it stayed on Opus. The Haiku checker ran type check, lint and build.
+
+**What changed:**
+- **New `src/lib/exercise-variations.ts`:** `variationsOf(exercise, profile)` lists the other versions of the same movement, closest first. `compareVariation(a, b)` gives plain facts about how one differs from another:
+  - a curated note;
+  - main muscle;
+  - equipment added or removed;
+  - difficulty;
+  - one side or both;
+  - timed or reps;
+  - trainer approval.
+- **`VARIATION_NOTES`** (in `exercise-taxonomy.ts`): 24 one-line facts the data can't express, such as grip, pace and range. Examples: "inclined bench: more upper chest", "palms facing you: more biceps", "jogging pace, more impact".
+- **Rozi:** `get_exercise_info` returns `variations` (up to 6), with `youCanDoIt` and `differences`. The tool description tells Rozi to use it for "difference between" and "easier/harder version" questions.
+- **Swaps and the exercise guide:** versions of the same movement now rank first in the alternatives, after the exercise's own fallback.
+
+**Example** (dumbbell bench, with dumbbells and a bench):
+- Incline dumbbell press — "inclined bench: more upper chest" ✓ you can do it.
+- Dumbbell floor press — "shorter range, easy on the shoulders; no bench needed" ✓.
+- Barbell bench press — "needs barbell / EZ bar; harder (intermediate)" ✗.
+
+**Checked:**
+- 403 tests pass, including the new `src/lib/exercise-variations.test.ts`.
+- Generated plans are unchanged (0 of 512 differ); the planner doesn't use these lists.
+- **Not checked live:** a real Rozi conversation. It needs the deployed AI server.
+
+### 2026-11-24 — R8: Rozi goals with a weekly plan (migration applied; flag off)
+
+After "Start R8". The design is in `docs/ROZI_AGENT_ARCHITECTURE.md` §7.
+
+**Who did what:**
+- **Opus:** the design, the migration and dry run, the plan templates and safety limits, the goal service, the API routes, the chat wiring, the tests and the review.
+- **Sonnet (builder):** the goal card UI. Opus reviewed it and corrected one line, which promised weekly progress checks before they exist.
+- **Haiku (checker):** the checks.
+
+**What it does:**
+- **Proposing:** say "help me lose 4 kg", "I want to bench 60 kg" or "make me train 4 times a week". Rozi calls `propose_goal_plan`. RozFit builds a 4–12 week plan from your own data using fixed templates; the model only passes the numbers you gave.
+- **Safety limits** (refused with a reason and, where possible, a safer suggestion):
+  - **Consistency:** 2–6 workouts a week, never more than your training days. It starts at your recent average + 1, then adds one every two weeks.
+  - **Weight loss:**
+    - needs a weight logged in the last 30 days and your height;
+    - at most 1% of body weight a week;
+    - never below BMI 18.5;
+    - over 12 weeks → it suggests a smaller first goal.
+  - **Weight gain:** at most 0.5% a week.
+  - **Strength:**
+    - starts from your best logged working set (rep exercises only);
+    - up to +2.5% a week and +20% overall;
+    - weeks 4 and 8 hold the weight;
+    - deadlift variations need trainer approval.
+- **The card** shows the plan week by week, with **Approve plan** and **Not now**, then Pause, Resume and Stop goal. Approving replaces any current goal.
+
+**Database** (`supabase/migrations/20261124100000_rozi_goals.sql`):
+- **`rozi_goals` is closed:** row-level security is on, with no policies and no grants.
+- **Functions:**
+  - `rozi_propose_goal`: service role only. Expires after 30 minutes; at most 3 waiting; the same plan returns the same row.
+  - `rozi_approve_goal(id, hash)`: owner only, hash-bound, single use. It holds a per-person lock and replaces the live goal.
+  - `rozi_set_goal_status(id, reject | pause | resume | cancel)`: allowed transitions only.
+  - `rozi_my_goals`.
+- **One live goal per person**, enforced by a unique index.
+
+**Dry run on the live database (rolled back):** `PASS 24 checks`, signed in as real users.
+- Another person can't approve, cancel or see your goal.
+- A wrong plan hash is refused; a second approve does nothing.
+- The table can't be read directly, and only the server can propose.
+- Only the allowed status changes work; a new goal replaces the old one.
+- The 4th waiting proposal is refused; anon can't call anything.
+- Afterwards: no table and no functions left.
+
+**Checked:** 411 tests, including 8 new planning tests.
+
+**Not checked live:** the card inside a real Rozi chat. It needs the migration, `ROZI_GOALS=on` and a deploy.
+
+**Applied 2026-11-24 after "Yes, apply it"** (recorded as `20261124080532 rozi_goals`).
+- **Structure:**
+  - Row-level security is on, with 0 policies and no table grants for anon or authenticated.
+  - There are 3 indexes, including one live goal per person.
+  - The three functions people can call (approve, set status, list goals) are security definer with `search_path=''`, callable by authenticated users.
+  - `rozi_propose_goal` is service-role only.
+- **Security advisors:** only the expected kinds of notice, the same as for `rozi_actions`: a closed table, and owner-checked functions that signed-in users can call. `rozi_propose_goal` is not listed, as intended.
+- **Live behaviour test (rolled back):** `PASS 9 checks`.
+  - Another person can't approve it.
+  - The table can't be read directly, and a user can't propose.
+  - A wrong hash is refused.
+  - The owner can approve, pause and cancel it, and it appears in their list.
+- **Cleanup:** 0 goal rows left.
+
+**To use it:**
+1. Commit and push.
+2. Set `ROZI_GOALS=on` in Vercel and deploy.
+3. Ask Rozi for a goal.
+
+### 2026-11-24 — R9: goal progress and replanning (migration applied; flag off)
+
+After "Start R9". The design is in `docs/ROZI_AGENT_ARCHITECTURE.md` §8.
+
+**Who did what:**
+- **Opus:** the monitor, the replan rules, the Rozi tool, the wiring, the migration and dry run, the tests and the review.
+- **Sonnet (builder):** the progress card. Opus reviewed it: read-only, no network calls, existing colour variables.
+- **Haiku (checker):** the checks.
+
+**What it does:**
+- **Asking about a goal:** "How's my goal going?" makes Rozi call `get_goal_progress`. Each week is compared with its target:
+  - workouts done that week;
+  - the last weigh-in that week, ±0.3 kg;
+  - the best working set that week.
+- **The card** marks each week met ✓ / missed ✗ / no log / this week / upcoming, with an overall On track, Ahead, Behind, Paused or Plan finished.
+- **Behind** means the last two finished weeks missed their target. Rozi then offers a gentler plan built from what you actually managed:
+  - **workouts:** the target drops to what you managed + 1, or the same target over more weeks;
+  - **weight and strength:** the same target over more weeks, from where you are now.
+
+  Only if you agree does it propose the new plan, which you approve on the usual card. Nothing changes on its own.
+- **Finished plans** show as completed, and Rozi can still sum them up for 14 days after they end.
+
+**Migration** `supabase/migrations/20261124120000_rozi_goals_completion.sql`:
+- `create or replace` of two functions, `rozi_approve_goal` and `rozi_my_goals`. Before editing, both were confirmed identical to the live versions (md5).
+- `rozi_my_goals` shows a plan past its end date as `completed`.
+- `rozi_approve_goal` records a finished goal as `completed` instead of `replaced` when a new one is approved.
+- No table changes.
+
+**Dry run on the live database (rolled back):** `PASS 6 checks`, run as a real user.
+- A finished plan shows completed and is stored as completed when a new goal is approved.
+- An unfinished one is still replaced.
+- There is exactly one active goal, and no anon/public grants.
+- Afterwards: live functions unchanged and 0 rows.
+
+**Checked:** 416 tests, including 5 new progress tests.
+
+**Applied 2026-11-24 after "Yes, apply it"** (recorded as `20261124081107 rozi_goals_completion`). Just before applying, I re-checked that both live functions still matched what the migration was built from.
+- **Structure:** both functions are still security definer with `search_path=''` and the same grants (authenticated, service_role); both include the completion rule.
+- **Security advisors:** unchanged from after R8, with the same counts. Nothing new.
+- **Live behaviour test (rolled back):** `PASS 4 checks`.
+  - A finished plan shows completed and is stored as completed when a new goal is approved.
+  - Another person can't see the goals or approve them.
+- **Cleanup:** 0 goal rows left.
+
+**Not checked live:** the cards inside a real Rozi chat. That needs `ROZI_GOALS=on` and a deploy.
+
+### 2026-11-24 — R10: memory you control (built; migration applied; flag off)
+
+After "start R10". The design is in `docs/ROZI_AGENT_ARCHITECTURE.md` §9.
+
+**Who did what:**
+- **Opus:** the design, the migration and dry run, the checks on notes, the server code (`src/lib/rozi-ai/memory/memory-service.ts`), the API routes, the chat wiring, the tests and the review.
+- **Sonnet (builder):** the "Remember this?" card and the Settings list.
+- **Haiku (checker):** the checks.
+
+**What it does:**
+- **Saving a note:** you tell Rozi something lasting, like "my left knee hurts on lunges". Rozi may suggest remembering it on a card. **Only your tap on Save stores it**, through your own sign-in; Rozi itself can't store anything.
+- **Refused notes:**
+  - contact details (email, phone) or links;
+  - things your profile already holds (goal, days, equipment, height, weight);
+  - duplicates;
+  - more than 30 notes.
+- **How Rozi uses notes:** your notes go into Rozi's instructions on every question, up to 20 notes and 1,500 characters, so its advice respects them. For example, it avoids lunges.
+- **Settings → What Rozi remembers:** every note, with Edit and Delete. Delete really deletes. Notes are deleted with your account.
+- **The flag:** `ROZI_MEMORY=on` (off by default).
+
+**Migration** `supabase/migrations/20261124140000_rozi_memories.sql`:
+- **`rozi_memories` is closed:** row-level security is on, with no policies and no grants.
+- **Owner functions only:** `rozi_my_memories`, `rozi_save_memory` (trimmed, case-insensitive duplicate check, max 30 under a per-person lock), `rozi_update_memory`, `rozi_delete_memory`.
+- **No service-role access** is needed.
+
+**Dry run on the live database (rolled back):** `PASS 12 checks`, signed in as real users.
+- A note is trimmed, and a duplicate returns the same note.
+- A bad kind or a too-short note is refused.
+- The table can't be read directly.
+- The owner can edit and delete a note; another person can't see, edit or delete it.
+- The 31st note is refused, and anon can't call anything.
+- Afterwards: no table and no functions left.
+
+**Checked:**
+- 421 tests (5 new memory tests), type check and build pass; both `/api/rozi/memories` routes built.
+- Lint shows the same single old warning.
+- The Settings section hides itself when memory is off.
+
+**Not checked live:** the card and the Settings list in a signed-in browser. That needs `ROZI_MEMORY=on` and a deploy.
+
+**Applied 2026-11-24** after "Yes, apply it" (recorded as `20261124082003 rozi_memories`). Opus did the apply and every check below.
+- **Structure:** row-level security on, 0 policies, 0 table grants, 3 indexes. The four `rozi_*_memory` functions are security definer with an empty `search_path`, callable by signed-in users only. `private.rozi_memory_json` has no grants.
+- **Live behaviour test (rolled back):** `PASS 8 checks`. Save, duplicate returns the same note, the table can't be read directly, update, another person can't see or delete it, the owner's delete leaves 0 notes, anon is refused. 0 rows left afterwards.
+  - The first run reported "FAIL delete". That was the test, not the function: the delete and the count ran in one statement, so the count still saw the old row. Run as separate statements, it passed.
+- **Security advisors:** the only new items are the expected ones: `rozi_memories` "RLS enabled, no policy" (INFO, closed on purpose) and the four memory functions "signed-in users can execute" (WARN, on purpose; each checks the owner). Leaked-password protection is still off (old item, a dashboard setting).
+- **To turn it on:** set `ROZI_MEMORY=on` in Vercel (Production and Preview) and redeploy after pushing.
+
+### 2026-11-24 — R11: weekly check-ins you opt into (built; migration applied; flag off)
+
+After "start R11". The design is in `docs/ROZI_AGENT_ARCHITECTURE.md` §10.
+
+**Who did what:**
+- **Opus:** the design, the migration and dry run, the server code (`src/lib/rozi-ai/checkins/`), the API route, the hourly-push wiring, the tests and the review.
+- **Sonnet (builder):** the Settings card and its hook.
+- **Haiku (checker):** the checks.
+
+**What it does:**
+- **Opt-in, off by default:** Settings → Your data → "Weekly check-in with Rozi". A switch, a day and an hour (05:00–21:00, your time zone). Switching on records when you agreed; switching off clears it.
+- **One notification a week** with counts only, for example "2 workouts done of 3 planned". Tapping it opens that week's "Your week with Rozi" (`/report?week=…`).
+- **Which week:** Sunday sends the week ending that day. Any other day sends the last full week.
+- **No AI and no stored summary:** the existing hourly push schedule counts the workouts it already loads. The AI runs only if you then ask Rozi about your week.
+- **Never twice:** the server claims each week once with `rozi_mark_checkin_sent`. A missed hour still sends within 3 hours.
+- **Needs notifications on a phone;** without one nothing is sent.
+- **The flag:** `ROZI_CHECKINS=on` (off by default). Off: the card is hidden and nothing is sent.
+
+**Migration** `supabase/migrations/20261124160000_rozi_checkins.sql`:
+- **`rozi_checkin_settings` is closed:** row-level security on, no policies, no grants. Deleted with the account.
+- **Your functions:** `rozi_my_checkin_settings`, `rozi_set_checkin_settings` (checks the day and hour).
+- **Server only (service role):** `rozi_checkin_people`, `rozi_mark_checkin_sent`.
+
+**Dry run on the live database (rolled back):** `PASS 15 checks`, signed in as real users.
+- Defaults are off, Monday, 09:00. Switching on records the consent time; switching off clears it.
+- A bad day or hour is refused. The table can't be read directly.
+- A signed-in person can't list who opted in or mark a week sent; another person doesn't see your choice; anon is refused.
+- The server lists opted-in people, claims a week once (the second claim is refused), and can't claim for someone who isn't opted in or switched off.
+- Afterwards: no table and no functions left.
+
+**Code changed:** `app/api/push/hourly/route.ts` (one call after the existing reminders, only when the flag is on), `src/lib/notifications.ts` (new message kind `checkin`), `settings-screen.tsx` (card placed after the memory card; search keywords).
+
+**Checked:**
+- 425 tests (4 new check-in tests), type check and build pass; `/api/rozi/checkins` built.
+- Lint shows the same single old warning (`welcome.tsx:400`).
+
+**Not checked live:** the card in a signed-in browser and a real weekly notification. That needs `ROZI_CHECKINS=on` and a deploy.
+
+**Applied 2026-11-24** after "Yes, apply it" (recorded as `20261124083201 rozi_checkins`). Opus did the apply and every check below.
+- **Structure:** row-level security on, 0 policies, 0 table grants. All four functions are security definer with an empty `search_path`. `rozi_my_checkin_settings` and `rozi_set_checkin_settings`: signed-in users only. `rozi_checkin_people` and `rozi_mark_checkin_sent`: service role only (not signed-in users, not anon).
+- **Live behaviour test (rolled back):** `PASS 9 checks`. Switching on records consent, a bad hour is refused, no direct reads, a signed-in person can't list who opted in, another person doesn't see your choice, the server lists you and claims a week once (the second claim is refused), anon is refused. 0 rows left afterwards.
+- **Security advisors:** the only new items are the expected ones: `rozi_checkin_settings` "RLS enabled, no policy" (INFO, closed on purpose) and the two person functions "signed-in users can execute" (WARN, on purpose; each acts only on your own row). The two server functions are not flagged. Leaked-password protection is still off (old item, a dashboard setting).
+- **To turn it on:** set `ROZI_CHECKINS=on` in Vercel (Production and Preview) and redeploy after pushing.

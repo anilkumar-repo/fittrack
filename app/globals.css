@@ -3863,3 +3863,32 @@ img[data-motion="float"] { --rozi-motion: rozi-float 3.6s ease-in-out infinite; 
 .rozi-actions-list li { display: grid; gap: 4px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 16px; background: var(--surface-2); }
 .rozi-actions-list li > small { color: var(--muted); font-size: 12.5px; }
 .rozi-actions-row-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+
+/* Rozi goal card (R8) */
+.rozi-goal-steps { display: grid; gap: 4px; margin: 0; padding: 8px 10px 8px 26px; border-radius: 12px; background: var(--surface-solid); font-size: 14px; }
+.rozi-goal-steps li small { display: block; color: var(--muted); font-size: 12.5px; }
+.rozi-goal-toggle { justify-self: start; min-height: 32px; padding: 0; border: 0; background: none; color: var(--accent, #ef7d5c); font: inherit; font-size: 13px; font-weight: 800; cursor: pointer; }
+.rozi-action-buttons .button:disabled { opacity: .6; cursor: not-allowed; }
+
+/* Rozi goal progress card (R9) */
+.rozi-progress-weeks { padding-left: 10px; list-style: none; }
+.rozi-progress-weeks li { display: grid; grid-template-columns: auto minmax(0, 1fr) auto auto; align-items: center; gap: 8px; }
+.rozi-progress-weeks li.is-upcoming { opacity: .55; }
+.rozi-progress-target { color: var(--muted); font-size: 12.5px; }
+.rozi-progress-actual { font-weight: 700; text-align: right; }
+.rozi-progress-mark { display: inline-flex; align-items: center; justify-content: flex-end; min-width: 52px; color: var(--muted); font-size: 12px; font-weight: 700; }
+.rozi-progress-mark svg { width: 15px; height: 15px; }
+.rozi-progress-mark.is-met { color: var(--tone-ready); }
+.rozi-progress-mark.is-missed { color: var(--tone-sore); }
+.rozi-progress-mark.is-now { color: var(--accent, #ef7d5c); }
+
+/* Rozi memory (R10) */
+.rozi-memory-hidden { display: none; }
+.rozi-memory-note { margin: 0; color: var(--ink-2); font-size: 15px; font-weight: 600; overflow-wrap: anywhere; }
+.rozi-memory-list { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.rozi-memory-list li { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 16px; background: var(--surface-2); }
+.rozi-memory-list li > span:first-child { display: grid; gap: 2px; min-width: 0; flex: 1 1 200px; overflow-wrap: anywhere; }
+.rozi-memory-list small { color: var(--muted); font-size: 12.5px; }
+.rozi-checkin-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-bottom: 12px; }
+.rozi-memory-edit { display: grid; gap: 6px; width: 100%; }
+.rozi-memory-edit textarea { width: 100%; padding: 10px 12px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface-solid); color: inherit; font: inherit; resize: vertical; }

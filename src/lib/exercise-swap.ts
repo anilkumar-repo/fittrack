@@ -62,7 +62,9 @@ export function swapChoices(source: ExerciseDefinition, profile: Profile, workou
   const reference = getExerciseDefinition(source.id) ?? source;
   const muscleWords = (exercise: ExerciseDefinition) => new Set(exercise.targetMuscles.flatMap((muscle) => muscle.toLowerCase().split(/[\s/-]+/)).filter((word) => word.length > 3 && !["upper", "lower", "front", "rear", "side", "inner", "outer"].includes(word)));
   const sourceWords = muscleWords(reference);
-  const closeness = (exercise: ExerciseDefinition) => (exercise.movementPattern && exercise.movementPattern === reference.movementPattern ? 10 : 0)
+  // A version of the same movement (same variation group) ranks above everything else (R7).
+  const closeness = (exercise: ExerciseDefinition) => (reference.variationGroup && exercise.variationGroup === reference.variationGroup ? 20 : 0)
+    + (exercise.movementPattern && exercise.movementPattern === reference.movementPattern ? 10 : 0)
     + [...muscleWords(exercise)].filter((word) => sourceWords.has(word)).length * 2 + (exercise.targetMuscles[0] && reference.targetMuscles[0] && muscleWords({ ...exercise, targetMuscles: [exercise.targetMuscles[0]] }).has([...muscleWords({ ...reference, targetMuscles: [reference.targetMuscles[0]] })][0] ?? "") ? 1 : 0);
   const matching = (list: ExerciseDefinition[]) => rankSearchResults(list.filter((exercise) => exerciseSearchRank(exercise, query) !== null), query).map((item) => item.exercise);
   const others = query.trim()

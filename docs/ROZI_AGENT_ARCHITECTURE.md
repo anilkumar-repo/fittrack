@@ -155,3 +155,91 @@ Option chosen: **server executes, browser reloads.** After an action completes, 
 **Trade-off:** if the app closes between approving and reporting back, the action stays `executing`. After 10 minutes the next look marks it `failed`; it is never re-applied, and you can ask again.
 
 The `approved` status stays in the list for compatibility; Phase 1 approves and starts in one step (`awaiting_approval → executing`).
+
+## 7. R8 — goals and weekly plans (2026-11-24)
+
+This replaces the generic plan/task-graph design in §4 for the first Level 4 step. That design is simpler and covers what people actually ask for.
+
+**What a goal is:**
+- One goal with a short **weekly plan**: 4–12 weeks, one step per week.
+- Each step holds **targets** for that week: workouts, a weight or a lift.
+- You approve the **whole plan once**.
+- In R8, steps are targets only. Checking progress against them and proposing changes comes in R9. Anything that would change your plan, profile or settings still goes through a Level 3 action card.
+
+**Goal kinds** (fixed templates; the model only fills the numbers):
+
+| Kind | Target | Safety rules (validator) |
+|---|---|---|
+| `consistency` | workouts per week (2–6) | Week 1 starts from your recent average + 1 at most, then rises by up to 1 a week |
+| `weight_loss` | target kg | Needs a logged weight in the last 30 days. At most 1% of body weight per week. Target BMI not under 18.5 (needs your height) |
+| `weight_gain` | target kg | Needs a recent logged weight. At most 0.5% of body weight per week |
+| `strength` | an exercise + target kg | Needs a logged best set (rep exercises only). Up to +2.5% a week, +20% overall. Weeks 4 and 8 are lighter "hold" weeks. Not a locked (deadlift) exercise unless your trainer approved it |
+
+**Who can do what:**
+- **The model** can only call `propose_goal_plan` (with `ROZI_GOALS=on`). The server rebuilds and validates the whole plan from your data.
+- **The server (service role)** records the proposal, hash-bound to you and the exact plan: `rozi_propose_goal`. A proposal expires after 30 minutes, and at most 3 can wait at once.
+- **You (your own sign-in):**
+  - `rozi_approve_goal(id, hash)` — single use. Approving it **replaces** your current goal, if any; only one goal is active or paused at a time.
+  - `rozi_set_goal_status(id, reject | pause | resume | cancel)` — only the allowed transitions.
+  - `rozi_my_goals`.
+- **The table** `rozi_goals` is closed: row-level security is on, with no policies and no direct grants. Rows are deleted with the account.
+
+**Statuses:**
+- awaiting_approval → active ⇄ paused → cancelled;
+- awaiting_approval → rejected or expired;
+- active or paused → replaced, when you approve a new goal.
+
+`completed` is recorded by the R9 check after the end date. Until then, an active goal past its end date is shown as finished.
+
+## 8. R9 — weekly progress and replanning (2026-11-24)
+
+- **Monitor** (`planning/plan-monitor.ts`, read-only, deterministic): it compares each week's target with what you actually logged:
+  - **workouts:** completed sessions that week;
+  - **weight:** the last weight logged that week, with ±0.3 kg tolerance;
+  - **lift:** the best working set of the goal's exercise that week.
+
+  Each week is `met`, `missed`, `no_data`, `in_progress` or `upcoming`. The overall state is `on_track`, `behind` (the last two finished weeks were not met), `ahead`, `paused` or `finished`.
+- **Rozi** gets `get_goal_progress`, a read-only tool available when `ROZI_GOALS=on`. It returns the facts and a progress card.
+- **Replanning is only ever a proposal.** When you're behind, the result carries a suggested new plan built from what you actually managed:
+  - **consistency:** the weekly target drops to what you managed + 1;
+  - **weight and strength:** the same target over more weeks, from your current weight or best set.
+
+  Rozi offers it, and if you agree it calls `propose_goal_plan`. You approve the new plan on a card, and it replaces the old one. Nothing changes on its own.
+- **Completion** (small migration):
+  - once the end date has passed, the goal shows as `completed`;
+  - approving a new goal marks a finished one `completed` instead of `replaced`.
+- **Weekly reminders by schedule** are R11.
+
+## 9. R10 — memory you control (2026-11-24)
+
+- **What gets remembered:** short notes the profile doesn't already hold, for example "Left knee hurts on lunges", "Prefers morning workouts" or "Hates burpees". Each note is one of four kinds: `injury`, `preference`, `schedule` or `other`. A note is 3–200 characters, and you can have at most 30.
+- **Only you save a note.**
+  - Rozi can call `propose_memory` (when `ROZI_MEMORY=on`). That only shows a "Remember this?" card; nothing is stored.
+  - **Save** on the card calls `POST /api/rozi/memories` with your own sign-in. The server checks the note again, then calls the owner-checked function `rozi_save_memory`.
+- **Refused notes:**
+  - notes with contact details (email, phone, links), using the same detector as chat masking;
+  - repeats of a profile fact (goal, training days, equipment, height or weight);
+  - duplicates.
+- **You stay in control:** Settings → "What Rozi remembers" lists every note, and you can edit or delete each one. Deleting really deletes it; it's your data. Notes are deleted with your account.
+- **How Rozi uses notes:**
+  - Saved notes go into Rozi's instructions for every question, up to 20 notes or 1,500 characters.
+  - Rozi is told to respect them (for example, avoid lunges) and never to save anything itself.
+  - Notes are sent to the AI provider only as part of answering you. Contact details are refused before a note is saved.
+- **Database:** `rozi_memories` is a closed table: row-level security on, no policies, no grants. Access is only through owner functions: `rozi_my_memories`, `rozi_save_memory`, `rozi_update_memory`, `rozi_delete_memory`. No service-role function is needed.
+
+## 10. R11 — weekly check-ins you opt into (2026-11-24)
+
+- **What it is:** once a week, one notification with how many workouts you did that week ("2 workouts done of 3 planned"). Tapping it opens "Your week with Rozi" (`/report?week=…`), the existing weekly report.
+- **Opt-in only.** Off by default. Settings → "Weekly check-in with Rozi": a switch, a day and an hour (05:00–21:00, your time zone). Switching it on records when you agreed; switching it off clears that and stops the next one.
+- **No AI and nothing new stored.**
+  - The existing hourly push schedule (`pg_cron` → `/api/push/hourly`) does the work. It counts that week's workouts from the session statuses it already loads. No model is called.
+  - The only new data is your choice (on/off, day, hour, when you agreed) and the last week sent.
+  - The AI runs only if you then ask Rozi about your week in the chat (the existing `week_report` tool).
+- **Which week:** Sunday sends the week ending that day (Monday–Sunday). Any other day sends the last full week.
+- **Once per week, even if the schedule runs twice:** the server claims the week with `rozi_mark_checkin_sent`, which returns true only the first time and only while you're opted in. A missed hour still sends within 3 hours of the chosen one.
+- **Needs notifications on a phone.** Without a push subscription nothing is sent; the report page is still there.
+- **Database:** `rozi_checkin_settings` is a closed table (row-level security on, no policies, no grants), deleted with the account.
+  - You: `rozi_my_checkin_settings`, `rozi_set_checkin_settings` (owner-checked, validates day and hour).
+  - Server only (service role): `rozi_checkin_people` (who opted in), `rozi_mark_checkin_sent`.
+- **Code:** `src/lib/rozi-ai/checkins/checkin-service.ts` (when it's due, the message, the settings calls), `checkin-push.ts` (sending), `app/api/rozi/checkins/route.ts` (GET/PUT your choice).
+- **The flag:** `ROZI_CHECKINS=on` (off by default). Off: the setting is hidden and nothing is sent.

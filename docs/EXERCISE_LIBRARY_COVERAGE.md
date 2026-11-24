@@ -79,7 +79,7 @@ Batch B, lower body + core (12) — ✅ added 2026-11-23:
 - **Legs:** Walking lunge · Wall sit · Single-leg Romanian deadlift · Barbell hip thrust · Single-leg glute bridge · Single-leg calf raise
 - **Core:** Crunch · Bicycle crunch · Lying leg raise · Russian twist · Wood chop · Mountain climber
 
-Batch C, cardio + home conditioning (16). This batch needs time/distance tracking (R5) first:
+Batch C, cardio + home conditioning (16) — ✅ added 2026-11-24 (time/distance tracking from R5):
 - **Machines** (split out of `easy_cardio`): Treadmill walk · Stationary bike · Elliptical · Rowing machine
 - **Outdoor:** Brisk walk · Jog · Run · Cycling
 - **Home:** Jumping jack · Low-impact jumping jack · Step touch · High knees · Jump squat · Burpee · Jump rope · Kettlebell swing

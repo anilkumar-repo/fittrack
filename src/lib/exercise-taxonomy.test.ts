@@ -5,7 +5,7 @@ import { EQUIPMENT_ALTERNATIVES, EXERCISE_ALIASES, muscleKey, TARGET_MUSCLE_LABE
 import { exerciseEquipmentIsAvailable, exerciseSearchRank, filterExerciseLibrary, getExerciseLibraryFilterOptions, MOVEMENT_PATTERN_LABELS } from "./exercise-library.ts";
 import { GYM_OPTIONS } from "./onboarding.ts";
 import { canUseExercise, findNamedExercise, swapChoices } from "./exercise-swap.ts";
-import { BATCH_A_UPPER, BATCH_B_LOWER_CORE, NOT_AUTO_PICKED } from "./library-additions.ts";
+import { BATCH_A_UPPER, BATCH_B_LOWER_CORE, BATCH_C_CARDIO_HOME, NOT_AUTO_PICKED } from "./library-additions.ts";
 import { isTrainerEditableTemplateExercise } from "./trainer-rules.ts";
 import { regionsForExercises } from "./figure.ts";
 import { findExercise } from "./rozi-ai/tools.ts";
@@ -34,7 +34,10 @@ const KNOWN_IDS = ["goblet_squat", "dumbbell_bench", "lat_pulldown", "glute_brid
   "band_pull_apart", "cable_curl", "band_curl", "skull_crusher", "bench_dips", "dead_hang",
   // R6 batch B (2026-11-23)
   "walking_lunge", "wall_sit", "single_leg_rdl", "barbell_hip_thrust", "single_leg_glute_bridge", "single_leg_calf_raise", "crunch",
-  "bicycle_crunch", "lying_leg_raise", "russian_twist", "wood_chop", "mountain_climber"];
+  "bicycle_crunch", "lying_leg_raise", "russian_twist", "wood_chop", "mountain_climber",
+  // R6 batch C (2026-11-24)
+  "treadmill_walk", "stationary_bike", "elliptical", "rowing_machine", "brisk_walk", "jog", "run", "cycling", "jumping_jack",
+  "low_impact_jumping_jack", "step_touch", "high_knees", "jump_squat", "burpee", "jump_rope", "kettlebell_swing"];
 
 const profile: Profile = {
   id: "client", displayName: "Client", experience: "beginner", sessionsPerWeek: 3, trainingDays: [1, 3, 5], trainingStartDate: "2026-01-01",
@@ -175,7 +178,7 @@ test("equipment alternatives: a kettlebell or band unlocks the exercises that ac
   assert.ok(!exerciseEquipmentIsAvailable(getExerciseDefinition("lat_pulldown")!, only(["resistance_band", "kettlebell"])), "no alternative, no change");
   assert.ok(!exerciseEquipmentIsAvailable(goblet, { ...only(["kettlebell"]), equipmentAvailability: "unknown" }), "unconfirmed equipment still counts as none");
   const kettlebell = filterExerciseLibrary(EXERCISE_LIBRARY, profile, { equipment: "kettlebell" }).map((exercise) => exercise.id).sort();
-  assert.deepEqual(kettlebell, ["farmer_carry", "goblet_squat"]);
+  assert.deepEqual(kettlebell, ["farmer_carry", "goblet_squat", "kettlebell_swing"]);
   assert.ok(getExerciseLibraryFilterOptions(EXERCISE_LIBRARY, profile).equipment.some((option) => option.key === "resistance_band" && option.label === "Resistance bands"));
   assert.ok(GYM_OPTIONS.find((option) => option.id === "large_gym")?.equipment.includes("kettlebell"));
 });
@@ -238,4 +241,36 @@ test("R6 batch B: 12 lower-body and core exercises, complete and safe", () => {
     assert.ok(canUseExercise(getExerciseDefinition(id)!, bare), `${id} with no equipment`);
   }
   assert.ok(canUseExercise(getExerciseDefinition("wood_chop")!, { ...profile, availableEquipment: ["resistance_band"] }), "wood chop with a band");
+});
+
+test("R6 batch C: 16 cardio and home-conditioning exercises, tracked in the right units", () => {
+  assert.equal(BATCH_C_CARDIO_HOME.length, 16);
+  for (const item of BATCH_C_CARDIO_HOME) {
+    const exercise = getExerciseDefinition(item.id)!;
+    assert.equal(exercise.category, "conditioning", `${item.id}: conditioning`);
+    assert.equal(exercise.instructions.length, 4, `${item.id}: 4 steps`);
+    assert.equal(exercise.cues.length, 3, `${item.id}: 3 cues`);
+    assert.ok(exercise.cautionNotes.length >= 1, `${item.id}: a caution`);
+    assert.ok(exercise.fallbackId && getExerciseDefinition(exercise.fallbackId), `${item.id}: a fallback that exists`);
+    assert.ok(regionsForExercises([exercise]).length > 0, `${item.id}: shows on the body map`);
+    assert.ok(exercise.variationGroup || item.id === "kettlebell_swing", `${item.id}: in a variation group`);
+    assert.ok(NOT_AUTO_PICKED.has(item.id), `${item.id}: not an automatic planner fill-in`);
+    assert.equal(exercise.restriction, undefined, `${item.id}: open to everyone`);
+  }
+  const unit = (id: string) => getExerciseDefinition(id)?.tracking;
+  for (const id of ["treadmill_walk", "stationary_bike", "elliptical", "rowing_machine", "brisk_walk", "jog", "run", "cycling"]) {
+    assert.deepEqual(unit(id), { unit: "minutes", distance: true }, `${id}: minutes + km`);
+  }
+  for (const id of ["jumping_jack", "low_impact_jumping_jack", "step_touch", "high_knees", "jump_rope"]) assert.equal(unit(id)?.unit, "seconds", `${id}: timed`);
+  for (const id of ["jump_squat", "burpee", "kettlebell_swing"]) assert.equal(unit(id)?.unit, "reps", `${id}: reps`);
+  // Machines need the cardio-machine tick; the home moves need nothing; the swing takes a kettlebell or a dumbbell.
+  const bare: Profile = { ...profile, availableEquipment: [] };
+  assert.ok(!canUseExercise(getExerciseDefinition("rowing_machine")!, bare));
+  for (const id of ["brisk_walk", "jumping_jack", "low_impact_jumping_jack", "step_touch", "high_knees", "jump_squat", "burpee"]) assert.ok(canUseExercise(getExerciseDefinition(id)!, bare), `${id} with no equipment`);
+  assert.ok(canUseExercise(getExerciseDefinition("kettlebell_swing")!, { ...profile, availableEquipment: ["dumbbells"] }));
+  // Plain words find the new entries.
+  assert.equal(findExercise("treadmill")?.id, "treadmill_walk");
+  assert.equal(findExercise("burpees")?.id, "burpee");
+  assert.equal(findExercise("skipping")?.id, "jump_rope");
+  assert.equal(findExercise("running")?.id, "run");
 });

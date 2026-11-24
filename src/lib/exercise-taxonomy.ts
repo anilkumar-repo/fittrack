@@ -111,7 +111,7 @@ export const EXERCISE_ALIASES: Record<string, string[]> = {
   hanging_knee_raise: ["captain's chair knee raise", "captains chair"],
   hip_thrust: ["hip thrust"],
   farmer_carry: ["farmer's carry", "farmers carry", "farmer walk", "farmers walk"],
-  easy_cardio: ["steady-state cardio", "steady state cardio", "treadmill", "stationary bike", "elliptical"],
+  easy_cardio: ["steady-state cardio", "steady state cardio", "easy cardio machine"],
   interval_cardio: ["interval training", "intervals", "hiit"],
   comfortable_walk: ["walk", "walking"],
   march_in_place: ["marching in place", "march in place", "low-impact marching"],
@@ -145,6 +145,23 @@ export const EXERCISE_ALIASES: Record<string, string[]> = {
   russian_twist: ["russian twists", "seated twist"],
   wood_chop: ["woodchop", "cable chop", "wood chopper"],
   mountain_climber: ["mountain climbers"],
+  // Batch C (R6)
+  treadmill_walk: ["treadmill", "incline walk", "treadmill walking"],
+  stationary_bike: ["exercise bike", "spin bike", "indoor cycling", "stationary cycling"],
+  elliptical: ["cross trainer", "elliptical trainer"],
+  rowing_machine: ["rower", "erg", "rowing"],
+  brisk_walk: ["power walk", "fast walk", "brisk walking"],
+  jog: ["jogging"],
+  run: ["running"],
+  cycling: ["bike ride", "bicycle"],
+  jumping_jack: ["jumping jacks", "star jumps"],
+  low_impact_jumping_jack: ["step jacks", "low impact jumping jacks"],
+  step_touch: ["side step"],
+  high_knees: ["high knee", "running in place"],
+  jump_squat: ["squat jumps", "squat jump"],
+  burpee: ["burpees"],
+  jump_rope: ["skipping", "skipping rope", "rope skipping"],
+  kettlebell_swing: ["kb swing", "russian swing"],
 };
 
 /**
@@ -159,10 +176,11 @@ export const EQUIPMENT_ALTERNATIVES: Record<string, EquipmentKey[][]> = {
   skull_crusher: [["dumbbells", "bench"]],
   bench_dips: [["chair"]],
   wood_chop: [["resistance_band"], ["dumbbells"]],
+  kettlebell_swing: [["dumbbells"]],
 };
 
 /** Cardio that can also log a distance. */
-const DISTANCE_EXERCISES = new Set(["comfortable_walk", "easy_cardio"]);
+const DISTANCE_EXERCISES = new Set(["comfortable_walk", "easy_cardio", "treadmill_walk", "stationary_bike", "elliptical", "rowing_machine", "brisk_walk", "jog", "run", "cycling"]);
 
 /** The unit an exercise's reps text uses: "8 rounds: …" → rounds, "10 min" → minutes, "30 sec" → seconds, else reps. */
 export function unitFromReps(reps: string): TrackingUnit {
@@ -178,6 +196,37 @@ export function trackingFor(id: string, reps: string): ExerciseTracking {
   const unit = unitFromReps(reps);
   return DISTANCE_EXERCISES.has(id) ? { unit, distance: true } : { unit };
 }
+
+/**
+ * One short fact per exercise for what sets it apart within its variation group, where the data alone can't say it
+ * (grip, pace, range). Shown by Rozi next to the facts worked out from equipment, difficulty and muscles.
+ */
+export const VARIATION_NOTES: Record<string, string> = {
+  incline_db_press: "inclined bench: more upper chest",
+  barbell_incline_bench: "inclined bench: more upper chest",
+  close_grip_bench: "narrow grip: more triceps",
+  db_floor_press: "shorter range, easy on the shoulders",
+  knee_pushup: "from the knees: easier",
+  incline_pushup: "hands raised: easier",
+  wall_pushup: "against a wall: easiest",
+  pullup: "palms away, a little wider than shoulders",
+  chinup: "palms facing you: more biceps",
+  assisted_pullup: "a machine or band takes some of your weight",
+  hammer_curl: "palms facing in: more forearm",
+  preacher_curl: "arms braced on a pad: no swinging",
+  incline_db_curl: "arms behind you: longer biceps stretch",
+  brisk_walk: "faster pace",
+  jog: "jogging pace, more impact",
+  run: "running pace, most impact",
+  treadmill_walk: "indoors, with incline to make it harder",
+  wall_sit: "a still hold against the wall",
+  bulgarian_split_squat: "back foot raised: harder balance",
+  single_leg_glute_bridge: "one leg: double the load per side",
+  hip_thrust: "back on a bench: bigger range than a bridge",
+  low_impact_jumping_jack: "no jumping",
+  step_touch: "no jumping, side to side",
+  march_in_place: "gentlest option",
+};
 
 /** Variation groups: versions of the same movement, for "try a variation" suggestions. Every group has 2+ members. */
 export const VARIATION_GROUPS: Record<string, string[]> = {
@@ -204,7 +253,11 @@ export const VARIATION_GROUPS: Record<string, string[]> = {
   crunch: ["reverse_crunch", "cable_crunch", "crunch", "bicycle_crunch"],
   leg_raise: ["hanging_knee_raise", "lying_leg_raise"],
   rotation: ["pallof_press", "russian_twist", "wood_chop"],
-  cardio: ["easy_cardio", "interval_cardio", "comfortable_walk", "march_in_place"],
+  walk_run: ["comfortable_walk", "brisk_walk", "treadmill_walk", "jog", "run"],
+  cycle: ["stationary_bike", "cycling"],
+  machine_cardio: ["easy_cardio", "elliptical", "rowing_machine", "interval_cardio"],
+  low_impact_cardio: ["march_in_place", "step_touch", "low_impact_jumping_jack", "jumping_jack", "high_knees"],
+  plyometric: ["jump_squat", "burpee", "jump_rope"],
 };
 
 const GROUP_OF = new Map(Object.entries(VARIATION_GROUPS).flatMap(([group, ids]) => ids.map((id) => [id, group] as const)));

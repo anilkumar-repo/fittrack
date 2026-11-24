@@ -260,8 +260,127 @@ export const BATCH_B_LOWER_CORE: ProgramExercise[] = [
   },
 ];
 
+/** Batch C (2026-11-24): cardio and home conditioning. 16 exercises. */
+export const BATCH_C_CARDIO_HOME: ProgramExercise[] = [
+  // Machines
+  {
+    id: "treadmill_walk", name: "Treadmill walk", equipment: "Treadmill", category: "conditioning", sets: 1, reps: "20–30 min", restSeconds: 0,
+    pattern: "cardio", needs: ["cardio_machine"], fallback: "comfortable_walk", targetMuscles: ["Heart and lungs", "Quadriceps", "Calves"], difficulty: "beginner",
+    cues: ["Stand tall, look ahead.", "Let your arms swing naturally.", "Pick a pace you can talk at."],
+    instructions: ["Stand on the side rails, start the belt slowly, then step on.", "Walk at an easy pace for the first few minutes to warm up.", "Raise the speed or a small incline until you feel warm but can still talk.", "Slow down for the last couple of minutes before stepping off."],
+    cautions: ["Hold the rails only if you need to; leaning on them cuts the effort.", PAIN_STOP],
+  },
+  {
+    id: "stationary_bike", name: "Stationary bike", equipment: "Exercise bike", category: "conditioning", sets: 1, reps: "15–30 min", restSeconds: 0,
+    pattern: "cardio", needs: ["cardio_machine"], fallback: "march_in_place", targetMuscles: ["Heart and lungs", "Quadriceps", "Glutes"], difficulty: "beginner",
+    cues: ["Seat height: slight bend at the bottom.", "Shoulders relaxed, back tall.", "Smooth, steady pedalling."],
+    instructions: ["Set the seat so your knee is slightly bent when the pedal is at its lowest.", "Start pedalling with very light resistance to warm up.", "Add resistance until the effort feels moderate and you can still talk.", "Ease off the resistance for the last couple of minutes."],
+    cautions: ["If your knees hurt, raise the seat a little and lower the resistance.", PAIN_STOP],
+  },
+  {
+    id: "elliptical", name: "Elliptical", equipment: "Elliptical trainer", category: "conditioning", sets: 1, reps: "15–30 min", restSeconds: 0,
+    pattern: "cardio", needs: ["cardio_machine"], fallback: "march_in_place", targetMuscles: ["Heart and lungs", "Quadriceps", "Glutes"], difficulty: "beginner",
+    cues: ["Stand tall, don't lean on the handles.", "Push through your whole foot.", "Keep a smooth, even rhythm."],
+    instructions: ["Step onto the pedals and hold the handles lightly.", "Start moving slowly with low resistance to warm up.", "Increase the resistance or speed until the effort feels moderate.", "Slow down for the last couple of minutes, then step off carefully."],
+    cautions: ["It is easy on the joints, but keep your feet flat on the pedals.", PAIN_STOP],
+  },
+  {
+    id: "rowing_machine", name: "Rowing machine", equipment: "Rowing machine", category: "conditioning", sets: 1, reps: "10–20 min", restSeconds: 0,
+    pattern: "cardio", needs: ["cardio_machine"], fallback: "easy_cardio", targetMuscles: ["Heart and lungs", "Lats", "Quadriceps"], difficulty: "beginner",
+    cues: ["Drive: legs, then body, then arms.", "Return: arms, then body, then legs.", "Keep your back long, not rounded."],
+    instructions: ["Strap your feet in and sit tall, holding the handle with arms straight.", "Push with your legs first, then lean back slightly, then pull the handle to your lower ribs.", "Reverse it: arms out, lean forward, then bend your knees to slide back.", "Keep a steady rhythm and relaxed breathing."],
+    cautions: ["Don't pull with your arms first; the power comes from your legs.", PAIN_STOP],
+  },
+  // Outdoor
+  {
+    id: "brisk_walk", name: "Brisk walk", equipment: "No equipment", category: "conditioning", sets: 1, reps: "20–40 min", restSeconds: 0,
+    pattern: "cardio", fallback: "comfortable_walk", targetMuscles: ["Heart and lungs", "Quadriceps", "Calves"], difficulty: "beginner",
+    cues: ["Pace: you can talk but not sing.", "Stand tall, arms swinging.", "Land heel first, roll through."],
+    instructions: ["Start with a few minutes of easy walking to warm up.", "Pick up the pace until you are breathing harder but can still hold a conversation.", "Keep that pace steady, swinging your arms.", "Slow down for the last few minutes to cool off."],
+    cautions: ["Wear supportive shoes and stay aware of traffic and uneven ground.", PAIN_STOP],
+  },
+  {
+    id: "jog", name: "Jog", equipment: "Running shoes", category: "conditioning", sets: 1, reps: "15–25 min", restSeconds: 0,
+    pattern: "cardio", fallback: "brisk_walk", targetMuscles: ["Heart and lungs", "Quadriceps", "Calves"], difficulty: "beginner",
+    cues: ["Easy pace: you can still talk.", "Short, light steps.", "Relaxed shoulders and hands."],
+    instructions: ["Warm up with a few minutes of brisk walking.", "Break into a slow jog; walk-jog intervals are fine if you need them.", "Keep your steps short and your breathing steady.", "Walk for the last few minutes to cool down."],
+    cautions: ["For a low-impact option, do the brisk walk instead.", PAIN_STOP],
+  },
+  {
+    id: "run", name: "Run", equipment: "Running shoes", category: "conditioning", sets: 1, reps: "20–40 min", restSeconds: 0,
+    pattern: "cardio", fallback: "jog", targetMuscles: ["Heart and lungs", "Quadriceps", "Hamstrings"], difficulty: "intermediate",
+    cues: ["Tall posture, slight forward lean.", "Quick, light steps under your body.", "Breathe in a steady rhythm."],
+    instructions: ["Warm up with a few minutes of walking and an easy jog.", "Build to a steady running pace that feels hard but sustainable.", "Keep your steps quick and your arms relaxed at about 90 degrees.", "Finish with a few minutes of jogging, then walking."],
+    cautions: ["For a low-impact option, do the jog or a brisk walk instead.", PAIN_STOP],
+  },
+  {
+    id: "cycling", name: "Cycling", equipment: "Bicycle and helmet", category: "conditioning", sets: 1, reps: "20–45 min", restSeconds: 0,
+    pattern: "cardio", fallback: "stationary_bike", targetMuscles: ["Heart and lungs", "Quadriceps", "Glutes"], difficulty: "beginner",
+    cues: ["Helmet on, eyes up.", "Smooth, steady pedalling.", "Relaxed grip and shoulders."],
+    instructions: ["Put on your helmet and check your tyres and brakes.", "Ride easily for the first few minutes to warm up.", "Pedal at a steady pace that feels moderate and lets you talk.", "Ease off for the last few minutes."],
+    cautions: ["Always wear a helmet, follow road rules and use lights in low light.", PAIN_STOP],
+  },
+  // Home
+  {
+    id: "jumping_jack", name: "Jumping jack", equipment: "No equipment", category: "conditioning", sets: 3, reps: "30 sec", restSeconds: 30,
+    pattern: "cardio", fallback: "low_impact_jumping_jack", targetMuscles: ["Heart and lungs", "Calves", "Shoulders"], difficulty: "beginner",
+    cues: ["Land softly on the balls of your feet.", "Arms and legs open together.", "Keep a steady rhythm."],
+    instructions: ["Stand tall with feet together and arms by your sides.", "Jump your feet apart as you swing your arms overhead.", "Jump your feet back together and bring your arms down.", "Keep going at a steady pace for the time."],
+    cautions: ["For a low-impact option, use the low-impact jumping jack instead.", PAIN_STOP],
+  },
+  {
+    id: "low_impact_jumping_jack", name: "Low-impact jumping jack", equipment: "No equipment", category: "conditioning", sets: 3, reps: "30 sec", restSeconds: 30,
+    pattern: "cardio", fallback: "march_in_place", targetMuscles: ["Heart and lungs", "Shoulders", "Calves"], difficulty: "beginner",
+    cues: ["No jumping: one foot at a time.", "Arms rise as the foot steps out.", "Stay tall and steady."],
+    instructions: ["Stand tall with feet together and arms by your sides.", "Step one foot out to the side as your arms rise overhead.", "Step it back in as your arms lower, then repeat on the other side.", "Keep going at a steady pace for the time."],
+    cautions: [PAIN_STOP],
+  },
+  {
+    id: "step_touch", name: "Step touch", equipment: "No equipment", category: "conditioning", sets: 3, reps: "45 sec", restSeconds: 30,
+    pattern: "cardio", fallback: "march_in_place", targetMuscles: ["Heart and lungs", "Calves"], difficulty: "beginner",
+    cues: ["Small, light steps side to side.", "Swing your arms with the steps.", "Stay tall, knees soft."],
+    instructions: ["Stand with feet together and knees slightly bent.", "Step one foot out to the side, then bring the other foot to meet it.", "Step back the other way and keep going side to side.", "Add arm swings to lift your heart rate."],
+    cautions: ["Clear some space around you and wear shoes with grip.", PAIN_STOP],
+  },
+  {
+    id: "high_knees", name: "High knees", equipment: "No equipment", category: "conditioning", sets: 3, reps: "20–30 sec", restSeconds: 30,
+    pattern: "cardio", fallback: "march_in_place", targetMuscles: ["Heart and lungs", "Hip flexors", "Calves"], difficulty: "beginner",
+    cues: ["Lift your knees to hip height.", "Stay tall, chest up.", "Quick, light feet."],
+    instructions: ["Stand tall with your feet hip-width apart.", "Lift one knee up towards hip height, then switch quickly to the other.", "Pump your arms as you go and stay on the balls of your feet.", "Keep it quick but controlled for the time."],
+    cautions: ["For a low-impact option, march in place instead of running.", PAIN_STOP],
+  },
+  {
+    id: "jump_squat", name: "Jump squat", equipment: "No equipment", category: "conditioning", sets: 3, reps: "8–10", restSeconds: 60,
+    pattern: "squat", fallback: "bodyweight_squat", targetMuscles: ["Quadriceps", "Glutes", "Calves"], difficulty: "intermediate",
+    cues: ["Sit back into the squat first.", "Jump up, land softly.", "Bend your knees as you land."],
+    instructions: ["Stand with feet shoulder-width apart and lower into a squat.", "Push through your feet and jump straight up.", "Land softly on the balls of your feet, then sink back into the squat.", "Reset your balance before the next jump."],
+    cautions: ["For a low-impact option, do a bodyweight squat without the jump.", PAIN_STOP],
+  },
+  {
+    id: "burpee", name: "Burpee", equipment: "No equipment", category: "conditioning", sets: 3, reps: "6–10", restSeconds: 60,
+    pattern: "cardio", fallback: "knee_pushup", targetMuscles: ["Heart and lungs", "Chest", "Quadriceps"], difficulty: "intermediate",
+    cues: ["Hands down under your shoulders.", "Keep your body in a straight line.", "Stand up tall at the top."],
+    instructions: ["Stand tall, then squat down and place your hands on the floor.", "Jump or step your feet back into a high plank.", "Jump or step your feet back in towards your hands.", "Stand up, with a small jump if you like."],
+    cautions: ["For a low-impact version, step back and forward instead of jumping.", PAIN_STOP],
+  },
+  {
+    id: "jump_rope", name: "Jump rope", equipment: "Jump rope", category: "conditioning", sets: 3, reps: "30–60 sec", restSeconds: 45,
+    pattern: "cardio", fallback: "jumping_jack", targetMuscles: ["Heart and lungs", "Calves", "Shoulders"], difficulty: "beginner",
+    cues: ["Small hops, just off the floor.", "Turn the rope with your wrists.", "Elbows close to your sides."],
+    instructions: ["Hold the handles with the rope behind your heels.", "Swing the rope over your head using your wrists.", "Hop lightly on the balls of your feet as it passes under.", "Keep the hops small and steady for the time."],
+    cautions: ["For a low-impact option, mimic the rope with no jumping, or step side to side.", PAIN_STOP],
+  },
+  {
+    id: "kettlebell_swing", name: "Kettlebell swing", equipment: "Kettlebell (or dumbbell)", category: "conditioning", sets: 3, reps: "12–15", restSeconds: 60,
+    pattern: "hip_extension", needs: ["kettlebell"], fallback: "glute_bridge", targetMuscles: ["Glutes", "Hamstrings", "Core"], difficulty: "intermediate",
+    cues: ["Hinge at the hips; arms are just ropes.", "Snap your hips forward, squeeze glutes.", "Stand tall at the top, flat back."],
+    instructions: ["Stand with feet a little wider than your hips and the weight on the floor in front of you.", "Hinge back at your hips, grab the handle and swing the weight back between your legs.", "Drive your hips forward so the weight floats up to chest height.", "Let it swing back down as you hinge again; your arms only guide it."],
+    cautions: ["Learn the hip hinge with a light weight first and keep your back flat.", PAIN_STOP],
+  },
+];
+
 /** Every exercise added in R6 so far, in batch order. */
-export const LIBRARY_ADDITIONS: ProgramExercise[] = [...BATCH_A_UPPER, ...BATCH_B_LOWER_CORE];
+export const LIBRARY_ADDITIONS: ProgramExercise[] = [...BATCH_A_UPPER, ...BATCH_B_LOWER_CORE, ...BATCH_C_CARDIO_HOME];
 
 /**
  * The planner never picks these as automatic fill-ins (when an exercise was skipped or its pattern repeats), so adding

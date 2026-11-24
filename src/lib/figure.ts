@@ -81,6 +81,14 @@ const EXERCISE_REGIONS: Record<string, BodyRegion[]> = {
   single_leg_glute_bridge: ["hips", "hamstrings"],
   wood_chop: ["core", "shoulders"],
   mountain_climber: ["core", "shoulders", "thighs"],
+  // Batch C (R6)
+  rowing_machine: ["back", "thighs", "arms"],
+  stationary_bike: ["thighs", "hips"],
+  cycling: ["thighs", "hips"],
+  jump_squat: ["thighs", "hips", "calves"],
+  burpee: ["chest", "thighs", "core"],
+  jump_rope: ["calves", "shoulders"],
+  kettlebell_swing: ["hips", "hamstrings", "back"],
 };
 
 /** Body regions a set of exercises works, most-used first; ties keep the order they first appear. */

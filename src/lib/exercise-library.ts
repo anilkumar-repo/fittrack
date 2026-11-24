@@ -235,8 +235,9 @@ export function getSafeExerciseAlternatives(
   const fallback = source.fallbackId ? getExerciseDefinition(source.fallbackId) : undefined;
   const candidates = [
     ...(fallback ? [fallback] : []),
+    // Versions of the same movement first (R7), then the rest A–Z.
     ...EXERCISE_LIBRARY.filter((candidate) => candidate.id !== source.id && candidate.id !== fallback?.id)
-      .sort((a, b) => a.name.localeCompare(b.name)),
+      .sort((a, b) => Number(b.variationGroup === source.variationGroup && Boolean(source.variationGroup)) - Number(a.variationGroup === source.variationGroup && Boolean(source.variationGroup)) || a.name.localeCompare(b.name)),
   ];
   const seen = new Set<string>();
 
