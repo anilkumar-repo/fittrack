@@ -9,6 +9,7 @@ import { calculatePersonalRecords } from "../../progress.ts";
 import { shiftDate } from "../../dates.ts";
 import { isLifting, trackingOf } from "../../tracking.ts";
 import { findExercise, type RoziContext } from "../tools.ts";
+import { plainCardText } from "../privacy.ts";
 import { GOAL_KINDS, type GoalKind, type GoalPlan, type GoalStep } from "./goal-types.ts";
 
 /** Safety limits (also in docs/ROZI_AGENT_ARCHITECTURE.md §7). */
@@ -145,5 +146,6 @@ export function buildGoalPlan(args: Args, ctx: RoziContext): BuildResult {
     : kind === "strength" ? strengthPlan(args, ctx, weeksGiven ?? 8)
       : weightPlan(kind, args, ctx, weeksGiven);
   if (!built.ok) return built;
-  return { ok: true, plan: { ...built.plan, reason: str(args, "why", 300) } };
+  // The person's reason, as the model relayed it: shown on the approval card only (never sent back to the model).
+  return { ok: true, plan: { ...built.plan, reason: plainCardText(args.why, 200) } };
 }

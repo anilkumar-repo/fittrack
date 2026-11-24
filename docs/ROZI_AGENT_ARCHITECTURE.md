@@ -243,3 +243,23 @@ This replaces the generic plan/task-graph design in §4 for the first Level 4 st
   - Server only (service role): `rozi_checkin_people` (who opted in), `rozi_mark_checkin_sent`.
 - **Code:** `src/lib/rozi-ai/checkins/checkin-service.ts` (when it's due, the message, the settings calls), `checkin-push.ts` (sending), `app/api/rozi/checkins/route.ts` (GET/PUT your choice).
 - **The flag:** `ROZI_CHECKINS=on` (off by default). Off: the setting is hidden and nothing is sent.
+
+## 11. R12 — advanced intelligence (2026-11-24)
+
+All of it is deterministic and read-only (`src/lib/insights.ts`). It's built from your saved sets, the exercise library and the plan's own fields. Nothing changes your plan; a suggestion is only a suggestion.
+
+- **Plateau detection** (`findPlateaus`):
+  - **The rule:** in the last 3 weeks you did the lift at least 3 times, over 10+ days, and none of those sessions beat your best estimated 1-rep max from before (looking back 12 weeks). You also did it within the last 14 days, so it's still in your training.
+  - **Only real data:** loaded lifts with an estimated 1-rep max (1–12 reps; warm-ups never count). Sample data and sets done on a swapped-in exercise are left out.
+  - **The suggestion:** the closest version of the same movement that you can do now (R7 variation groups, your equipment and trainer rules), for 3 weeks, then go back. With no usable variation: change the reps for 3 weeks.
+- **Post-workout recap** (`workoutRecap`): sets done and planned, volume, new bests (heavier than ever, not counting a first-ever session), each lift compared with last time (estimated 1-rep max up, same or down), and any stalled lift in the workout.
+- **"Why this workout" in plain words** (`explainWorkout`), up to 5 sentences:
+  - the goal, week and stage, or the rotation;
+  - a recovery day, comeback session, lighter 4th week or trainer's light week;
+  - which muscles it trains and which are still recovering (from your logs);
+  - the planner's reasons about you (check-in, soreness, focus, trainer), never its internal rule notes;
+  - a stalled lift in today's plan.
+- **Where it shows:**
+  - **Rozi:** `get_workout_for_day` now returns the plain "why" and, for a logged day, a `recap`. `get_progress` returns `stalledLifts` overall, or `stalled` for one exercise. No new tools, so it's still 14 tools.
+  - **Screens:** Today's "Why this workout" list (the planner notes stay one tap deeper), the recap on the post-workout celebration, and a "Stalled for N weeks" note on an exercise's stats.
+- **No migration and no flag:** nothing new is stored.

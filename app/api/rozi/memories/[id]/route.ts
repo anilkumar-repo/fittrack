@@ -4,7 +4,7 @@ import { bearerToken, userClientFromToken } from "@/lib/rozi-ai/user-client";
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 /** One of the person's notes: POST { op: "update", note } or { op: "delete" } (deleting really deletes). */
-export async function POST(request: Request, ctx: RouteContext<"/api/rozi/memories/[id]">) {
+export async function POST(request: Request, ctx: { params: Promise<{ id: string }> }) {
   const headers = { "Cache-Control": "no-store" };
   if (!memoryEnabled()) return Response.json({ ok: false, message: "Rozi memory is off." }, { status: 404, headers });
   const { id } = await ctx.params;

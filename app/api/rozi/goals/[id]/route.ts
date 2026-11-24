@@ -8,7 +8,7 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
  *   { op: "approve", hash }               → starts THIS exact plan (replacing any current goal). Repeating is harmless.
  *   { op: "reject" | "pause" | "resume" | "cancel" } → only the allowed status changes; others leave it as it is.
  */
-export async function POST(request: Request, ctx: RouteContext<"/api/rozi/goals/[id]">) {
+export async function POST(request: Request, ctx: { params: Promise<{ id: string }> }) {
   const headers = { "Cache-Control": "no-store" };
   if (!goalsEnabled()) return Response.json({ ok: false, message: "Rozi goals are off." }, { status: 404, headers });
   const { id } = await ctx.params;

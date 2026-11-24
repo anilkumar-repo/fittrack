@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import Link from "next/link";
 import { Flame } from "lucide-react";
+import { workoutRecap } from "@/lib/insights";
 import { buildStreakTimeline, weekStrip } from "@/lib/streak";
 import type { RoziMood } from "@/lib/rozi";
 import type { WorkoutSession } from "@/lib/types";
@@ -26,6 +27,8 @@ export function WorkoutCelebration({ session, setsDone, roziMood }: { session: W
   useScrollLock(open);
   const [shown, setShown] = useState(0);
   const timeline = useMemo(() => buildStreakTimeline(state.profile, recordedSessions, session.date), [state.profile, recordedSessions, session.date]);
+  const recap = useMemo(() => workoutRecap(recordedSessions, session.date, state.profile), [recordedSessions, session.date, state.profile]);
+  const recapItems = recap ? [...recap.records, ...recap.compared.filter((item) => item.change === "up").map((item) => item.text)].slice(0, 3) : [];
   const streak = timeline.current;
   const repaired = timeline.repairedOn.includes(session.date);
 
@@ -80,6 +83,11 @@ export function WorkoutCelebration({ session, setsDone, roziMood }: { session: W
           <div><dd>{setsDone}</dd><dt>sets</dt></div>
           <div><dd>{session.plan.durationMinutes}</dd><dt>minutes</dt></div>
         </dl>
+        {recap && <div className="celebrate-recap">
+          <strong>{recap.headline}</strong>
+          {recapItems.length > 0 && <ul className="celebrate-recap-list">{recapItems.map((item) => <li key={item}>{item}</li>)}</ul>}
+          {recap.plateaus[0] && <p className="celebrate-recap-note">{recap.plateaus[0].advice}</p>}
+        </div>}
         <button type="button" className="button button-primary full-width" onClick={close}>Continue</button>
         <Link className="text-button" href="/streak" onClick={close}>See my streak calendar</Link>
       </section>

@@ -4,6 +4,7 @@ import { useMemo } from "react";
 import { Award, Dumbbell, Repeat, TrendingUp } from "lucide-react";
 import { useFitTrack } from "./fit-track-provider";
 import { LineChart } from "./line-chart";
+import { findPlateaus } from "@/lib/insights";
 import { shortDate } from "@/lib/dates";
 import { formatWeight, kgToDisplay } from "@/lib/logging";
 import { exerciseHistory, exerciseRecords, repMaxTable, setLabels } from "@/lib/pro-tracking";
@@ -15,7 +16,7 @@ const MOST_LABEL: Record<TrackingUnit, string> = { reps: "Most reps", seconds: "
 import { EmptyState } from "@/components/ui/empty-state";
 
 /** History, charts and records for one exercise (the exercise guide's tabs), from your own saved sets. */
-export function ExerciseStats({ exerciseId, view }: { exerciseId: string; view: "history" | "charts" | "records" }) {
+function ExerciseStatsBody({ exerciseId, view }: { exerciseId: string; view: "history" | "charts" | "records" }) {
   const { recordedSessions, weightUnit } = useFitTrack();
   const history = useMemo(() => exerciseHistory(recordedSessions, exerciseId), [recordedSessions, exerciseId]);
   const records = useMemo(() => exerciseRecords(history), [history]);
@@ -69,5 +70,17 @@ export function ExerciseStats({ exerciseId, view }: { exerciseId: string; view: 
       </>}
       <p className="card-note">{records.sessions} {records.sessions === 1 ? "session" : "sessions"} logged. Warm-up sets (W) are not counted.</p>
     </div>
+  );
+}
+
+/** The stats for one exercise, with a notice on top when its progress has stalled. */
+export function ExerciseStats(props: { exerciseId: string; view: "history" | "charts" | "records" }) {
+  const { state, currentDate, recordedSessions } = useFitTrack();
+  const plateau = useMemo(() => findPlateaus(recordedSessions, state.profile, currentDate).find((item) => item.exerciseId === props.exerciseId), [recordedSessions, state.profile, currentDate, props.exerciseId]);
+  return (
+    <>
+      {plateau && <aside className="plateau-note"><strong>Stalled for {plateau.weeksStalled} {plateau.weeksStalled === 1 ? "week" : "weeks"}</strong><p>{plateau.advice}</p></aside>}
+      <ExerciseStatsBody {...props} />
+    </>
   );
 }
