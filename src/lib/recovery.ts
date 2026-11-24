@@ -39,6 +39,12 @@ function daysBetween(later: string, earlier: string): number {
   return Math.round((Date.parse(`${later}T12:00:00Z`) - Date.parse(`${earlier}T12:00:00Z`)) / 86_400_000);
 }
 
+/** The muscle groups a list of exercises trains (R12: "why this workout"). */
+export function exerciseGroups(exercises: Parameters<typeof regionsForExercises>[0]): MuscleGroup[] {
+  const groups = new Set(exercises.flatMap((exercise) => regionsForExercises([exercise]).map((region) => REGION_GROUP.get(region))));
+  return MUSCLE_GROUPS.filter((group) => groups.has(group));
+}
+
 /** Every completed set in a session, with the muscle groups its exercise trains. */
 export function sessionGroupSets(session: WorkoutSession): Array<{ group: MuscleGroup; sets: number; exercise: string }> {
   const out: Array<{ group: MuscleGroup; sets: number; exercise: string }> = [];

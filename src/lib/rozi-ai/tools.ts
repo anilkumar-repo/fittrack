@@ -27,6 +27,7 @@ import { swapSuggestion, SWAP_BLOCK_TEXT } from "../exercise-swap.ts";
 import type { AiTool } from "./provider.ts";
 import { trackingOf, UNIT_WORD } from "../tracking.ts";
 import { variationsOf } from "../exercise-variations.ts";
+import { explainWorkout, findPlateaus, workoutRecap, type Plateau } from "../insights.ts";
 
 // ---------- What the tools work on ----------
 
@@ -206,7 +207,9 @@ function workoutForDay(ctx: RoziContext, date: string): ToolOutcome {
       ...(session && status !== "planned" ? { setsDone: setsDone(session) } : {}),
       level: plan.level ?? null, goal: plan.goal ? goalTitle(plan.goal) : null, week: plan.weekNumber ?? null, stage: plan.stage ?? null,
       lighterWeek: Boolean(plan.recoveryWeek || plan.lightWeek), recoveryDay: plan.sessionType === "recovery",
-      whyThisWorkout: plan.generationReasons.slice(0, 5),
+      // R12: plain sentences built from the plan and the person's logs (not the planner's internal rule notes).
+      whyThisWorkout: explainWorkout(plan, date, ctx.sessions, ctx.profile, ctx.today),
+      ...(session && (status === "completed" || status === "in_progress" || status === "partial") ? { recap: recapResult(ctx, date) } : {}),
       exercises,
     },
     card: {
@@ -273,6 +276,22 @@ function workoutHistory(ctx: RoziContext, args: Args): ToolOutcome {
   };
 }
 
+/** R12: a stalled lift, as the model sees it. */
+const stalledResult = (plateau: Plateau) => ({
+  exercise: plateau.name, weeksWithoutGain: plateau.weeksStalled, bestEstimated1RmKg: plateau.bestKg, bestOn: plateau.bestOn,
+  recentBestEstimated1RmKg: plateau.recentBestKg, tryInstead: plateau.variation?.name ?? null, howItDiffers: plateau.variation?.differences ?? [], advice: plateau.advice,
+});
+
+/** R12: what a logged workout achieved (new bests, compared with last time, stalled lifts). */
+function recapResult(ctx: RoziContext, date: string) {
+  const recap = workoutRecap(ctx.sessions, date, ctx.profile);
+  if (!recap) return null;
+  return {
+    headline: recap.headline, setsDone: recap.setsDone, setsPlanned: recap.setsPlanned, volumeKg: recap.volumeKg,
+    newBests: recap.records.slice(0, 5), comparedWithLastTime: recap.compared.slice(0, 6).map((item) => item.text), stalledLifts: recap.plateaus.slice(0, 2).map(stalledResult),
+  };
+}
+
 function progress(ctx: RoziContext, args: Args): ToolOutcome {
   const done = completedSessions(ctx);
   const query = text(args, "exercise");
@@ -286,9 +305,11 @@ function progress(ctx: RoziContext, args: Args): ToolOutcome {
     const history = performance.records.slice(-8).map((record) => ({ date: record.date, heaviestKg: record.heaviestRecordedLoadKg, sets: record.completedSets, reps: record.completedReps }));
     const loads = history.map((item) => item.heaviestKg).filter((kg): kg is number => kg !== null);
     const best = records.find((record) => record.exerciseId === exercise.id) ?? null;
+    const stalled = findPlateaus(ctx.sessions, ctx.profile, ctx.today).find((item) => item.exerciseId === exercise.id);
     return {
       result: {
         exercise: exercise.name, logged: true, timesLogged: performance.records.length, history,
+        stalled: stalled ? stalledResult(stalled) : null,
         // Timed exercises store seconds (holds) or minutes (cardio) in the "reps" fields.
         repsAreIn: UNIT_WORD[trackingOf(exercise).unit],
         bestSet: best ? { kg: best.loadKg, reps: best.reps, date: best.date } : null,
@@ -309,6 +330,7 @@ function progress(ctx: RoziContext, args: Args): ToolOutcome {
       workoutsCompleted: done.length, last28Days: last28.length, plannedPerWeek: ctx.profile.sessionsPerWeek,
       bestSets: records.slice(0, 6).map((record) => ({ exercise: record.exerciseName, kg: record.loadKg, reps: record.reps, date: record.date })),
       biggestImprovements: biggestImprovements(done),
+      stalledLifts: findPlateaus(ctx.sessions, ctx.profile, ctx.today).slice(0, 3).map(stalledResult),
       note: records.length ? null : "No weights are logged yet, so there are no best lifts.",
     },
     card: { type: "progress", exercise: null, records: records.slice(0, 6).map((record) => ({ exercise: record.exerciseName, kg: record.loadKg, reps: record.reps, date: record.date })), trend: [], link: { href: "/progress", label: "See progress" } },
@@ -514,10 +536,10 @@ const MUSCLE_ARG = { type: "string", description: "Optional muscle group: chest,
 const EXERCISE_ARG = { type: "string", description: "Exercise name as the user said it, e.g. \"bench press\", \"squats\"." };
 
 export const ROZI_TOOLS: AiTool[] = [
-  { name: "get_workout_for_day", description: "The user's workout for a day from their plan (exercises, sets, reps, minutes, status, and why this workout was chosen), or that it's a rest day. Use for today's/tomorrow's workout and 'why this workout'.", parameters: { type: "object", properties: { day: { type: "string", description: "\"today\", \"tomorrow\", \"yesterday\" or a date YYYY-MM-DD. Default today." } } } },
+  { name: "get_workout_for_day", description: "The user's workout for a day from their plan (exercises, sets, reps, minutes, status, and why this workout was chosen), or that it's a rest day. For a logged workout it adds a recap: new bests, compared with last time, stalled lifts. Use for today's/tomorrow's workout, 'why this workout' and 'how did my workout go'.", parameters: { type: "object", properties: { day: { type: "string", description: "\"today\", \"tomorrow\", \"yesterday\" or a date YYYY-MM-DD. Default today." } } } },
   { name: "get_next_workout", description: "The next scheduled training day after today and its planned workout.", parameters: { type: "object", properties: {} } },
   { name: "get_workout_history", description: "Workouts the user actually logged in a period — completed, partly done and SKIPPED counts — optionally only those that trained a muscle group or a specific exercise. Use for 'last workout', 'how many workouts (or skipped workouts) this week/month', 'when did I last train legs'.", parameters: { type: "object", properties: { period: { type: "string", enum: [...PERIODS], description: "Match the user's words: this_month = from the 1st of the CURRENT month to today; last_month = the whole previous calendar month; this_week = Monday to today; last_week = the previous Monday–Sunday. Default last_30_days." }, muscle: MUSCLE_ARG, exercise: EXERCISE_ARG } } },
-  { name: "get_progress", description: "Strength progress from logged sets: overall best sets (personal records) and the exercises that improved most, or one exercise's history and best set.", parameters: { type: "object", properties: { exercise: { ...EXERCISE_ARG, description: "Optional. Leave empty for overall progress." } } } },
+  { name: "get_progress", description: "Strength progress from logged sets: overall best sets (personal records), the exercises that improved most, and stalled lifts (no gain for 3+ weeks, with a variation to try), or one exercise's history, best set and whether it has stalled.", parameters: { type: "object", properties: { exercise: { ...EXERCISE_ARG, description: "Optional. Leave empty for overall progress." } } } },
   { name: "get_recovery", description: "How recovered each muscle group is, from logged sets and check-ins (just trained / recovering / ready / sore).", parameters: { type: "object", properties: { muscle: MUSCLE_ARG } } },
   { name: "get_streak", description: "The user's current and best workout streak.", parameters: { type: "object", properties: {} } },
   { name: "get_weekly_report", description: "Summary of a week: workouts done vs planned, sets, volume, new records, sets per muscle group, energy and soreness.", parameters: { type: "object", properties: { week: { type: "string", enum: ["this", "last"] } } } },

@@ -278,7 +278,7 @@ The ChatGPT Level 4 + exercise library plan has been audited. Items 6–11 above
 - **R3–R6:** exercise library foundation (**R3 ✅ done 2026-11-23**), equipment keys (**R4 ✅ done 2026-11-23, migration applied**), time/distance tracking (**R5 ✅ done 2026-11-23, migration applied**), then +50 exercises (**R6 ✅ 2026-11-24: +50 exercises, 127 total**).
 - **R7:** variation intelligence (**✅ 2026-11-24**).
 - **R8–R11:** Level 4 goals (**R8 ✅ 2026-11-24, migration applied**), monitoring (**R9 ✅ 2026-11-24**), memory (**R10 ✅ 2026-11-24, migration applied**) and scheduled check-ins (**R11 ✅ 2026-11-24, migration applied**).
-- **R12–R13:** plateau detection and the final review.
+- **R12–R13:** plateau detection, post-workout recap and plain "why this workout" (**R12 ✅ 2026-11-24, no migration**), and the final review (**R13 🟡 review done 2026-11-24; lock migration applied; staging pass waiting**).
 
 Exercise gaps are listed in `docs/EXERCISE_LIBRARY_COVERAGE.md`.
 

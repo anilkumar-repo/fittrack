@@ -2242,3 +2242,62 @@ After "start R11". The design is in `docs/ROZI_AGENT_ARCHITECTURE.md` §10.
 - **Live behaviour test (rolled back):** `PASS 9 checks`. Switching on records consent, a bad hour is refused, no direct reads, a signed-in person can't list who opted in, another person doesn't see your choice, the server lists you and claims a week once (the second claim is refused), anon is refused. 0 rows left afterwards.
 - **Security advisors:** the only new items are the expected ones: `rozi_checkin_settings` "RLS enabled, no policy" (INFO, closed on purpose) and the two person functions "signed-in users can execute" (WARN, on purpose; each acts only on your own row). The two server functions are not flagged. Leaked-password protection is still off (old item, a dashboard setting).
 - **To turn it on:** set `ROZI_CHECKINS=on` in Vercel (Production and Preview) and redeploy after pushing.
+
+### 2026-11-24 — R12: plateaus, post-workout recap, plain "why this workout" (built; no migration, no flag)
+
+After "Start R12". The design is in `docs/ROZI_AGENT_ARCHITECTURE.md` §11.
+
+**Who did what:**
+- **Opus:** the design and `src/lib/insights.ts` (`findPlateaus`, `workoutRecap`, `explainWorkout`), `exerciseGroups` in `recovery.ts`, the Rozi tool wiring (`get_workout_for_day`, `get_progress`; still 14 tools), the tests, and the review of every change.
+- **Sonnet (builder):** the Today "Why this workout" list, the recap on the post-workout celebration, and the "Stalled for N weeks" note on exercise stats.
+
+**What it does:**
+- **Plateau:** 3+ sessions over 10+ days in the last 3 weeks, none beating the earlier best estimated 1-rep max, and still trained in the last 14 days. Rozi suggests the closest usable variation for 3 weeks, then going back. Swapped sets and sample data don't count.
+- **Recap:** new bests, each lift compared with last time, and any stalled lift.
+- **Why this workout:** up to 5 plain sentences (goal and week, lighter weeks, muscles and recovery, the planner's reasons about you, a stalled lift). The planner's internal notes stay one tap deeper.
+
+**Fixed during the build:** an old saved log without `substitutionName` broke the tool (now tolerated), and saved plans without their own date broke the recovery check (the day's date is now passed in).
+
+**Checked:** 429 tests pass (4 new), the type check and the build pass, and lint shows only the same old warning (`welcome.tsx:400`).
+
+**Not checked:** the screens in a browser.
+
+### 2026-11-24 — R13: security review and final validation (code fixes in; lock migration applied; staging pass waiting)
+
+After "Start R13". The full report is `docs/ROZI_R13_SECURITY_REVIEW.md`. Opus did the whole review; no helpers, since it is security work.
+
+**Checked on the live database (read-only or rolled back):**
+- All 6 Rozi tables are closed: RLS on, no policies, no client grants.
+- All 27 Rozi functions have an empty `search_path`. None are callable by anon. The server-only ones are blocked for signed-in users.
+- Security advisors: only the expected items.
+
+**Fixed in code:**
+- **Memory:** instruction-like notes are refused, and notes reach the model quoted, under a heading that says they're information only.
+- **Goals:** the model's "why" becomes plain card text (one line, at most 200 characters, dropped if it holds contact details, links or instruction-like text).
+- **Shared helpers** in `privacy.ts`: `looksLikeInstructions` and `plainCardText`.
+
+**Migration** `supabase/migrations/20261124180000_rozi_propose_locks.sql`:
+- Adds a per-person lock to `rozi_propose_action` and `rozi_propose_goal`, so parallel questions can't go over the waiting-proposal caps or record the same plan twice.
+- **Dry run (rolled back):** `PASS 5 checks`; the live functions are unchanged.
+
+**Checked:**
+- 431 tests pass (2 new: memory injection, goal reason).
+- Type check passes.
+- Lint on the Rozi code is clean.
+
+**Applied 2026-11-24** after "Yes, apply it" (recorded as `20261124125324 rozi_propose_locks`). Opus did the apply and every check below.
+- **Structure:** both functions hold the lock and are security definer with an empty `search_path`. Grants are unchanged: service role only, not signed-in users or anon.
+- **Live behaviour test (rolled back):** `PASS 4 checks` (structure, grants, action idempotency, same goal plan not recorded twice). 0 test rows left.
+- **Security advisors:** unchanged (the same 23 INFO and 83 WARN items). The proposal functions aren't flagged.
+
+**Not done (needs a deploy):** preview deploy and staging pass with both providers and live reply times.
+
+### 2026-11-24 — CI fix: type check failed on `RouteContext`
+
+**What failed:** GitHub Actions "Test, typecheck, lint, build" failed at `npm run typecheck`. Three routes used `TS2304: Cannot find name 'RouteContext'`: `app/api/rozi/actions/[id]`, `goals/[id]` and `memories/[id]`.
+
+**Why:** `RouteContext` is a global type that Next.js generates into `.next/` during `next dev` or `next build`. CI runs the type check before the build, so the type doesn't exist yet. Locally it passed because `.next/` was already there.
+
+**Fix:** the three routes now type their second argument directly as `{ params: Promise<{ id: string }> }`, so the type check doesn't depend on generated files. Behaviour is unchanged.
+
+**Checked:** the type check passes with `.next/` moved aside (as in CI), the build passes, and lint on `app/api/rozi` is clean.

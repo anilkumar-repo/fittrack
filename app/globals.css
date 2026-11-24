@@ -1050,6 +1050,13 @@ select option { color: #143229; background: #ffffff; }
 .why-plan summary { color: var(--ink-2); font-size: 15px; font-weight: 700; cursor: pointer; }
 .why-plan p { margin: 10px 0 8px; font-size: 14px; line-height: 1.6; }
 .why-plan small { font-size: 12px; }
+.why-plan-list { margin: 10px 0 8px; padding-left: 18px; font-size: 14px; line-height: 1.6; }
+.why-plan-list li + li { margin-top: 4px; }
+.why-plan-notes { margin: 8px 0; }
+.why-plan-notes summary { color: var(--muted); font-size: 13px; font-weight: 700; }
+.plateau-note { display: grid; gap: 4px; margin-bottom: 12px; padding: 12px 14px; border: 1px solid var(--line); border-radius: 16px; color: var(--ink-2); background: var(--surface-solid); }
+.plateau-note strong { color: var(--ink); font-size: 15px; }
+.plateau-note p { margin: 0; color: var(--muted); font-size: 14px; line-height: 1.5; }
 .train-cta { position: sticky; z-index: 5; bottom: 18px; padding-top: 4px; }
 .train-cta .button, .flow-cta { width: 100%; min-height: 58px; font-size: 17px; }
 .train-cta .button svg, .flow-cta svg, .logger-nav svg, .done-actions svg { width: 18px; height: 18px; }
@@ -1733,6 +1740,10 @@ img.celebrate-rozi { position: relative; width: 150px; height: 150px; }
 .celebrate-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; width: 100%; margin: 4px 0; }
 .celebrate-stats div { display: grid; padding: 8px; border-radius: 14px; background: rgba(255, 255, 255, .7); }
 .celebrate-stats dd { margin: 0; font-size: 22px; font-weight: 900; }
+.celebrate-recap { display: grid; gap: 4px; width: 100%; text-align: left; }
+.celebrate-recap strong { color: var(--ink); font-size: 14px; line-height: 1.4; }
+.celebrate-recap-list { margin: 0; padding-left: 18px; color: var(--ink-2); font-size: 13px; line-height: 1.45; }
+.celebrate-card .celebrate-recap-note { color: var(--muted); font-size: 12px; line-height: 1.4; }
 .celebrate-stats dt { color: rgba(22, 24, 26, .6); font-size: 12px; font-weight: 700; }
 @media (prefers-reduced-motion: reduce) { .celebrate-card, .celebrate-burst, .streak-hero img.rozi { animation: none; } }
 

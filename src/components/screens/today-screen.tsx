@@ -4,7 +4,7 @@ import { CoolDownCard, WarmUpCard } from "@/components/app/mobility-suggestion";
 import { clearWorkoutNotification, notifyWorkoutStarted, updateWorkoutNotification, workoutStartedAt } from "@/lib/session-notify";
 import { notifyBuddies } from "@/lib/buddies-repository";
 import { levelTitle } from "@/lib/levels";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ArrowLeft, ArrowLeftRight, ArrowRight, Check, ChevronRight, Clock, ListChecks, MessageCircle, Pencil, Play, Repeat } from "lucide-react";
 import Link from "next/link";
@@ -23,6 +23,7 @@ import { SwapSheet, useExerciseSwap } from "@/components/app/swap-sheet";
 import { REGION_LABELS, regionsForExercises } from "@/lib/figure";
 import { calculateStreak, roziMoment, winsForWorkout } from "@/lib/rozi";
 import { lastPerformance } from "@/lib/logging";
+import { explainWorkout } from "@/lib/insights";
 import { sessionForDate, useFitTrack } from "@/components/app/fit-track-provider";
 import { emptyCheckIn, useWorkoutDay } from "@/components/app/use-workout-day";
 import { dateLabel, describeNextDay, isIsoDate, nextTrainingDate, shiftDate, todayHref, hourIn, weekdayOf } from "@/lib/dates";
@@ -246,6 +247,7 @@ function WorkoutDayView({ date, extraDay = false, startAtReview = false }: { dat
   const doneMoment = todaySession?.status === "completed"
     ? roziMoment({ streak: calculateStreak(state.profile, recordedSessions, date), todaySession, hour: 12, name: state.profile.displayName, wins: winsForWorkout(recordedSessions, date, state.profile.sessionsPerWeek) })
     : null;
+  const whyLines = useMemo(() => (plan ? explainWorkout(plan, date, recordedSessions, state.profile, currentDate) : []), [plan, date, recordedSessions, state.profile, currentDate]);
   const saveNote = savingSession ? "Saving…" : saveError ? "Saved on this device; sync needs attention" : "Saved as you go";
 
   return (
@@ -309,8 +311,12 @@ function WorkoutDayView({ date, extraDay = false, startAtReview = false }: { dat
           </ol>
 
           <details className="why-plan">
-            <summary>Why this plan</summary>
-            <p>{plan.generationReasons.join(" ")}</p>
+            <summary>Why this workout</summary>
+            <ul className="why-plan-list">{whyLines.map((line) => <li key={line}>{line}</li>)}</ul>
+            <details className="why-plan-notes">
+              <summary>Planner notes</summary>
+              <p>{plan.generationReasons.join(" ")}</p>
+            </details>
             <small>Template {plan.templateVersion} · Rules {plan.ruleVersion}</small>
           </details>
 
