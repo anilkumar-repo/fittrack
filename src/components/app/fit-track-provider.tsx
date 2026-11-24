@@ -34,7 +34,7 @@ function applyTheme(theme: Theme) {
   const dark = theme === "dark" || (theme === "auto" && window.matchMedia("(prefers-color-scheme: dark)").matches);
   if (dark) document.documentElement.dataset.theme = "dark";
   else delete document.documentElement.dataset.theme;
-  document.querySelector('meta[name="theme-color"]')?.setAttribute("content", dark ? "#262b31" : "#f3f2ee");
+  document.querySelector('meta[name="theme-color"]')?.setAttribute("content", dark ? "#0b0f12" : "#f3f2ee");
 }
 
 interface FitTrackContextValue {
@@ -120,7 +120,8 @@ export function FitTrackProvider({ children }: { children: React.ReactNode }) {
   const [savingSession, setSavingSession] = useState(false);
   const [pendingSessions, setPendingSessions] = useState<WorkoutSession[]>([]);
   const [weightUnit, setWeightUnitState] = useState<WeightUnit>("kg");
-  const [theme, setThemeState] = useState<Theme>("light");
+  // Dark premium is the default look (docs/DESIGN.md §2); light stays in Settings → Appearance.
+  const [theme, setThemeState] = useState<Theme>("dark");
   const [figure, setFigureState] = useState<FigureChoice>("neutral");
   const stateRef = useRef(state);
   const sessionSaveQueue = useRef<Promise<void>>(Promise.resolve());
@@ -155,7 +156,7 @@ export function FitTrackProvider({ children }: { children: React.ReactNode }) {
         if (isTheme(saved)) setThemeState(saved);
         const savedFigure = window.localStorage.getItem(FIGURE_KEY);
         if (isFigureChoice(savedFigure)) setFigureState(savedFigure);
-      } catch { /* Light glass remains the default. */ }
+      } catch { /* Dark glass remains the default. */ }
       writeDemoState(localState);
       setReady(true);
     }, 0);

@@ -242,7 +242,9 @@ export function RoziChatScreen() {
     <RoziActionsContext.Provider value={actionsContext}>
     <section className="rozi-chat">
       <div className="rozi-chat-top">
-        <button type="button" className="text-button rozi-back" onClick={() => (window.history.length > 1 ? router.back() : router.push("/"))}><ArrowLeft aria-hidden="true" /> Back</button>
+        {/* One header (Phase 7): the app's top bar hides here, so the back button and the title live in this row. */}
+        <button type="button" className="icon-button rozi-back" aria-label="Back" onClick={() => (window.history.length > 1 ? router.back() : router.push("/"))}><ArrowLeft aria-hidden="true" /></button>
+        <h1 className="rozi-chat-title">Ask Rozi</h1>
         {aiOn && <div className="rozi-chat-actions">
           <button type="button" className="text-button" onClick={() => setShowHistory(true)}><History aria-hidden="true" /> History</button>
           <button type="button" className="text-button" onClick={newChat} disabled={messages.length <= 1}><Plus aria-hidden="true" /> New chat</button>
@@ -286,7 +288,7 @@ export function RoziChatScreen() {
         </div>}
         <div ref={end} className="rozi-chat-end" />
       </div>
-      <div className="chat-suggestions">{SUGGESTED_QUESTIONS.map((question) => <button key={question} type="button" className="chip" onClick={() => ask(question)}>{question}</button>)}</div>
+      <div className={`chat-suggestions ${messages.length <= 1 ? "first" : ""}`}>{SUGGESTED_QUESTIONS.map((question) => <button key={question} type="button" className="chip" onClick={() => ask(question)}>{question}</button>)}</div>
       {showActions && <RoziActionsSheet actions={actions} onClose={() => setShowActions(false)} />}
       {showHistory && browserClient && <RoziHistorySheet client={browserClient} today={currentDate} currentId={conversationId}
         onOpen={(id) => void openConversation(id)} onDeleted={(id) => { if (id === null || id === conversationId) newChat(); }} onClose={() => setShowHistory(false)} />}

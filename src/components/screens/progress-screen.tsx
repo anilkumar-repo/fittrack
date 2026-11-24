@@ -4,8 +4,10 @@ import { MissedDaysList } from "@/components/app/missed-days-card";
 import { LevelPanel } from "@/components/app/level-panel";
 import { BodyPanel } from "@/components/app/body-panel";
 
-import { useState } from "react";
-import { Award, CalendarCheck, Check, ChevronRight, Clock, Dumbbell, Flame, Lock, Medal, Sparkles, Target, Trophy, Zap, type LucideIcon } from "lucide-react";
+import { useMemo, useState } from "react";
+import { Activity, Award, CalendarCheck, Check, ChevronRight, Clock, Dumbbell, Flame, Lock, Medal, Sparkles, Target, Trophy, Zap, type LucideIcon } from "lucide-react";
+import { Card } from "@/components/ui/card";
+import { ListRow } from "@/components/ui/list-row";
 import { useFitTrack } from "@/components/app/fit-track-provider";
 import { HistoryDetailModal } from "@/components/app/history-detail-modal";
 import { calculateAchievements, type AchievementId } from "@/lib/achievements";
@@ -17,6 +19,11 @@ import { saveCloudBodyWeightEntry } from "@/lib/supabase-repository";
 import type { WorkoutSession } from "@/lib/types";
 import { CountUp } from "@/components/ui/count-up";
 import { EmptyState } from "@/components/ui/empty-state";
+import { ButtonLink } from "@/components/ui/button";
+import { Rozi } from "@/components/app/rozi";
+import { weeklyReport } from "@/lib/recovery";
+import { findPlateaus } from "@/lib/insights";
+import { weekDates } from "@/lib/dates";
 
 const BADGE_ICONS: Record<AchievementId, LucideIcon> = {
   "first-workout": Sparkles, "full-week": CalendarCheck, "five-workouts": Medal, "two-weeks": Flame,
@@ -35,6 +42,21 @@ function progressStatusLabel(status: string): string {
     not_started: "Before training start",
   };
   return labels[status] ?? status.replaceAll("_", " ");
+}
+
+/** One badge: earned with its icon, or locked with progress toward it. */
+function BadgeItem({ item }: { item: ReturnType<typeof calculateAchievements>[number] }) {
+  const BadgeIcon = BADGE_ICONS[item.id];
+  return (
+    <li className={`badge ${item.earned ? "earned" : ""}`}>
+      <span className="badge-icon">{item.earned ? <BadgeIcon aria-hidden="true" /> : <Lock aria-hidden="true" />}</span>
+      <strong>{item.title}</strong>
+      <small>{item.description}</small>
+      {item.earned
+        ? <span className="badge-state"><Check aria-hidden="true" /> Earned</span>
+        : <span className="badge-progress" role="progressbar" aria-label={`${item.title} progress`} aria-valuemin={0} aria-valuemax={item.target} aria-valuenow={item.current}><span style={{ width: `${(item.current / item.target) * 100}%` }} /><em>{item.current} / {item.target}</em></span>}
+    </li>
+  );
 }
 
 export function ProgressScreen() {
@@ -65,6 +87,13 @@ export function ProgressScreen() {
   const recentSessions = recordedSessions.filter((session) => progressRange && session.date >= progressRange.startDate && session.date <= progressRange.endDate);
   const completedRecentSessions = recentSessions.filter((session) => session.status === "completed").length;
   const achievements = calculateAchievements(recordedSessions, state.profile.sessionsPerWeek, personalRecords.length);
+  // The week's story (Phase 5): the same summary as "Your week with Rozi", told in one line.
+  const week = useMemo(() => weeklyReport(state.profile, recordedSessions, weekDates(currentDate)[0], currentDate), [state.profile, recordedSessions, currentDate]);
+  const plateaus = useMemo(() => findPlateaus(recordedSessions, state.profile, currentDate), [recordedSessions, state.profile, currentDate]);
+  // Badges: earned first, then the two closest to earning; the rest fold away.
+  const earnedBadges = achievements.filter((item) => item.earned);
+  const nextBadges = achievements.filter((item) => !item.earned).sort((a, b) => b.current / b.target - a.current / a.target).slice(0, 2);
+  const laterBadges = achievements.filter((item) => !item.earned && !nextBadges.includes(item));
 
   async function saveBodyWeight(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -97,33 +126,19 @@ export function ProgressScreen() {
   return (
     <>
       <section className="progress">
+        <article className="panel progress-story">
+          <Rozi mood="report-card" size={136} priority className="progress-story-rozi" />
+          <p className="today-tag">This week</p>
+          <h2 className="progress-story-title">{week.rozi}</h2>
+          <p className="today-meta">{week.completed} of {week.planned || state.profile.sessionsPerWeek} {(week.planned || state.profile.sessionsPerWeek) === 1 ? "workout" : "workouts"} · {week.sets} {week.sets === 1 ? "set" : "sets"}{week.newRecords.length ? ` · ${week.newRecords.length} new ${week.newRecords.length === 1 ? "record" : "records"}` : ""}</p>
+          <ButtonLink href="/report" variant="glass" icon={<ChevronRight aria-hidden="true" />}>Your week with Rozi</ButtonLink>
+        </article>
+        <h2 className="progress-section">Consistency</h2>
         <div className="stat-row">
           <article className="panel stat"><span className="stat-ico"><Target aria-hidden="true" /></span><strong>{consistency?.percent === null || consistency?.percent === undefined ? "—" : <><CountUp value={consistency.percent} />%</>}</strong><small>Consistency</small><em>{consistency?.completedScheduledDays ?? 0} of {consistency?.scheduledDays ?? 0} planned days · 4 weeks</em></article>
           <article className="panel stat"><span className="stat-ico"><CalendarCheck aria-hidden="true" /></span><strong><CountUp value={completedRecentSessions} /></strong><small>Workouts</small><em>Finished in the last 4 weeks</em></article>
           <article className="panel stat"><span className="stat-ico"><Trophy aria-hidden="true" /></span><strong><CountUp value={personalRecords.length} /></strong><small>Personal records</small><em>Heaviest logged set per exercise</em></article>
         </div>
-
-        <BodyPanel />
-
-        <LevelPanel />
-
-        <article className="panel">
-          <div className="panel-title"><h3>Achievements</h3><span className="panel-count">{achievements.filter((item) => item.earned).length} of {achievements.length} earned</span></div>
-          <ul className="badge-grid">{achievements.map((item) => {
-            const BadgeIcon = BADGE_ICONS[item.id];
-            return (
-              <li key={item.id} className={`badge ${item.earned ? "earned" : ""}`}>
-                <span className="badge-icon">{item.earned ? <BadgeIcon aria-hidden="true" /> : <Lock aria-hidden="true" />}</span>
-                <strong>{item.title}</strong>
-                <small>{item.description}</small>
-                {item.earned
-                  ? <span className="badge-state"><Check aria-hidden="true" /> Earned</span>
-                  : <span className="badge-progress" role="progressbar" aria-label={`${item.title} progress`} aria-valuemin={0} aria-valuemax={item.target} aria-valuenow={item.current}><span style={{ width: `${(item.current / item.target) * 100}%` }} /><em>{item.current} / {item.target}</em></span>}
-              </li>
-            );
-          })}</ul>
-        </article>
-
         <article className="panel">
           <div className="panel-title"><h3>Last 4 weeks</h3><span className="panel-count">Tap a marked day to review it</span></div>
           <div className="activity-grid" role="list">
@@ -139,7 +154,12 @@ export function ProgressScreen() {
           </div>
           <p className="week-key"><span className="key done" /> Done <span className="key partial" /> Started <span className="key missed" /> Planned day, nothing logged <span className="key rest" /> Rest</p>
         </article>
-
+        <Card padding="md" className="progress-more"><ListRow href="/streak" title="Streak calendar" detail="Every day, done or rested" leading={<span className="profile-link-icon"><Flame aria-hidden="true" /></span>} /></Card>
+        <h2 className="progress-section">Strength</h2>
+        {plateaus.length > 0 && <article className="panel progress-plateaus">
+          <div className="panel-title"><h3>Stalled lifts</h3><span className="panel-count">No gain for 3+ weeks</span></div>
+          <ul className="plateau-list">{plateaus.slice(0, 3).map((item) => <li key={item.exerciseId}><strong>{item.name}</strong><span>{item.advice}</span></li>)}</ul>
+        </article>}
         <div className="progress-two-column">
           <article className="panel progress-panel">
             <div className="section-heading"><div><h3>Exercise performance</h3><p>Actual completed sets and reps, with prescribed targets shown separately.</p></div></div>
@@ -162,16 +182,9 @@ export function ProgressScreen() {
             <p className="metric-definition">These are recorded load records, not estimated one-rep maxes. Substituted exercises are tracked under the substituted movement’s name.</p>
           </article>
         </div>
-
+        <h2 className="progress-section">Body</h2>
         <div className="progress-two-column">
-          <article className="panel progress-panel">
-            <div className="section-heading"><div><h3>Recovery & exercise patterns</h3><p>Available check-ins, post-workout feedback, and explicit skips · last 28 days</p></div></div>
-            {recoveryMetrics && (recoveryMetrics.checkInCount || recoveryMetrics.reviewCount || recoveryMetrics.skippedExercises.length) ? <>
-              <div className="recovery-grid"><div><small>PRE-WORKOUT CHECK-INS</small><strong>{recoveryMetrics.checkInCount}</strong></div><div><small>AVERAGE ENERGY · CHECK-INS</small><strong>{recoveryMetrics.averageEnergy ?? "—"}{recoveryMetrics.averageEnergy === null ? "" : " / 5"}</strong></div><div><small>AVERAGE SORENESS · CHECK-INS</small><strong>{recoveryMetrics.averageSoreness ?? "—"}{recoveryMetrics.averageSoreness === null ? "" : " / 5"}</strong></div><div><small>ENERGY AFTER · {recoveryMetrics.reviewCount} REVIEWS</small><strong>{recoveryMetrics.averageEnergyAfter ?? "—"}{recoveryMetrics.averageEnergyAfter === null ? "" : " / 5"}</strong></div><div><small>PAIN REPORTED BEFORE</small><strong>{recoveryMetrics.painCheckIns} / {recoveryMetrics.checkInCount}</strong></div><div><small>DISCOMFORT AFTER · {recoveryMetrics.reviewCount} REVIEWS</small><strong>{recoveryMetrics.postWorkoutDiscomfortReports}</strong></div></div>
-              {recoveryMetrics.skippedExercises.length > 0 && <div className="skip-patterns"><h4>Exercises marked skipped</h4>{recoveryMetrics.skippedExercises.map((item) => <p key={item.exerciseId}>{item.exerciseName} · {item.count} {item.count === 1 ? "time" : "times"}, last {shortDate(item.latestDate)}</p>)}</div>}
-              {recoveryMetrics.painCheckIns > 0 && <p className="pain-note">Pain was reported before one or more workouts. RozFit does not diagnose the cause; stop any painful movement and consider professional assessment when appropriate.</p>}
-            </> : <div className="empty-inline">No check-in, recovery, or skipped-exercise feedback is recorded for this date range.</div>}
-          </article>
+  <BodyPanel />
           <article className="panel progress-panel bodyweight-panel">
             <div className="section-heading"><div><h3>Body weight <span className="optional-tag">OPTIONAL</span></h3><p>Private dated measurements. Leaving this blank does not affect your plan.</p></div></div>
             {state.mode === "supabase" && !state.bodyWeightAvailable ? <div className="empty-inline">Body-weight tracking isn’t available right now. Your workouts still save normally.</div> : <>
@@ -185,11 +198,41 @@ export function ProgressScreen() {
             </>}
           </article>
         </div>
-
-        <article className="panel">
-          <div className="panel-title"><h3>Missed workouts</h3><span className="panel-count">Reasons you gave</span></div>
-          <MissedDaysList sessions={recordedSessions} />
+        <h2 className="progress-section">Level and badges</h2>
+        <LevelPanel />
+        <article className="panel progress-badges">
+          <div className="panel-title"><h3>Badges</h3><span className="panel-count">{earnedBadges.length} of {achievements.length} earned</span></div>
+          <ul className="badge-grid">{[...earnedBadges, ...nextBadges].map((item) => <BadgeItem key={item.id} item={item} />)}</ul>
+          {laterBadges.length > 0 && <details className="progress-more-badges">
+            <summary>{laterBadges.length} more to earn</summary>
+            <ul className="badge-grid">{laterBadges.map((item) => <BadgeItem key={item.id} item={item} />)}</ul>
+          </details>}
         </article>
+        <h2 className="progress-section">Recovery</h2>
+        <div className="progress-two-column">
+          <article className="panel progress-panel">
+            <div className="section-heading"><div><h3>Recovery & exercise patterns</h3><p>Available check-ins, post-workout feedback, and explicit skips · last 28 days</p></div></div>
+            {recoveryMetrics && (recoveryMetrics.checkInCount || recoveryMetrics.reviewCount || recoveryMetrics.skippedExercises.length) ? <>
+              <div className="recovery-grid"><div><small>PRE-WORKOUT CHECK-INS</small><strong>{recoveryMetrics.checkInCount}</strong></div><div><small>AVERAGE ENERGY · CHECK-INS</small><strong>{recoveryMetrics.averageEnergy ?? "—"}{recoveryMetrics.averageEnergy === null ? "" : " / 5"}</strong></div><div><small>AVERAGE SORENESS · CHECK-INS</small><strong>{recoveryMetrics.averageSoreness ?? "—"}{recoveryMetrics.averageSoreness === null ? "" : " / 5"}</strong></div><div><small>ENERGY AFTER · {recoveryMetrics.reviewCount} REVIEWS</small><strong>{recoveryMetrics.averageEnergyAfter ?? "—"}{recoveryMetrics.averageEnergyAfter === null ? "" : " / 5"}</strong></div><div><small>PAIN REPORTED BEFORE</small><strong>{recoveryMetrics.painCheckIns} / {recoveryMetrics.checkInCount}</strong></div><div><small>DISCOMFORT AFTER · {recoveryMetrics.reviewCount} REVIEWS</small><strong>{recoveryMetrics.postWorkoutDiscomfortReports}</strong></div></div>
+              {recoveryMetrics.skippedExercises.length > 0 && <div className="skip-patterns"><h4>Exercises marked skipped</h4>{recoveryMetrics.skippedExercises.map((item) => <p key={item.exerciseId}>{item.exerciseName} · {item.count} {item.count === 1 ? "time" : "times"}, last {shortDate(item.latestDate)}</p>)}</div>}
+              {recoveryMetrics.painCheckIns > 0 && <p className="pain-note">Pain was reported before one or more workouts. RozFit does not diagnose the cause; stop any painful movement and consider professional assessment when appropriate.</p>}
+            </> : <div className="empty-inline">No check-in, recovery, or skipped-exercise feedback is recorded for this date range.</div>}
+          </article>
+          <article className="panel">
+            <div className="panel-title"><h3>Missed workouts</h3><span className="panel-count">Reasons you gave</span></div>
+            <MissedDaysList sessions={recordedSessions} />
+          </article>
+        </div>
+        <Card padding="md" className="progress-more"><ListRow href="/recovery" title="Recovery map" detail="Which muscles are ready" leading={<span className="profile-link-icon"><Activity aria-hidden="true" /></span>} /></Card>
+        <h2 className="progress-section">History</h2>
+
+
+
+
+
+
+
+
 
         <article className="panel">
           <div className="panel-title"><h3>Workout history</h3><span className="panel-count">{historySessions.length} saved</span></div>

@@ -5,10 +5,9 @@ import { useFitTrack } from "@/components/app/fit-track-provider";
 import { NotificationsCard } from "@/components/app/notifications-card";
 import { RoziMemorySettings } from "@/components/app/rozi-memory-settings";
 import { RoziCheckinSettings } from "@/components/app/rozi-checkin-settings";
-import { Avatar } from "@/components/app/avatar";
 import { replayTour } from "@/components/app/tour-guide";
 import { TrainerControls } from "@/components/trainer-controls";
-import { Bell, CalendarDays, Check, ChevronLeft, ChevronRight, Database, Dumbbell, Info, KeyRound, MessageCircle, Moon, Palette, QrCode, ShieldCheck, Smartphone, Sparkles, Sun, UserRound, Users } from "lucide-react";
+import { Bell, CalendarDays, Check, ChevronLeft, ChevronRight, Database, Dumbbell, Info, KeyRound, Moon, Palette, QrCode, ShieldCheck, Smartphone, Sparkles, Sun, Users } from "lucide-react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { SettingsMenu, type MenuItem } from "@/components/app/settings-menu";
@@ -94,7 +93,6 @@ export function SettingsScreen() {
   const synced = Boolean(saved.buddyAnchor) && !isDemo;
   const themeLabel = THEME_OPTIONS.find((option) => option.id === theme)?.label ?? "Auto";
   const items: MenuItem[] = [
-    { group: "Account", id: "profile", href: "/profile", icon: UserRound, color: "#ef7d5c", label: "Your profile", note: "Picture, name, stats", keywords: "avatar photo picture name" },
     { group: "Account", id: "account", icon: KeyRound, color: "#5b9bd5", label: "Account", note: isDemo ? "Not signed in" : state.userEmail ?? "Signed in", keywords: "sign in sign out email login delete" },
     { group: "Account", id: "data", icon: Database, color: "#7a8a99", label: "Your data", note: "Rozi AI, sharing, export or delete", keywords: "export download delete backup ai rozi gemini groq privacy sharing memory remember check-in checkin weekly" },
     { group: "Preferences", id: "plan", icon: CalendarDays, color: "#3fae8c", label: "Your plan", note: "Goal, level, days, equipment", value: `${saved.trainingDays.length} days · ${saved.preferredSessionMinutes} min`, keywords: "goal level days session length equipment body height weight bmi why name age birthday date of birth dob 18 adult activity active typical day seated" },
@@ -105,15 +103,14 @@ export function SettingsScreen() {
     { group: "Trainers & safety", id: "trainers", icon: Users, color: "#5b9bd5", label: "Trainers", note: profile.trainerRole && !isDemo ? "Trainer mode, add clients, your own trainers" : "Your trainers · become a trainer", keywords: "trainer code coach link qr share" },
     { group: "Help", id: "tour", icon: Sparkles, color: "#ef7d5c", label: "Show the app tour", note: "A quick walk through", onClick: replayTour, keywords: "help tour guide" },
     { group: "Help", id: "install", href: "/install", icon: QrCode, color: "#16181a", label: "Install / share", note: "Home Screen app and QR code", keywords: "install qr share phone" },
-    { group: "Help", id: "rozi", href: "/rozi", icon: MessageCircle, color: "#ef7d5c", label: "Ask Rozi", note: "Questions about your training", keywords: "help chat question rozi" },
     { group: "Help", id: "about", icon: Info, color: "#7a8a99", label: "About this plan", note: `Rules ${RULE_VERSION}`, keywords: "about version rules templates" },
   ];
 
   if (!section || !items.some((item) => item.id === section && !item.href && !item.onClick)) {
     return <SettingsMenu items={items} profileCard={(
-      <Link href="/profile" className="settings-me" aria-label="Open your profile">
-        <Avatar value={saved.avatar} name={saved.displayName} size={56} />
-        <span><strong>{saved.displayName}</strong><small>{isDemo ? "Saved on this device only" : state.userEmail ?? "Signed in"}{profile.trainerRole && !isDemo ? " · Trainer" : ""} · {workouts} workouts</small>
+      // Your picture and name live on Profile (one tap back); Settings keeps only where your data is saved.
+      <Link href={isDemo ? "/sign-in" : "/settings?section=account"} className="settings-me settings-sync" aria-label={isDemo ? "Sign in to sync your data" : "Account and sync"}>
+        <span><small>{isDemo ? "Saved on this device only" : state.userEmail ?? "Signed in"}{profile.trainerRole && !isDemo ? " · Trainer" : ""} · {workouts} workouts</small>
           <span className={`sync-pill ${isDemo ? "local" : saveError ? "error" : "ok"}`}><span className="save-dot" />{isDemo ? "Not synced — sign in to keep your data safe" : saveError ? "Sync needs attention" : savingSession ? "Saving…" : "Synced to your account"}</span></span>
         <ChevronRight aria-hidden="true" />
       </Link>
