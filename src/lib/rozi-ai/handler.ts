@@ -20,6 +20,8 @@ import type { RoziAiProviders } from "./server.ts";
 import { selectTools } from "./tool-select.ts";
 import { roziContext, type RoziContext, type ToolOutcome } from "./tools.ts";
 import { PROPOSE_ACTION_TOOL } from "./actions/action-service.ts";
+import { GOAL_PROGRESS_TOOL, PROPOSE_GOAL_TOOL } from "./planning/goal-service.ts";
+import { PROPOSE_MEMORY_TOOL, proposeMemory } from "./memory/memory-service.ts";
 
 export type RoziChatReason =
   | "sign-in"        // 401: no or expired sign-in
@@ -56,6 +58,20 @@ export interface RoziChatSession {
    * proposal for the person to approve on a card; it never changes their data.
    */
   actions?: { propose(ctx: RoziContext, args: Record<string, unknown>, conversationId: string | null): Promise<ToolOutcome> };
+  /**
+   * Level 4 goals (only when ROZI_GOALS=on and the server key is set): runs the propose_goal_plan tool. It records a
+   * goal with a weekly plan for the person to approve on a card; nothing starts until they do.
+   */
+  goals?: {
+    propose(ctx: RoziContext, args: Record<string, unknown>, conversationId: string | null): Promise<ToolOutcome>;
+    /** get_goal_progress (read-only): the live goal's week-by-week progress. */
+    progress(ctx: RoziContext): Promise<ToolOutcome>;
+  };
+  /**
+   * Memory (R10, only when ROZI_MEMORY=on): the person's saved notes, read through their own sign-in. With it, Rozi
+   * reads the notes and may SUGGEST a new one on a card (propose_memory stores nothing).
+   */
+  memory?: { load(): Promise<Array<{ kind: string; note: string }> | null> };
 }
 
 export interface RoziChatDeps {
@@ -161,7 +177,7 @@ export async function handleRoziChat(input: RoziChatInput, deps: RoziChatDeps): 
 
   // Contact details typed into a question (or earlier ones) never go to a provider.
   const question = { message: redactContactDetails(request.message), history: history.map((line) => ({ ...line, text: redactContactDetails(line.text) })) };
-  const result = await ask(available.providers, deps.cooldowns, data, question, now, input.signal, log, conversationId, session.actions);
+  const result = await ask(available.providers, deps.cooldowns, data, question, now, input.signal, log, conversationId, session.actions, session.goals, session.memory);
   if (result.body.ok && conversationId && session.history) {
     const saved = await session.history.saveAiReply(conversationId, { text: result.body.text, intent: result.body.intent, model: result.body.model, cards: result.body.cards }).catch(() => false);
     if (!saved) log({ event: "rozi_ai_history", ok: false });
@@ -172,11 +188,23 @@ export async function handleRoziChat(input: RoziChatInput, deps: RoziChatDeps): 
 /** Models tried, for the log: "groq:openai/gpt-oss-20b=rate-limited, groq:openai/gpt-oss-120b=answered". */
 const attemptLog = (attempts: Array<{ provider: string; model: string; outcome: string }>) => attempts.map((item) => `${item.provider}:${item.model}=${item.outcome}`).join(", ");
 
-async function ask(providers: AiProvider[], cooldowns: Cooldowns | undefined, data: OwnTrainingData, request: { message: string; history: ChatLine[] }, now: Date, signal: AbortSignal | undefined, log: (entry: Record<string, unknown>) => void, conversationId: string | null, actions?: RoziChatSession["actions"]): Promise<RoziChatResult> {
+async function ask(providers: AiProvider[], cooldowns: Cooldowns | undefined, data: OwnTrainingData, request: { message: string; history: ChatLine[] }, now: Date, signal: AbortSignal | undefined, log: (entry: Record<string, unknown>) => void, conversationId: string | null, actions?: RoziChatSession["actions"], goals?: RoziChatSession["goals"], memory?: RoziChatSession["memory"]): Promise<RoziChatResult> {
   const ctx = roziContext(data, dayIn(data.profile.timeZone, now), hourIn(data.profile.timeZone, now));
+  // Saved notes (R10): a failed read just means Rozi answers without them.
+  if (memory) ctx.memories = (await memory.load().catch(() => null)) ?? [];
   const tools = selectTools(request.message, request.history);
-  // With actions on, the model may also PROPOSE a change (the person approves it on a card). Off: unchanged.
-  const extraTools = actions ? { tools: [PROPOSE_ACTION_TOOL], run: (name: string, args: Record<string, unknown>) => (name === PROPOSE_ACTION_TOOL.name ? actions.propose(ctx, args, conversationId) : Promise.resolve({ result: { error: "Unknown tool." } } as ToolOutcome)) } : undefined;
+  // With actions / goals on, the model may also PROPOSE a change or a goal plan (the person approves it on a card).
+  // Off: unchanged.
+  const proposers = [
+    ...(actions ? [{ tool: PROPOSE_ACTION_TOOL, propose: actions.propose }] : []),
+    ...(goals ? [{ tool: PROPOSE_GOAL_TOOL, propose: goals.propose }, { tool: GOAL_PROGRESS_TOOL, propose: (toolCtx: RoziContext) => goals.progress(toolCtx) }] : []),
+    ...(memory ? [{ tool: PROPOSE_MEMORY_TOOL, propose: (toolCtx: RoziContext, args: Record<string, unknown>) => Promise.resolve(proposeMemory(args, toolCtx)) }] : []),
+  ];
+  const extraTools = proposers.length ? {
+    tools: proposers.map((item) => item.tool),
+    run: (name: string, args: Record<string, unknown>) => proposers.find((item) => item.tool.name === name)?.propose(ctx, args, conversationId)
+      ?? Promise.resolve({ result: { error: "Unknown tool." } } as ToolOutcome),
+  } : undefined;
   try {
     const answer = await askRoziWithFallback({ providers, cooldowns, ctx, message: request.message, history: request.history, signal, tools, extraTools });
     log({ event: "rozi_ai", ok: true, model: answer.model, attempts: attemptLog(answer.attempts), intent: answer.intent, toolsOffered: tools.length, tools: answer.toolsUsed, latencyMs: answer.latencyMs, tokens: answer.usage.totalTokens });

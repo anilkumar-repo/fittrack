@@ -3,6 +3,8 @@
 import { AccountCard, DataCard, LiftSharingCard, RoziAiCard, TrainerInviteCard, TrainerLinkCard, TrainerModeCard } from "@/components/app/account-cards";
 import { useFitTrack } from "@/components/app/fit-track-provider";
 import { NotificationsCard } from "@/components/app/notifications-card";
+import { RoziMemorySettings } from "@/components/app/rozi-memory-settings";
+import { RoziCheckinSettings } from "@/components/app/rozi-checkin-settings";
 import { Avatar } from "@/components/app/avatar";
 import { replayTour } from "@/components/app/tour-guide";
 import { TrainerControls } from "@/components/trainer-controls";
@@ -94,7 +96,7 @@ export function SettingsScreen() {
   const items: MenuItem[] = [
     { group: "Account", id: "profile", href: "/profile", icon: UserRound, color: "#ef7d5c", label: "Your profile", note: "Picture, name, stats", keywords: "avatar photo picture name" },
     { group: "Account", id: "account", icon: KeyRound, color: "#5b9bd5", label: "Account", note: isDemo ? "Not signed in" : state.userEmail ?? "Signed in", keywords: "sign in sign out email login delete" },
-    { group: "Account", id: "data", icon: Database, color: "#7a8a99", label: "Your data", note: "Rozi AI, sharing, export or delete", keywords: "export download delete backup ai rozi gemini groq privacy sharing" },
+    { group: "Account", id: "data", icon: Database, color: "#7a8a99", label: "Your data", note: "Rozi AI, sharing, export or delete", keywords: "export download delete backup ai rozi gemini groq privacy sharing memory remember check-in checkin weekly" },
     { group: "Preferences", id: "plan", icon: CalendarDays, color: "#3fae8c", label: "Your plan", note: "Goal, level, days, equipment", value: `${saved.trainingDays.length} days · ${saved.preferredSessionMinutes} min`, keywords: "goal level days session length equipment body height weight bmi why name age birthday date of birth dob 18 adult activity active typical day seated" },
     { group: "Preferences", id: "notifications", icon: Bell, color: "#e5a33b", label: "Notifications", note: "Reminders, water, nudges", keywords: "push reminder morning evening water comeback nudge weigh" },
     { group: "Preferences", id: "appearance", icon: Palette, color: "#9b7be0", label: "Appearance", note: "Theme, figure, units", value: themeLabel, keywords: "dark light theme figure male female units kg lb pounds" },
@@ -166,7 +168,7 @@ export function SettingsScreen() {
               {profile.equipmentAvailability === "verified" && <div className="equip-tiles">{EQUIPMENT_OPTIONS.map((item) => {
                 const on = profile.availableEquipment.includes(item.id);
                 return <button key={item.id} type="button" className={`equip-tile ${on ? "selected" : ""}`} aria-pressed={on} onClick={() => toggleAvailableEquipment(item.id)}>
-                  <Image src={equipmentPicture(item.id)} alt="" width={96} height={96} sizes="72px" /><span>{item.label}</span>{on && <i className="equip-tile-check"><Check aria-hidden="true" /></i>}
+                  <Image src={equipmentPicture(item.id)} unoptimized={equipmentPicture(item.id).endsWith(".svg")} alt="" width={96} height={96} sizes="72px" /><span>{item.label}</span>{on && <i className="equip-tile-check"><Check aria-hidden="true" /></i>}
                 </button>;
               })}</div>}
               <small>{profile.equipmentAvailability === "verified" ? (profile.availableEquipment.length ? "Your plan uses only what is ticked." : "Nothing ticked yet, so your plan uses bodyweight movements.") : "Your plan uses bodyweight movements only."}</small>
@@ -206,7 +208,7 @@ export function SettingsScreen() {
       </>}
       {section === "trainers" && <><TrainerModeCard /><TrainerInviteCard onLinked={refreshTrainerClients} /><TrainerLinkCard /></>}
       {section === "account" && <AccountCard />}
-      {section === "data" && <><RoziAiCard /><LiftSharingCard /><DataCard /></>}
+      {section === "data" && <><RoziAiCard /><RoziMemorySettings /><RoziCheckinSettings /><LiftSharingCard /><DataCard /></>}
       {section === "about" && <>
           <details className="why-plan" open>
             <summary>About this plan</summary>

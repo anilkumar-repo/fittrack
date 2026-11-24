@@ -10,6 +10,9 @@ import type { ExerciseDefinition } from "@/lib/types";
 import { sessionForDate, useFitTrack } from "./fit-track-provider";
 import { SwapSheet, useExerciseSwap } from "./swap-sheet";
 import { RoziActionCard } from "./rozi-action-card";
+import { RoziGoalCard } from "./rozi-goal-card";
+import { RoziGoalProgressCard } from "./rozi-goal-progress-card";
+import { RoziMemoryCard } from "./rozi-memory-card";
 
 /**
  * Cards under an AI answer. Everything here comes from RozFit's own tools on the server (never from the model's
@@ -77,6 +80,12 @@ function RoziCardView({ card }: { card: RoziCard }) {
       return <SwapCard card={card} />;
     case "action":
       return <RoziActionCard action={card.action} />;
+    case "goal":
+      return <RoziGoalCard goal={card.goal} />;
+    case "goal_progress":
+      return <RoziGoalProgressCard progress={card.progress} />;
+    case "memory":
+      return <RoziMemoryCard memory={card.memory} />;
     case "stat":
       return (
         <section className="rozi-card rozi-stat" aria-label={card.title}>

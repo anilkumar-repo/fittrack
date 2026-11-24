@@ -21,7 +21,7 @@ export const MORNING_HOURS = [5, 6, 7, 8, 9, 10, 11];
 export const EVENING_HOURS = [16, 17, 18, 19, 20, 21, 22];
 
 export interface PushMessage {
-  kind: "morning" | "evening" | "nudge" | "water" | "comeback" | "weigh-in" | "trainer" | "chat";
+  kind: "morning" | "evening" | "nudge" | "water" | "comeback" | "weigh-in" | "trainer" | "chat" | "checkin";
   title: string;
   body: string;
   /** Page to open when the notification is tapped. */

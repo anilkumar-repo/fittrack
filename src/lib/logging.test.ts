@@ -39,6 +39,10 @@ test("describes last time in the chosen unit without inventing a load", () => {
   assert.equal(describeLastPerformance({ date: "2026-11-05", sets: [{ reps: 10, loadKg: 12.5 }, { reps: 9, loadKg: 12.5 }] }, "kg"), "10, 9 reps · 12.5 kg");
   assert.equal(describeLastPerformance({ date: "2026-11-05", sets: [{ reps: 10, loadKg: null }, { reps: 10, loadKg: null }] }, "kg"), "10, 10 reps");
   assert.equal(describeLastPerformance({ date: "2026-11-05", sets: [{ reps: 10, loadKg: 20 }, { reps: 8, loadKg: null }] }, "lb"), "10 × 44.1 lb, 8 reps");
+  // Timed exercises (R5): seconds for holds, minutes and distance for cardio.
+  assert.equal(describeLastPerformance({ date: "2026-11-05", sets: [{ reps: 30, loadKg: null }, { reps: 45, loadKg: null }] }, "kg", "seconds"), "30, 45 sec");
+  assert.equal(describeLastPerformance({ date: "2026-11-05", sets: [{ reps: 25, loadKg: null, distanceKm: 2.4 }] }, "kg", "minutes"), "25 min · 2.4 km");
+  assert.equal(describeLastPerformance({ date: "2026-11-05", sets: [{ reps: 30, loadKg: 20 }, { reps: 30, loadKg: 24 }] }, "kg", "seconds"), "30 sec × 20 kg, 30 sec × 24 kg");
   assert.equal(lastLoadKg({ date: "2026-11-05", sets: [{ reps: 10, loadKg: 10 }, { reps: 8, loadKg: 12.5 }] }), 12.5);
   assert.equal(lastLoadKg({ date: "2026-11-05", sets: [{ reps: 10, loadKg: null }] }), null);
   assert.equal(lastLoadKg(null), null);

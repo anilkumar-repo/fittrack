@@ -155,3 +155,45 @@ Update the three agent docs, `ROZI_AGENT_BENCHMARK.md`, setup/env docs (`ROZI_AC
 **To switch it on (your step):** in Vercel add `ROZI_ACTIONS=on` (`SUPABASE_SERVICE_ROLE_KEY` is already set) and redeploy. Off again: remove it, and Rozi goes back to Level 2 behaviour.
 
 **Not in this phase:** the existing swap and "Start now / Save as routine" plan cards still apply directly when you tap them. They're your own taps, not the model's, so they stay as they are.
+
+## Milestone 0 audit (2026-11-23)
+
+The ChatGPT Level 4 plan has been audited against this plan.
+- **Current state:** `ROZI_LEVEL_4_CURRENT_STATE_AUDIT.md`.
+- **Order from here:** `ROZI_LEVEL_4_REMAINING_ROADMAP.md`, steps R1–R13. This order replaces the Phase 3–9 order above.
+- **Changes from the Phase 3–4 design:**
+  - A goal plan is a short ordered list of weekly steps, not a dependency graph.
+  - You approve the whole plan once. Anything outside it still needs its own approval.
+- **The exercise library foundation (R3–R6) now comes before Level 4.**
+
+## R8 — status (2026-11-24): goals with a weekly plan built; migration APPLIED (live check 9/9); flag OFF
+
+The design is in `ROZI_AGENT_ARCHITECTURE.md` §7. Built:
+- **`src/lib/rozi-ai/planning/`:**
+  - `goal-types.ts`;
+  - `plan-builder.ts`: fixed templates and safety limits (`GOAL_LIMITS`);
+  - `goal-service.ts`: the `propose_goal_plan` tool, `planHash`, propose / approve / status / list;
+  - `planning.test.ts`: 8 tests.
+- **API:**
+  - `GET /api/rozi/goals`;
+  - `POST /api/rozi/goals/[id]` with `{ op: approve + hash | reject | pause | resume | cancel }`.
+- **Chat:** with `ROZI_GOALS=on`, Rozi gets `propose_goal_plan` next to `propose_action`.
+- **Card:** `RoziGoalCard` (`src/components/app/rozi-goal-card.tsx`, `use-rozi-goal.ts`) shows the weekly plan with Approve plan / Not now, then Pause / Resume / Stop goal.
+- **Migration** `20261124100000_rozi_goals.sql`: passed a rolled-back dry run on the live database with **24/24** checks.
+
+**Not in R8 (next is R9):**
+- weekly progress checks against the plan;
+- proposals when someone falls behind;
+- recording `completed`;
+- a goal list screen outside the chat.
+
+## R9 — status (2026-11-24): weekly progress and replanning built; migration APPLIED (live check 4/4)
+
+The design is in `ROZI_AGENT_ARCHITECTURE.md` §8. Built:
+- **`planning/plan-monitor.ts`** (`goalProgress`): each week is met, missed, no_data, in_progress or upcoming. The overall state is on_track, behind, ahead, paused or finished. When behind, it suggests a gentler plan.
+- **`get_goal_progress`:** a read-only Rozi tool available when `ROZI_GOALS=on`. The goal is read through the person's own sign-in (`loadLiveGoal`). A goal that ended in the last 14 days is still reported, so Rozi can sum it up.
+- **`RoziGoalProgressCard`:** a read-only, week-by-week card.
+- **Migration `20261124120000_rozi_goals_completion.sql`:** a finished plan shows as completed, and approving a new goal records the finished one as completed rather than replaced.
+- **Replanning is only ever a proposal:** Rozi offers the suggestion and, if the person agrees, calls `propose_goal_plan`; the person approves the new plan on the usual card.
+
+**Not in R9:** scheduled weekly reminders (R11) and a goals screen outside the chat.

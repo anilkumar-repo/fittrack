@@ -62,6 +62,33 @@ const EXERCISE_REGIONS: Record<string, BodyRegion[]> = {
   hanging_knee_raise: ["core"],
   back_extension: ["hips", "hamstrings", "back"],
   bulgarian_split_squat: ["thighs", "hips"],
+  // Batch A (R6)
+  close_grip_bench: ["arms", "chest", "shoulders"],
+  knee_pushup: ["chest", "arms", "core"],
+  db_shrug: ["back", "shoulders"],
+  conventional_deadlift: ["hips", "hamstrings", "back"],
+  reverse_db_fly: ["shoulders", "back"],
+  reverse_pec_deck: ["shoulders", "back"],
+  band_pull_apart: ["shoulders", "back"],
+  cable_curl: ["arms"],
+  band_curl: ["arms"],
+  dead_hang: ["forearms", "back"],
+  // Batch B (R6)
+  walking_lunge: ["thighs", "hips"],
+  wall_sit: ["thighs"],
+  single_leg_rdl: ["hamstrings", "hips"],
+  barbell_hip_thrust: ["hips", "hamstrings"],
+  single_leg_glute_bridge: ["hips", "hamstrings"],
+  wood_chop: ["core", "shoulders"],
+  mountain_climber: ["core", "shoulders", "thighs"],
+  // Batch C (R6)
+  rowing_machine: ["back", "thighs", "arms"],
+  stationary_bike: ["thighs", "hips"],
+  cycling: ["thighs", "hips"],
+  jump_squat: ["thighs", "hips", "calves"],
+  burpee: ["chest", "thighs", "core"],
+  jump_rope: ["calves", "shoulders"],
+  kettlebell_swing: ["hips", "hamstrings", "back"],
 };
 
 /** Body regions a set of exercises works, most-used first; ties keep the order they first appear. */

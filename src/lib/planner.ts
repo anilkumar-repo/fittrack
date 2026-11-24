@@ -1,11 +1,12 @@
 import { EXERCISE_LIBRARY, FOCUS_SUBTITLES, GOAL_CYCLES, getExerciseDefinition, getOptionalDeadliftExercise, getRecoveryExercises, getTemplateExercises, RULE_VERSION, TEMPLATE_VERSION, type TemplateFocus } from "./templates.ts";
 import { goalOf, goalTitle, inLightWeek, isRecoveryWeek, recoveryWeekSets, setCap, stageLabel } from "./program.ts";
 import { extraSets, levelOf, levelSetBonus, levelTitle, programWeek, usesFoundationWeeks } from "./levels.ts";
-import { exerciseEquipmentIsAvailable, isDeadliftVariation, isExerciseAllowedForProfile } from "./exercise-library.ts";
+import { exerciseEquipmentIsAvailable, hasEquipmentFor, isDeadliftVariation, isExerciseAllowedForProfile } from "./exercise-library.ts";
 import type { CheckIn, ExerciseDefinition, Profile, TrainerRuleSettings, TrainingGoal, TrainingPhase, WorkoutFocus, WorkoutPlan, WorkoutSession } from "./types";
 import { DEFAULT_TRAINER_RULE_SETTINGS, normalizeTrainerRuleSettings, profileWithTrainerEquipment } from "./trainer-rules.ts";
 import { regionsForExercises } from "./figure.ts";
 import { FOCUS_OPTIONS, focusRegions } from "./onboarding.ts";
+import { NOT_AUTO_PICKED } from "./library-additions.ts";
 
 export interface PlanInput {
   date: string;
@@ -141,7 +142,7 @@ function equipmentAvailable(exercise: ExerciseDefinition, profile: Profile): boo
   const required = exercise.requiredEquipment ?? [];
   if (!required.length) return true;
   if (profile.equipmentAvailability !== "verified") return false;
-  return required.every((key) => profile.availableEquipment.includes(key));
+  return hasEquipmentFor(exercise, profile.availableEquipment);
 }
 
 function mostRecentLoggedSession(sessions: WorkoutSession[]): WorkoutSession | undefined {
@@ -181,7 +182,7 @@ function alternativeForPattern(
   blockedIds: Set<string>,
 ): ExerciseDefinition | null {
   const candidates = EXERCISE_LIBRARY
-    .filter((item) => item.category === exercise.category && !blockedIds.has(item.id) && !isDeadliftVariation(item))
+    .filter((item) => item.category === exercise.category && !blockedIds.has(item.id) && !isDeadliftVariation(item) && !NOT_AUTO_PICKED.has(item.id))
     .filter((item) => !blockedPatterns.has(item.movementPattern ?? ""))
     .map((item) => adaptEquipment(item, profile))
     .filter((item): item is ExerciseDefinition => item !== null)

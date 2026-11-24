@@ -1,5 +1,6 @@
 import { EQUIPMENT_OPTIONS, EXERCISE_LIBRARY, getExerciseDefinition } from "./templates.ts";
-import type { EquipmentKey, ExerciseDefinition, ExerciseDifficulty, MovementPattern, Profile, WorkoutPlan } from "./types.ts";
+import { musclesFor, TARGET_MUSCLE_LABELS } from "./exercise-taxonomy.ts";
+import type { EquipmentKey, ExerciseDefinition, ExerciseDifficulty, MovementPattern, Profile, TargetMuscle, WorkoutPlan } from "./types.ts";
 
 export const MOVEMENT_PATTERN_LABELS: Record<MovementPattern, string> = {
   squat: "Squat",
@@ -27,6 +28,7 @@ export const NO_EQUIPMENT_FILTER = "no_equipment";
 export interface ExerciseLibraryFilters {
   query?: string;
   category?: string;
+  /** A TargetMuscle value (e.g. "chest"); matches any muscle the exercise works. */
   muscleGroup?: string;
   movementPattern?: string;
   equipment?: string;
@@ -52,10 +54,15 @@ export function exerciseInArea(exercise: Pick<ExerciseDefinition, "movementPatte
 }
 
 export interface ExerciseLibraryFilterOptions {
-  muscleGroups: string[];
+  muscleGroups: Array<{ key: TargetMuscle; label: string }>;
   movementPatterns: Array<{ key: MovementPattern; label: string }>;
   equipment: Array<{ key: EquipmentKey | typeof NO_EQUIPMENT_FILTER; label: string }>;
   difficulties: ExerciseDifficulty[];
+}
+
+/** An exercise's controlled muscles (old saved copies without them are worked out from the muscle text). */
+export function exerciseMuscles(exercise: Pick<ExerciseDefinition, "muscles" | "targetMuscles">): TargetMuscle[] {
+  return exercise.muscles?.length ? exercise.muscles : musclesFor(exercise.targetMuscles ?? []);
 }
 
 function normalize(value: string): string {
@@ -72,10 +79,19 @@ export function isExerciseAllowedForProfile(exercise: ExerciseDefinition, profil
   return !isDeadliftVariation(exercise) || profile.deadliftEnabled === true;
 }
 
+/** Every equipment set that lets someone do the exercise: the required one, then any alternatives. */
+export function equipmentSets(exercise: Pick<ExerciseDefinition, "requiredEquipment" | "equipmentAlternatives">): EquipmentKey[][] {
+  return [exercise.requiredEquipment ?? [], ...(exercise.equipmentAlternatives ?? [])];
+}
+
+/** Whether the listed equipment covers the exercise (its required equipment, or one of its alternatives). */
+export function hasEquipmentFor(exercise: Pick<ExerciseDefinition, "requiredEquipment" | "equipmentAlternatives">, available: EquipmentKey[]): boolean {
+  return equipmentSets(exercise).some((set) => set.every((item) => available.includes(item)));
+}
+
 export function exerciseEquipmentIsAvailable(exercise: ExerciseDefinition, profile: Profile): boolean {
-  const required = exercise.requiredEquipment ?? [];
-  if (!required.length) return true;
-  return profile.equipmentAvailability === "verified" && required.every((item) => profile.availableEquipment.includes(item));
+  if (!(exercise.requiredEquipment ?? []).length) return true;
+  return profile.equipmentAvailability === "verified" && hasEquipmentFor(exercise, profile.availableEquipment);
 }
 
 export function workoutPlanMatchesProfile(plan: WorkoutPlan, profile: Profile): boolean {
@@ -91,24 +107,24 @@ export function getExerciseLibraryFilterOptions(
   profile: Profile,
 ): ExerciseLibraryFilterOptions {
   const allowed = exercises.filter((exercise) => isExerciseAllowedForProfile(exercise, profile));
-  const muscles = new Set<string>();
+  const muscles = new Set<TargetMuscle>();
   const patterns = new Set<MovementPattern>();
   const equipment = new Set<EquipmentKey>();
   const difficulties = new Set<ExerciseDifficulty>();
   let hasNoExternalEquipment = false;
 
   for (const exercise of allowed) {
-    exercise.targetMuscles.forEach((muscle) => muscles.add(muscle));
+    exerciseMuscles(exercise).forEach((muscle) => muscles.add(muscle));
     if (exercise.movementPattern) patterns.add(exercise.movementPattern);
     if (exercise.difficulty) difficulties.add(exercise.difficulty);
     const required = exercise.requiredEquipment ?? [];
-    if (required.length) required.forEach((item) => equipment.add(item));
+    if (required.length) equipmentSets(exercise).flat().forEach((item) => equipment.add(item));
     else hasNoExternalEquipment = true;
   }
 
   const labels = new Map(EQUIPMENT_OPTIONS.map((option) => [option.id, option.label]));
   return {
-    muscleGroups: [...muscles].sort((a, b) => a.localeCompare(b)),
+    muscleGroups: [...muscles].map((key) => ({ key, label: TARGET_MUSCLE_LABELS[key] })).sort((a, b) => a.label.localeCompare(b.label)),
     movementPatterns: [...patterns].sort((a, b) => MOVEMENT_PATTERN_LABELS[a].localeCompare(MOVEMENT_PATTERN_LABELS[b])).map((key) => ({ key, label: MOVEMENT_PATTERN_LABELS[key] })),
     equipment: [
       ...(hasNoExternalEquipment ? [{ key: NO_EQUIPMENT_FILTER as typeof NO_EQUIPMENT_FILTER, label: "No external equipment" }] : []),
@@ -124,7 +140,7 @@ export function filterExerciseLibrary(
   filters: ExerciseLibraryFilters = {},
 ): ExerciseDefinition[] {
   const query = normalize(filters.query ?? "");
-  const muscleGroup = normalize(filters.muscleGroup ?? "");
+  const muscleGroup = filters.muscleGroup ?? "";
   const pattern = filters.movementPattern ?? "";
   const equipment = filters.equipment ?? "";
   const difficulty = filters.difficulty ?? "";
@@ -140,10 +156,10 @@ export function filterExerciseLibrary(
   return exercises.filter((exercise) => {
     if (!isExerciseAllowedForProfile(exercise, profile)) return false;
     if (category && category !== "all" && normalize(exercise.category) !== category) return false;
-    if (muscleGroup && !exercise.targetMuscles.some((muscle) => normalize(muscle) === muscleGroup)) return false;
+    if (muscleGroup && !exerciseMuscles(exercise).includes(muscleGroup as TargetMuscle)) return false;
     if (pattern && exercise.movementPattern !== pattern) return false;
     if (equipment === NO_EQUIPMENT_FILTER && (exercise.requiredEquipment ?? []).length > 0) return false;
-    if (equipment && equipment !== NO_EQUIPMENT_FILTER && !(exercise.requiredEquipment ?? []).includes(equipment as EquipmentKey)) return false;
+    if (equipment && equipment !== NO_EQUIPMENT_FILTER && !equipmentSets(exercise).some((set) => set.includes(equipment as EquipmentKey))) return false;
     if (difficulty && exercise.difficulty !== difficulty) return false;
     if (filters.area && !exerciseInArea(exercise, filters.area)) return false;
     if (!ranks) return true;
@@ -162,7 +178,8 @@ const SEARCH_ALIASES: Record<string, string[]> = {
 };
 
 /**
- * How well an exercise matches a search, best first: 0 the name, 1 its main muscle, 2 another muscle it works,
+ * How well an exercise matches a search, best first: 0 the name or a whole other name it goes by ("OHP", "military
+ * press"), 1 its main muscle or part of another name ("walk" in "farmers walk"), 2 another muscle it works,
  * its equipment or category, 3 its movement type, 4 only its how-to text. null = no match. Every word of a longer
  * search must match.
  */
@@ -175,14 +192,26 @@ export function exerciseSearchRank(exercise: ExerciseDefinition, rawQuery: strin
   const all = (text: string) => words.every((word) => has(text, word));
   const name = normalize(exercise.name);
   if (name.includes(query) || all(name)) return 0;
+  const aliases = (exercise.aliases ?? []).map(normalize);
+  // A whole other name, or a longer one inside the search ("military press form"); a one-word name ("walk") must be the
+  // whole search, so "farmers walk" doesn't also find the comfortable walk.
+  if (aliases.some((alias) => alias === query || (alias.includes(" ") && ` ${query} `.includes(` ${alias} `)))) return 0;
   const muscles = exercise.targetMuscles.map(normalize);
   if (muscles[0] && all(muscles[0])) return 1;
+  if (aliases.some((alias) => alias.includes(query) || all(alias))) return 1;
   const strong = normalize([exercise.name, exercise.equipment, exercise.category, ...exercise.targetMuscles].join(" "));
   if (all(strong)) return 2;
   const withPattern = normalize([strong, exercise.movementPattern ? MOVEMENT_PATTERN_LABELS[exercise.movementPattern] : ""].join(" "));
   if (all(withPattern)) return 3;
   const text = normalize([withPattern, ...exercise.instructions, ...exercise.cues, ...exercise.cautionNotes].join(" "));
   return all(text) ? 4 : null;
+}
+
+/** The exercise whose name, or one of whose other names, is exactly what was typed ("walk", "OHP"), if any. */
+export function exactExerciseMatch(exercises: ExerciseDefinition[], rawQuery: string): ExerciseDefinition | undefined {
+  const query = normalize(rawQuery);
+  if (!query) return undefined;
+  return exercises.find((exercise) => normalize(exercise.name) === query) ?? exercises.find((exercise) => (exercise.aliases ?? []).some((alias) => normalize(alias) === query));
 }
 
 /** Search results in order: best matches (name or main muscle) first, then the rest; A–Z within each. */
@@ -206,8 +235,9 @@ export function getSafeExerciseAlternatives(
   const fallback = source.fallbackId ? getExerciseDefinition(source.fallbackId) : undefined;
   const candidates = [
     ...(fallback ? [fallback] : []),
+    // Versions of the same movement first (R7), then the rest A–Z.
     ...EXERCISE_LIBRARY.filter((candidate) => candidate.id !== source.id && candidate.id !== fallback?.id)
-      .sort((a, b) => a.name.localeCompare(b.name)),
+      .sort((a, b) => Number(b.variationGroup === source.variationGroup && Boolean(source.variationGroup)) - Number(a.variationGroup === source.variationGroup && Boolean(source.variationGroup)) || a.name.localeCompare(b.name)),
   ];
   const seen = new Set<string>();
 

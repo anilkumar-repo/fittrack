@@ -9,11 +9,12 @@
 //   * before the workout starts, any exercise can be swapped; once it's started, only one with no sets done yet;
 //   * the original plan stays in the session's history (originalExercises), as with the planner's own changes.
 
-import { exerciseEquipmentIsAvailable, exerciseSearchRank, getSafeExerciseAlternatives, isExerciseAllowedForProfile, rankSearchResults } from "./exercise-library.ts";
+import { exactExerciseMatch, exerciseEquipmentIsAvailable, exerciseSearchRank, getSafeExerciseAlternatives, isExerciseAllowedForProfile, rankSearchResults } from "./exercise-library.ts";
 import { getExerciseDefinition } from "./templates.ts";
 import { EXERCISE_LIBRARY } from "./templates.ts";
 import type { ExerciseDefinition, Profile, WorkoutPlan, WorkoutSession } from "./types";
 import { createExerciseLog } from "./workout-tracking.ts";
+import { VARIATION_GROUPS } from "./exercise-taxonomy.ts";
 
 export type SwapBlock = "completed" | "sets-done" | "not-in-workout";
 
@@ -61,7 +62,9 @@ export function swapChoices(source: ExerciseDefinition, profile: Profile, workou
   const reference = getExerciseDefinition(source.id) ?? source;
   const muscleWords = (exercise: ExerciseDefinition) => new Set(exercise.targetMuscles.flatMap((muscle) => muscle.toLowerCase().split(/[\s/-]+/)).filter((word) => word.length > 3 && !["upper", "lower", "front", "rear", "side", "inner", "outer"].includes(word)));
   const sourceWords = muscleWords(reference);
-  const closeness = (exercise: ExerciseDefinition) => (exercise.movementPattern && exercise.movementPattern === reference.movementPattern ? 10 : 0)
+  // A version of the same movement (same variation group) ranks above everything else (R7).
+  const closeness = (exercise: ExerciseDefinition) => (reference.variationGroup && exercise.variationGroup === reference.variationGroup ? 20 : 0)
+    + (exercise.movementPattern && exercise.movementPattern === reference.movementPattern ? 10 : 0)
     + [...muscleWords(exercise)].filter((word) => sourceWords.has(word)).length * 2 + (exercise.targetMuscles[0] && reference.targetMuscles[0] && muscleWords({ ...exercise, targetMuscles: [exercise.targetMuscles[0]] }).has([...muscleWords({ ...reference, targetMuscles: [reference.targetMuscles[0]] })][0] ?? "") ? 1 : 0);
   const matching = (list: ExerciseDefinition[]) => rankSearchResults(list.filter((exercise) => exerciseSearchRank(exercise, query) !== null), query).map((item) => item.exercise);
   const others = query.trim()
@@ -122,6 +125,15 @@ export function findInWorkout(exercises: ExerciseDefinition[], text: string): Ex
 /** A library exercise named in text ("goblet squat"), preferring one this person can do, then the shortest name. */
 export function findNamedExercise(text: string, profile: Profile): ExerciseDefinition | null {
   if (!text.trim()) return null;
+  // An exact name or other name wins ("walk" is the comfortable walk, not the walking lunge). If the person can't do
+  // that one, the first version of the same movement they can do stands in ("bench" with only dumbbells → dumbbell bench).
+  const exact = exactExerciseMatch(EXERCISE_LIBRARY, text);
+  if (exact) {
+    if (canUseExercise(exact, profile) || !exact.variationGroup) return exact;
+    // Group order lists the closest versions first.
+    const stand = (VARIATION_GROUPS[exact.variationGroup] ?? []).map((id) => getExerciseDefinition(id)).find((item) => item && canUseExercise(item, profile));
+    return stand ?? exact;
+  }
   return EXERCISE_LIBRARY.filter((exercise) => exerciseSearchRank(exercise, text) === 0)
     .sort((a, b) => Number(canUseExercise(b, profile)) - Number(canUseExercise(a, profile)) || a.name.length - b.name.length)[0] ?? null;
 }

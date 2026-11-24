@@ -199,15 +199,16 @@ function createSupabaseWorkoutPort(client: SupabaseClient): WorkoutPersistencePo
         planned_reps: set.plannedReps,
         actual_reps: set.actualReps,
         load_kg: set.loadKg,
+        distance_km: set.distanceKm ?? null,
         completed: set.completed,
         is_extra: set.extra,
         set_type: set.kind ?? "normal",
         updated_at: new Date().toISOString(),
       }));
       let { error } = await client.from("workout_set_logs").upsert(rows, { onConflict: "exercise_log_id,set_number" });
-      // Before the Phase 4 migration there is no set_type column: save the sets without it.
+      // Before the Phase 4 / R5 migrations there is no set_type / distance_km column: save the sets without them.
       if (error && (error.code === "PGRST204" || error.code === "42703")) {
-        ({ error } = await client.from("workout_set_logs").upsert(rows.map(({ set_type: _type, ...rest }) => { void _type; return rest; }), { onConflict: "exercise_log_id,set_number" }));
+        ({ error } = await client.from("workout_set_logs").upsert(rows.map(({ set_type: _type, distance_km: _distance, ...rest }) => { void _type; void _distance; return rest; }), { onConflict: "exercise_log_id,set_number" }));
       }
       if (error) throw error;
     },
@@ -263,6 +264,7 @@ function createSupabaseWorkoutPort(client: SupabaseClient): WorkoutPersistencePo
             plannedReps: set.planned_reps === null ? null : Number(set.planned_reps),
             actualReps: set.actual_reps === null ? null : Number(set.actual_reps),
             loadKg: set.load_kg === null ? null : Number(set.load_kg),
+            ...(set.distance_km !== null && set.distance_km !== undefined ? { distanceKm: Number(set.distance_km) } : {}),
             completed: set.completed === true,
             extra: set.is_extra === true,
             ...(set.set_type === "warmup" || set.set_type === "drop" || set.set_type === "failure" ? { kind: set.set_type } : {}),

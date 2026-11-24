@@ -713,3 +713,20 @@ Then compare with 120b (60/60) before deciding the order.
 - **On-phone answers:** the new `SWAP_EXERCISE` intent (checked before "plan a workout") gives the same card.
 - **Tool selection:** swap/replace/customise wording offers `suggest_exercise_swap` + `get_workout_for_day`. Rozi now has 14 tools.
 - **Not yet in the 60-question benchmark.** Add swap questions in the next benchmark round.
+
+## 19. Exercise variations (R7, 2026-11-24)
+
+- **`get_exercise_info` now returns `variations`:** up to 6 other versions of the same movement, e.g. for dumbbell bench: barbell bench, incline dumbbell press, floor press and others.
+  - Each one has `youCanDoIt` (equipment and trainer rules) and `differences`.
+  - `differences` holds plain facts worked out from library data, in `src/lib/exercise-variations.ts`:
+    - a curated note where the data can't say it (`VARIATION_NOTES`, e.g. "palms facing you: more biceps");
+    - a different main muscle;
+    - equipment added or removed ("no bench needed");
+    - harder or easier;
+    - one side at a time;
+    - timed instead of reps;
+    - needs trainer approval.
+- **Why:** Rozi answers "what's the difference between X and Y" and "is there an easier version" from these facts instead of guessing. The tool description says so.
+- **Names:** "RDL", "military press", "pec deck fly" and similar resolve through the single alias list (R3). An exact name wins, and in swaps the closest version the person can do stands in (R6).
+- **Order of alternatives:** swaps and the exercise guide's alternatives put versions of the same movement first. The exercise's own fallback stays first.
+- **Not yet in the benchmark.** Add "difference between" and "easier version" questions next round.

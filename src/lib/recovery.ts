@@ -1,6 +1,7 @@
 import { shiftDate, weekDates, weekdayOf } from "./dates.ts";
 import { regionsForExercises, type BodyRegion } from "./figure.ts";
 import { calculatePersonalRecords, type PersonalRecord } from "./progress.ts";
+import { isLifting, trackingOf } from "./tracking.ts";
 import type { MissedReason, Profile, WorkoutSession } from "./types";
 
 /**
@@ -134,11 +135,16 @@ export function weeklyReport(profile: Pick<Profile, "trainingDays" | "trainingSt
   let volumeKg = 0;
   for (const session of done) {
     for (const hit of sessionGroupSets(session)) groupSets[hit.group] += hit.sets;
-    for (const log of session.exerciseLogs) for (const set of log.sets) {
-      if (!set.completed) continue;
-      sets += 1;
-      reps += set.actualReps ?? 0;
-      volumeKg += (set.actualReps ?? 0) * (set.loadKg ?? 0);
+    for (const log of session.exerciseLogs) {
+      // Seconds, minutes and rounds aren't reps: timed sets count as sets but add no reps or volume.
+      const lifting = isLifting(trackingOf(session.plan.exercises.find((exercise) => exercise.id === log.exerciseId) ?? log.exerciseId));
+      for (const set of log.sets) {
+        if (!set.completed) continue;
+        sets += 1;
+        if (!lifting) continue;
+        reps += set.actualReps ?? 0;
+        volumeKg += (set.actualReps ?? 0) * (set.loadKg ?? 0);
+      }
     }
   }
   const before = new Map(calculatePersonalRecords(real.filter((session) => session.status === "completed" && session.date < weekStart)).map((record) => [record.exerciseId, record]));

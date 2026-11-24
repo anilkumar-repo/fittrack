@@ -1,5 +1,7 @@
 import { loadOwnTrainingData } from "@/lib/supabase-repository";
 import { actionsEnabled, proposeAction } from "@/lib/rozi-ai/actions/action-service";
+import { goalProgressOutcome, goalsEnabled, loadLiveGoal, proposeGoal } from "@/lib/rozi-ai/planning/goal-service";
+import { listMemories, memoryEnabled } from "@/lib/rozi-ai/memory/memory-service";
 import { bearerToken, userClientFromToken } from "@/lib/rozi-ai/user-client";
 import { handleRoziChat, type RoziChatSession } from "@/lib/rozi-ai/handler";
 import { createRateLimiter, DEGRADED_RATE_LIMITS } from "@/lib/rozi-ai/rate-limit";
@@ -32,6 +34,14 @@ async function sessionFor(token: string): Promise<RoziChatSession | null> {
   return {
     // Level 3: Rozi may PROPOSE changes (recorded for the person to approve on a card) — only with ROZI_ACTIONS=on.
     ...(actionsEnabled() && service ? { actions: { propose: (ctx, args, conversationId) => proposeAction({ service, userId, ctx, conversationId }, args) } } : {}),
+    // Level 4: Rozi may PROPOSE a goal with a weekly plan (the person approves it once) — only with ROZI_GOALS=on.
+    ...(goalsEnabled() && service ? { goals: {
+      propose: (ctx, args, conversationId) => proposeGoal({ service, userId, ctx, conversationId }, args),
+      // Read through the person's own sign-in (owner-checked function), never the service role.
+      progress: async (ctx) => goalProgressOutcome(await loadLiveGoal(client, ctx.today).catch(() => null), ctx),
+    } } : {}),
+    // R10: the person's saved notes, read through their own sign-in (owner-checked function) — only with ROZI_MEMORY=on.
+    ...(memoryEnabled() ? { memory: { load: () => listMemories(client) } } : {}),
     userId,
     loadData: () => loadOwnTrainingData(client, userId),
     // Chat history and the daily limit, through the person's own sign-in (database functions check ownership).
