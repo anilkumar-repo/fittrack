@@ -31,7 +31,7 @@ export function focusRegions(focus: FocusArea | undefined): BodyRegion[] {
 }
 
 export const GYM_OPTIONS: Array<{ id: GymType; label: string; note: string; equipment: EquipmentKey[] }> = [
-  { id: "large_gym", label: "Large gym", note: "Free weights, machines, cables and cardio", equipment: ["dumbbells", "bench", "cable_machine", "leg_press", "leg_curl_machine", "rack", "mat", "barbell", "smith_machine", "gym_machines", "pullup_bar", "step", "back_extension", "cardio_machine"] },
+  { id: "large_gym", label: "Large gym", note: "Free weights, machines, cables and cardio", equipment: ["dumbbells", "bench", "cable_machine", "leg_press", "leg_curl_machine", "rack", "mat", "barbell", "smith_machine", "gym_machines", "pullup_bar", "step", "back_extension", "cardio_machine", "resistance_band", "kettlebell"] },
   { id: "small_gym", label: "Small gym", note: "Dumbbells, a bench, a rack and a few machines", equipment: ["dumbbells", "bench", "rack", "mat", "barbell", "gym_machines", "pullup_bar", "cardio_machine"] },
   { id: "home", label: "Home", note: "Dumbbells, a mat and a sturdy chair", equipment: ["dumbbells", "mat", "chair", "step"] },
   { id: "bodyweight", label: "Bodyweight only", note: "No equipment at all", equipment: [] },
@@ -49,8 +49,11 @@ export const DID_YOU_KNOW = [
 ];
 
 /** Picture of each piece of equipment (public/equipment/v1, built by scripts/build-art.mjs). */
+/** Equipment still waiting for its artwork (docs/IMAGE_PROMPTS.md, G1) uses a simple drawing until then. */
+const DRAWN_EQUIPMENT = new Set<EquipmentKey>(["resistance_band", "kettlebell"]);
+
 export function equipmentPicture(id: EquipmentKey): string {
-  return `/equipment/v1/${id}.webp`;
+  return `/equipment/v1/${id}.${DRAWN_EQUIPMENT.has(id) ? "svg" : "webp"}`;
 }
 
 /** Photo for each "where you train" choice (public/gyms/v1). */

@@ -272,5 +272,15 @@ Supersedes the order in "My recommendation" above. ✅ done · 🟡 partly done 
 | 15 | **Phase 9 — native app:** App Store / Play (Capacitor), Apple Health / Health Connect, Watch, Live Activity | 3–4 wk | small | Apple USD 99/yr, Google USD 25 |
 | 16 | **Phase 10 — nutrition + voice:** calorie/protein targets, food log, voice Rozi, form-check video | ~2 wk | yes | — |
 
+### Update 2026-11-23 — Milestone 0 audit
+The ChatGPT Level 4 + exercise library plan has been audited. Items 6–11 above are now ordered and refined in `docs/ROZI_LEVEL_4_REMAINING_ROADMAP.md`:
+- **R1–R2:** ship and verify Level 3, then the 20b re-test.
+- **R3–R6:** exercise library foundation (**R3 ✅ done 2026-11-23**), equipment keys (**R4 ✅ done 2026-11-23, migration applied**), time/distance tracking (**R5 ✅ done 2026-11-23, migration applied**), then +50 exercises (**R6 ✅ 2026-11-24: +50 exercises, 127 total**).
+- **R7:** variation intelligence (**✅ 2026-11-24**).
+- **R8–R11:** Level 4 goals (**R8 ✅ 2026-11-24, migration applied**), monitoring (**R9 ✅ 2026-11-24**), memory (**R10 ✅ 2026-11-24, migration applied**) and scheduled check-ins (**R11 ✅ 2026-11-24, migration applied**).
+- **R12–R13:** plateau detection and the final review.
+
+Exercise gaps are listed in `docs/EXERCISE_LIBRARY_COVERAGE.md`.
+
 ### Still to check on a real phone (from earlier work)
 Progress page cut on the right (iPhone Safari, #14) · notifications after deploy (#13) · "BMI asked twice" on a real new sign-up (#10) · haptics on iOS 18+.

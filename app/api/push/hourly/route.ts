@@ -2,6 +2,8 @@ import { dueNotifications, localDateAndHour, type PushMessage, type PushPrefs } 
 import { adminClient, hasCronSecret, sendPush } from "@/lib/push-server";
 import { comebackMessage, comebackSlot, waterNudge, waterTargetMl } from "@/lib/wellness";
 import { shiftDate, weekdayOf } from "@/lib/dates";
+import { checkinsEnabled } from "@/lib/rozi-ai/checkins/checkin-service";
+import { sendWeeklyCheckins } from "@/lib/rozi-ai/checkins/checkin-push";
 
 export const dynamic = "force-dynamic";
 
@@ -182,5 +184,7 @@ export async function POST(request: Request) {
     }
     if (Object.keys(updates).length) await db.from("push_subscriptions").update(updates).eq("id", String(sub.id));
   }
+  // R11: weekly check-ins for people who opted in (ROZI_CHECKINS=on). Counts only, no AI call.
+  if (checkinsEnabled()) sent += await sendWeeklyCheckins(db, { subs: subs as Row[], profileOf: profileOf as Map<string, Row>, statusOf, now });
   return Response.json({ sent, checked: subs.length });
 }

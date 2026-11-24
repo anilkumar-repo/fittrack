@@ -7,6 +7,7 @@ import type { RoziCard } from "./cards.ts";
 import { historyTurns, replyLanguageHint, roziSystemPrompt, type ChatLine } from "./prompt.ts";
 import { RoziAiError, type AiProvider, type AiTool, type AiTurn, type AiUsage } from "./provider.ts";
 import { ROZI_TOOLS, runRoziTool, type RoziContext, type ToolOutcome } from "./tools.ts";
+import { memoryPromptBlock } from "./memory/memory-service.ts";
 
 /** What the question was about (for history and analytics), from the first tool Rozi used. */
 export type RoziAiIntent =
@@ -81,7 +82,8 @@ export interface AskRoziInput {
 export async function askRozi({ provider, ctx, message, history = [], signal, tools: baseTools = ROZI_TOOLS, extraTools }: AskRoziInput): Promise<RoziAnswer> {
   const tools = extraTools ? [...baseTools, ...extraTools.tools.filter((tool) => !baseTools.some((item) => item.name === tool.name))] : baseTools;
   const extraNames = new Set(extraTools?.tools.map((tool) => tool.name) ?? []);
-  const system = roziSystemPrompt(ctx.today, ctx.hour, replyLanguageHint(message));
+  // The person's saved notes (R10) follow the rules, so advice respects them; none when memory is off.
+  const system = roziSystemPrompt(ctx.today, ctx.hour, replyLanguageHint(message)) + memoryPromptBlock(ctx.memories);
   const turns: AiTurn[] = [...historyTurns(history), { role: "user", parts: [{ kind: "text", text: message }] }];
   const usage: AiUsage = { inputTokens: 0, outputTokens: 0, totalTokens: 0 };
   const cards: RoziCard[] = [];

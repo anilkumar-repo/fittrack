@@ -1,5 +1,6 @@
 import { getExerciseDefinition, RULE_VERSION, TEMPLATE_VERSION } from "./templates.ts";
-import type { ExerciseDefinition, ExerciseLog, WorkoutPlan, WorkoutSession } from "./types";
+import { isLifting, trackingOf } from "./tracking.ts";
+import type { ExerciseDefinition, ExerciseLog, TrackingUnit, WorkoutPlan, WorkoutSession } from "./types";
 
 /** Phase 4 (2026-11-17): set types, strength estimates, plates, warm-ups, exercise history and your own routines. */
 export type SetKind = "normal" | "warmup" | "drop" | "failure";
@@ -66,7 +67,9 @@ export function warmUpSets(workKg: number, minKg = 0): Array<{ loadKg: number; r
 
 export interface ExerciseDay {
   date: string;
-  sets: Array<{ reps: number; loadKg: number | null; kind: SetKind; oneRepMax: number | null }>;
+  /** What `reps` counts for this exercise: reps, seconds, minutes or rounds. Only reps feed 1RM and volume. */
+  unit: TrackingUnit;
+  sets: Array<{ reps: number; loadKg: number | null; kind: SetKind; oneRepMax: number | null; distanceKm?: number }>;
   /** Heaviest working set that day. */
   best: { reps: number; loadKg: number } | null;
   volumeKg: number;
@@ -76,18 +79,23 @@ export interface ExerciseDay {
 /** Every saved session with completed sets of this exercise, newest first. Warm-ups are listed but never counted. */
 export function exerciseHistory(sessions: WorkoutSession[], exerciseId: string): ExerciseDay[] {
   const days: ExerciseDay[] = [];
+  const tracking = trackingOf(exerciseId);
+  const lifting = isLifting(tracking);
   for (const session of sessions) {
     if (session.sampleData || (session.status !== "completed" && session.status !== "in_progress")) continue;
     const log = session.exerciseLogs.find((item) => item.exerciseId === exerciseId);
     const sets = (log?.sets ?? []).filter((set) => set.completed && typeof set.actualReps === "number" && set.actualReps > 0)
-      .map((set) => ({ reps: set.actualReps as number, loadKg: set.loadKg, kind: setKind(set), oneRepMax: set.loadKg && setKind(set) !== "warmup" ? estimateOneRepMax(set.loadKg, set.actualReps as number) : null }));
+      .map((set) => ({ reps: set.actualReps as number, loadKg: set.loadKg, kind: setKind(set),
+        oneRepMax: lifting && set.loadKg && setKind(set) !== "warmup" ? estimateOneRepMax(set.loadKg, set.actualReps as number) : null,
+        ...(typeof set.distanceKm === "number" && set.distanceKm > 0 ? { distanceKm: set.distanceKm } : {}) }));
     if (!sets.length) continue;
     const working = sets.filter((set) => set.kind !== "warmup" && set.loadKg && set.loadKg > 0) as Array<{ reps: number; loadKg: number; kind: SetKind; oneRepMax: number | null }>;
     const best = working.reduce<{ reps: number; loadKg: number } | null>((top, set) => !top || set.loadKg > top.loadKg || (set.loadKg === top.loadKg && set.reps > top.reps) ? { reps: set.reps, loadKg: set.loadKg } : top, null);
     const oneRepMaxes = working.map((set) => set.oneRepMax).filter((value): value is number => value !== null);
     days.push({
-      date: session.date, sets, best,
-      volumeKg: Math.round(working.reduce((sum, set) => sum + set.reps * set.loadKg, 0)),
+      date: session.date, unit: tracking.unit, sets, best,
+      // kg × seconds isn't volume, so timed exercises (a weighted plank, a farmer carry) have none.
+      volumeKg: lifting ? Math.round(working.reduce((sum, set) => sum + set.reps * set.loadKg, 0)) : 0,
       oneRepMax: oneRepMaxes.length ? Math.max(...oneRepMaxes) : null,
     });
   }

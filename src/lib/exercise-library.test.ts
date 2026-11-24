@@ -6,6 +6,7 @@ import {
 } from "./templates.ts";
 import {
   BODY_AREAS,
+  equipmentSets,
   exerciseSearchRank,
   filterExerciseLibrary,
   getExerciseLibraryFilterOptions,
@@ -42,22 +43,23 @@ test("search matches exercise names, target muscles, and instruction text withou
 
 test("muscle, movement, equipment, and difficulty filters can be combined", () => {
   const results = filterExerciseLibrary(EXERCISE_LIBRARY, profile, {
-    muscleGroup: "Chest",
+    muscleGroup: "chest",
     movementPattern: "horizontal_push",
     equipment: NO_EQUIPMENT_FILTER,
     difficulty: "beginner",
   });
   assert.ok(results.length > 0);
-  assert.ok(results.every((item) => item.targetMuscles.includes("Chest")));
+  assert.ok(results.every((item) => item.muscles?.includes("chest")));
   assert.ok(results.every((item) => item.movementPattern === "horizontal_push"));
   assert.ok(results.every((item) => item.requiredEquipment?.length === 0));
   assert.ok(results.every((item) => item.difficulty === "beginner"));
-  assert.ok(filterExerciseLibrary(EXERCISE_LIBRARY, profile, { equipment: "dumbbells" }).every((item) => item.requiredEquipment?.includes("dumbbells")));
+  // An exercise is listed when dumbbells are its equipment or an accepted alternative (skull crusher: EZ bar or dumbbells).
+  assert.ok(filterExerciseLibrary(EXERCISE_LIBRARY, profile, { equipment: "dumbbells" }).every((item) => equipmentSets(item).some((set) => set.includes("dumbbells"))));
 });
 
 test("filter options follow exercises visible under the trainee's current restriction", () => {
   const options = getExerciseLibraryFilterOptions(EXERCISE_LIBRARY, profile);
-  assert.ok(options.muscleGroups.includes("Glutes"));
+  assert.ok(options.muscleGroups.some((item) => item.key === "glutes" && item.label === "Glutes"));
   assert.ok(options.movementPatterns.some((item) => item.key === "horizontal_pull"));
   assert.ok(options.equipment.some((item) => item.key === "dumbbells"));
   assert.ok(options.difficulties.includes("beginner"));

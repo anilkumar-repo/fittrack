@@ -467,7 +467,7 @@ Cute round fluffy coral-orange mascot named Rozi (#EF7D5C), soft fluffy fur (not
 Work through these one group at a time; send each group when it's ready and I'll cut them in (same pipeline as before:
 transparent background, trimmed, sized, versioned folder). File names matter — please keep them.
 
-### G1. Equipment (15) — onboarding "Check your equipment" and Settings → Your plan
+### G1. Equipment (17) — onboarding "Check your equipment" and Settings → Your plan
 
 > **`barbell.png` redone 2026-11-17** with a true transparent background. It's in the app.
 Today every row shows the same dumbbell icon. Save as `design/equipment-incoming/<file name>.png`.
@@ -495,6 +495,10 @@ transparent background, no people, no text, no logo, no floor, soft contact shad
 | `step.png` | An aerobic step platform with risers. |
 | `back_extension.png` | A 45-degree hyperextension bench. |
 | `cardio_machine.png` | A treadmill and an exercise bike side by side. |
+| `resistance_band.png` | **New 2026-11-23:** two looped resistance bands (one coral, one mint) and a long tube band with black foam handles. |
+| `kettlebell.png` | **New 2026-11-23:** a cast-iron kettlebell, matte charcoal, with a thin coral band around the body. |
+
+> The two new ones show a simple drawing (`public/equipment/v1/*.svg`) until the artwork arrives. When you add them, list them in `scripts/build-art.mjs` and remove them from `DRAWN_EQUIPMENT` in `src/lib/onboarding.ts`.
 
 ### G2. Where you train (4) — onboarding "Where do you work out?" and the program summary
 Save as `design/gyms-incoming/<file name>.png`, wide cards.

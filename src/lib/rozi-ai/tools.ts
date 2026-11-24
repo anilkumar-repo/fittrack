@@ -9,7 +9,7 @@
 import { BMI_BAND_LABEL, bmi, bmiBand } from "../body.ts";
 import { calculateAchievements } from "../achievements.ts";
 import { dateLabel, nextTrainingDate, shiftDate, weekDates, weekdayOf } from "../dates.ts";
-import { exerciseEquipmentIsAvailable, exerciseSearchRank, getExerciseReferenceInstructions, getSafeExerciseAlternatives, isDeadliftVariation, isExerciseAllowedForProfile } from "../exercise-library.ts";
+import { exactExerciseMatch, exerciseEquipmentIsAvailable, exerciseSearchRank, getExerciseReferenceInstructions, getSafeExerciseAlternatives, isDeadliftVariation, isExerciseAllowedForProfile } from "../exercise-library.ts";
 import { levelOf, levelTitle } from "../levels.ts";
 import { mobilityMove, routineMinutes, suggestionForDay } from "../mobility.ts";
 import { generateWorkout } from "../planner.ts";
@@ -25,6 +25,8 @@ import type { BodyWeightEntry, ExerciseDefinition, FitTrackState, Profile, Train
 import { swapCard, type RoziCard } from "./cards.ts";
 import { swapSuggestion, SWAP_BLOCK_TEXT } from "../exercise-swap.ts";
 import type { AiTool } from "./provider.ts";
+import { trackingOf, UNIT_WORD } from "../tracking.ts";
+import { variationsOf } from "../exercise-variations.ts";
 
 // ---------- What the tools work on ----------
 
@@ -37,6 +39,8 @@ export interface RoziContext {
   bodyWeightEntries: BodyWeightEntry[];
   trainerRuleSettings: TrainerRuleSettings;
   trainerRuleRevision: number;
+  /** Notes the person saved for Rozi to remember (R10, only with ROZI_MEMORY=on). Newest first. */
+  memories?: Array<{ kind: string; note: string }>;
   /** Today in the person's time zone (YYYY-MM-DD) and the hour there. */
   today: string;
   hour: number;
@@ -91,12 +95,6 @@ export function resolveDay(value: string, today: string): string {
   return today;
 }
 
-/** Short forms people type for exercises. */
-const EXERCISE_ALIASES: Record<string, string> = {
-  rdl: "romanian deadlift", ohp: "shoulder press", "overhead press": "shoulder press", "pull up": "pull-up", pullup: "pull-up",
-  "push up": "push-up", pushup: "push-up", "chin up": "pull-up", chinup: "pull-up", "lat pull down": "lat pulldown", curl: "biceps curl", "bicep curl": "biceps curl",
-};
-
 const COMMON_VERSION = /^(barbell|dumbbell|bodyweight)\b/i;
 const SPECIALTY_VERSION = /^(hack|smith|wrist|reverse|assisted|sliding|supported|incline|prone|ez-bar|landmine|straight-arm)\b/i;
 
@@ -110,7 +108,8 @@ export function findExercise(query: string, ctx?: Pick<RoziContext, "planningPro
   const cleaned = query.toLowerCase().replace(/[^a-z0-9\s-]/g, " ").replace(/\b(the|my|an?|exercises?|how to do|do)\b/g, " ").replace(/\s+/g, " ").trim();
   if (cleaned.length < 2) return null;
   const singular = cleaned.split(" ").map((word) => (word.length > 2 && word.endsWith("s") && !word.endsWith("ss") ? word.slice(0, -1) : word)).join(" ");
-  const tries = [...new Set([cleaned, singular].flatMap((value) => [EXERCISE_ALIASES[value] ?? value, value]))];
+  // Other names ("RDL", "OHP", "pull ups") are on the exercises themselves (exercise-taxonomy.ts) and match like a name.
+  const tries = [...new Set([cleaned, singular])];
   const logged = new Set(ctx?.sessions.flatMap((session) => session.exerciseLogs.filter((log) => log.sets.some((set) => set.completed)).map((log) => log.exerciseId)) ?? []);
   const score = (exercise: ExerciseDefinition) => [
     logged.has(exercise.id) ? 0 : 1,
@@ -119,7 +118,7 @@ export function findExercise(query: string, ctx?: Pick<RoziContext, "planningPro
     exercise.name.split(/\s+/).length,
   ];
   for (const attempt of tries) {
-    const exact = EXERCISE_LIBRARY.find((exercise) => exercise.name.toLowerCase() === attempt);
+    const exact = exactExerciseMatch(EXERCISE_LIBRARY, attempt);
     if (exact) return exact;
     const named = EXERCISE_LIBRARY.filter((exercise) => exerciseSearchRank(exercise, attempt) === 0).sort((a, b) => {
       const [x, y] = [score(a), score(b)];
@@ -290,6 +289,8 @@ function progress(ctx: RoziContext, args: Args): ToolOutcome {
     return {
       result: {
         exercise: exercise.name, logged: true, timesLogged: performance.records.length, history,
+        // Timed exercises store seconds (holds) or minutes (cardio) in the "reps" fields.
+        repsAreIn: UNIT_WORD[trackingOf(exercise).unit],
         bestSet: best ? { kg: best.loadKg, reps: best.reps, date: best.date } : null,
         heaviestChangeKg: loads.length >= 2 ? Math.round((loads[loads.length - 1] - loads[0]) * 10) / 10 : null,
         note: loads.length ? null : "Sets are logged without weights, so only sets and reps can be compared.",
@@ -399,6 +400,9 @@ function exerciseInfo(ctx: RoziContext, args: Args): ToolOutcome {
   const allowed = isExerciseAllowedForProfile(exercise, ctx.planningProfile);
   const equipmentReady = exerciseEquipmentIsAvailable(exercise, ctx.planningProfile);
   const alternatives = getSafeExerciseAlternatives(exercise, ctx.planningProfile).map((item) => ({ name: item.name, equipment: item.equipment }));
+  // Other versions of the same movement and how each differs, from library data (R7), so Rozi never guesses.
+  const variations = variationsOf(exercise, ctx.planningProfile).slice(0, 6)
+    .map((item) => ({ name: item.exercise.name, youCanDoIt: item.usable, differences: item.differences }));
   const performance = buildExercisePerformance(completedSessions(ctx)).find((item) => item.exerciseId === exercise.id);
   const last = performance?.records.at(-1);
   const steps = getExerciseReferenceInstructions(exercise).slice(0, 8);
@@ -409,7 +413,7 @@ function exerciseInfo(ctx: RoziContext, args: Args): ToolOutcome {
       steps, cues: exercise.cues.slice(0, 5), cautions: exercise.cautionNotes.slice(0, 4),
       allowedForYou: allowed, equipmentAvailable: equipmentReady,
       restrictedReason: !allowed && isDeadliftVariation(exercise) ? "Deadlift variations need your trainer's approval." : null,
-      alternatives, lastTime: last ? { date: last.date, heaviestKg: last.heaviestRecordedLoadKg, sets: last.completedSets, reps: last.completedReps } : null,
+      alternatives, variations, lastTime: last ? { date: last.date, heaviestKg: last.heaviestRecordedLoadKg, sets: last.completedSets, reps: last.completedReps, repsAreIn: UNIT_WORD[trackingOf(exercise).unit] } : null,
     },
     card: { type: "exercise", name: exercise.name, muscles: exercise.targetMuscles, equipment: exercise.equipment, steps, cues: exercise.cues.slice(0, 4), allowed: allowed && equipmentReady, alternatives },
   };
@@ -518,7 +522,7 @@ export const ROZI_TOOLS: AiTool[] = [
   { name: "get_streak", description: "The user's current and best workout streak.", parameters: { type: "object", properties: {} } },
   { name: "get_weekly_report", description: "Summary of a week: workouts done vs planned, sets, volume, new records, sets per muscle group, energy and soreness.", parameters: { type: "object", properties: { week: { type: "string", enum: ["this", "last"] } } } },
   { name: "get_body_stats", description: "Logged body weight history, height, BMI and the user's goal.", parameters: { type: "object", properties: {} } },
-  { name: "get_exercise_info", description: "How to do an exercise from RozFit's library (steps, cues, cautions, muscles), whether it's allowed with the user's equipment and rules, safe alternatives, and the user's last performance of it.", parameters: { type: "object", properties: { exercise: EXERCISE_ARG }, required: ["exercise"] } },
+  { name: "get_exercise_info", description: "How to do an exercise from RozFit's library (steps, cues, cautions, muscles), whether it's allowed with the user's equipment and rules, safe alternatives, other versions of the same movement (variations) with how each one differs and whether the user can do it, and the user's last performance of it. Use it for 'what's the difference between X and Y' and 'is there an easier/harder version'.", parameters: { type: "object", properties: { exercise: EXERCISE_ARG }, required: ["exercise"] } },
   { name: "get_mobility_suggestion", description: "A stretching/mobility routine suggestion for right now.", parameters: { type: "object", properties: {} } },
   { name: "get_achievements", description: "Badges earned and the closest ones to earn next.", parameters: { type: "object", properties: {} } },
   { name: "plan_custom_workout", description: "Builds a one-off workout for a body area and length, matched to the user's level, goal and equipment. It can be started or saved as a routine from the card.", parameters: { type: "object", properties: { area: { type: "string", enum: [...PLAN_AREAS] }, minutes: { type: "integer", description: "15–90. Optional." } }, required: ["area"] } },

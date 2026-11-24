@@ -1,5 +1,7 @@
 import type { EquipmentKey, ExerciseDefinition, MovementPattern, TrainingGoal, WorkoutFocus } from "./types";
 import { PROGRAM_EXERCISES } from "./program-exercises.ts";
+import { LIBRARY_ADDITIONS } from "./library-additions.ts";
+import { EQUIPMENT_ALTERNATIVES, EXERCISE_ALIASES, musclesFor, trackingFor, variationGroupOf } from "./exercise-taxonomy.ts";
 
 export const TEMPLATE_VERSION = "3.0.0";
 export const RULE_VERSION = "2026.11.12.1";
@@ -20,13 +22,15 @@ export const EQUIPMENT_OPTIONS: Array<{ id: EquipmentKey; label: string }> = [
   { id: "step", label: "Step platform" },
   { id: "back_extension", label: "Hyperextension bench" },
   { id: "cardio_machine", label: "Cardio machines" },
+  { id: "resistance_band", label: "Resistance bands" },
+  { id: "kettlebell", label: "Kettlebell" },
 ];
 
 type ExerciseSource = Omit<ExerciseDefinition, "movementPattern" | "requiredEquipment" | "fallbackId" | "instructions" | "targetMuscles" | "difficulty" | "cautionNotes" | "restriction">;
 
 const sourceLibrary: Record<string, ExerciseSource> = {
   goblet_squat: {
-    id: "goblet_squat", name: "Goblet squat", equipment: "Dumbbell", category: "strength", sets: 3, reps: "8–10", restSeconds: 90,
+    id: "goblet_squat", name: "Goblet squat", equipment: "Dumbbell or kettlebell", category: "strength", sets: 3, reps: "8–10", restSeconds: 90,
     cues: ["Hold the weight close to your chest.", "Sit between your hips and keep your whole foot grounded.", "Stand tall without rushing the last few inches."],
   },
   dumbbell_bench: {
@@ -82,7 +86,7 @@ const sourceLibrary: Record<string, ExerciseSource> = {
     cues: ["Set your upper back against the bench.", "Keep chin gently tucked as hips rise.", "Pause at the top without arching your back."],
   },
   farmer_carry: {
-    id: "farmer_carry", name: "Farmer carry", equipment: "Dumbbells", category: "conditioning", sets: 2, reps: "30 sec", restSeconds: 60,
+    id: "farmer_carry", name: "Farmer carry", equipment: "Dumbbells or kettlebells", category: "conditioning", sets: 2, reps: "30 sec", restSeconds: 60,
     cues: ["Choose a light load you can hold steadily.", "Walk tall with relaxed shoulders.", "Take short, quiet steps and keep breathing."],
   },
   dumbbell_rdl: {
@@ -286,22 +290,22 @@ const metadata: Record<string, ExerciseMetadata> = {
     cautions: ["Skip if lying face down is uncomfortable; keep the lift small and easy."],
   },
   march_in_place: {
-    pattern: "carry", targetMuscles: ["Calves", "Hip flexors"], difficulty: "beginner",
+    pattern: "cardio", targetMuscles: ["Heart and lungs", "Calves", "Hip flexors"], difficulty: "beginner",
     instructions: ["Stand near a sturdy support if you would like balance assistance.", "March slowly, lifting each foot only as high as comfortable.", "Keep steps quiet and breathe normally.", "Continue at an easy pace, then slow down before stopping."],
     cautions: ["Stop if you feel pain, dizziness, or unusual shortness of breath."],
   },
   comfortable_walk: {
-    pattern: "carry", targetMuscles: ["Legs", "Calves"], difficulty: "beginner",
+    pattern: "cardio", targetMuscles: ["Heart and lungs", "Quadriceps", "Calves"], difficulty: "beginner",
     instructions: ["Choose a familiar, level route or a clear indoor path.", "Walk at a pace that lets you speak comfortably.", "Keep steps natural and shoulders relaxed.", "Slow down or stop if the walk no longer feels comfortable."],
     cautions: ["Stop for pain, dizziness, or unusual shortness of breath."],
   },
   relaxed_breathing: {
-    pattern: "core", targetMuscles: ["No specific muscle focus"], difficulty: "beginner",
+    pattern: "recovery", targetMuscles: ["No specific muscle focus"], difficulty: "beginner",
     instructions: ["Sit or lie in a position that feels comfortable.", "Let your shoulders and jaw relax.", "Breathe gently at your own pace without forcing a deep breath.", "Stop whenever the exercise feels uncomfortable."],
   },
 };
 
-for (const item of PROGRAM_EXERCISES) {
+for (const item of [...PROGRAM_EXERCISES, ...LIBRARY_ADDITIONS]) {
   sourceLibrary[item.id] = { id: item.id, name: item.name, equipment: item.equipment, category: item.category, sets: item.sets, reps: item.reps, restSeconds: item.restSeconds, cues: item.cues };
   metadata[item.id] = { pattern: item.pattern, equipment: item.needs, fallback: item.fallback, targetMuscles: item.targetMuscles, difficulty: item.difficulty, instructions: item.instructions, cautions: item.cautions, restriction: item.restriction };
 }
@@ -314,11 +318,16 @@ function decorate(id: string): ExerciseDefinition {
     cues: [...exercise.cues],
     instructions: [...data.instructions],
     targetMuscles: [...data.targetMuscles],
+    muscles: musclesFor(data.targetMuscles),
+    aliases: [...(EXERCISE_ALIASES[id] ?? [])],
+    tracking: trackingFor(id, exercise.reps),
+    variationGroup: variationGroupOf(id),
     difficulty: data.difficulty,
     cautionNotes: [...(data.cautions ?? [])],
     restriction: data.restriction,
     movementPattern: data.pattern,
     requiredEquipment: [...(data.equipment ?? [])],
+    equipmentAlternatives: (EQUIPMENT_ALTERNATIVES[id] ?? []).map((set) => [...set]),
     fallbackId: data.fallback,
   };
 }

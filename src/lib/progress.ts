@@ -1,3 +1,4 @@
+import { isLifting, trackingOf } from "./tracking.ts";
 import type { BodyWeightEntry, ExerciseLog, Profile, WorkoutSession } from "./types.ts";
 
 export type RecordedSessionStatus = "completed" | "partial" | "skipped" | "planned" | "in_progress";
@@ -202,6 +203,8 @@ export function buildExercisePerformance(sessions: WorkoutSession[]): ExercisePe
 export function calculatePersonalRecords(sessions: WorkoutSession[]): PersonalRecord[] {
   const records = new Map<string, PersonalRecord>();
   for (const performance of buildExercisePerformance(sessions)) {
+    // Load records are for rep sets; a weighted plank or farmer carry (timed) isn't comparable as "kg × reps".
+    if (!isLifting(trackingOf(performance.exerciseId))) continue;
     for (const record of performance.records) {
       for (const set of record.sets) {
         const reps = set.actualReps;

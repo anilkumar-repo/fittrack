@@ -381,7 +381,7 @@ export function Welcome() {
             return <button key={item.id} type="button" role="switch" aria-checked={on} className="equip-row" onClick={() => {
               setKnowsEquipment(true);
               setEquipment((current) => current.includes(item.id) ? current.filter((value) => value !== item.id) : [...current, item.id]);
-            }}><span className="equip-pic"><Image src={equipmentPicture(item.id)} alt="" width={96} height={96} sizes="56px" loading="eager" /></span><span>{item.label}</span><span className={`switch ${on ? "on" : ""}`} aria-hidden="true" /></button>;
+            }}><span className="equip-pic"><Image src={equipmentPicture(item.id)} unoptimized={equipmentPicture(item.id).endsWith(".svg")} alt="" width={96} height={96} sizes="56px" loading="eager" /></span><span>{item.label}</span><span className={`switch ${on ? "on" : ""}`} aria-hidden="true" /></button>;
           })}</div>
           <p className="onb-hint">{knowsEquipment && equipment.length ? `${equipment.length} switched on` : "Nothing on: every workout uses bodyweight moves."}</p>
         </>}

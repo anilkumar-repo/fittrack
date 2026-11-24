@@ -6,6 +6,8 @@
 import type { RoziPlan } from "../rozi-plan.ts";
 import type { SwapSuggestion } from "../exercise-swap.ts";
 import type { ActionStatus, ActionSummary, ActionType } from "./actions/action-types.ts";
+import type { GoalKind, GoalStatus, GoalStep } from "./planning/goal-types.ts";
+import type { GoalState, WeekProgress } from "./planning/plan-monitor.ts";
 
 export interface CardLink { href: string; label: string }
 
@@ -72,6 +74,21 @@ export type RoziCard =
   | {
     type: "action";
     action: { id: string; type: ActionType; status: ActionStatus; summary: ActionSummary; payloadHash: string; expiresAt: string };
+  }
+  /**
+   * A goal with a weekly plan Rozi proposed (Level 4, R8). Approve / Not now act on THIS goal id and plan hash only;
+   * the database refuses a different plan.
+   */
+  | {
+    type: "goal";
+    goal: { id: string; kind: GoalKind; title: string; reason: string; status: GoalStatus; startDate: string; endDate: string; steps: GoalStep[]; planHash: string; expiresAt: string };
+  }
+  /** A note Rozi suggests remembering (R10). Saved only when the person taps Save (their own sign-in). */
+  | { type: "memory"; memory: { kind: "injury" | "preference" | "schedule" | "other"; note: string } }
+  /** How a goal is going, week by week (Level 4, R9). Read-only. */
+  | {
+    type: "goal_progress";
+    progress: { title: string; state: GoalState; summary: string; currentWeek: number; endDate: string; weeks: WeekProgress[] };
   };
 
 /** The swap card for a swap suggestion (shared by Rozi AI's tool and Rozi's on-phone answer). */
