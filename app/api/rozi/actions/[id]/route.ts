@@ -13,7 +13,7 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
  *   { op: "complete", ok, error? } → the app reports it applied the change; the server re-reads the person's data,
  *                              checks it, and records completed or failed.
  */
-export async function POST(request: Request, ctx: RouteContext<"/api/rozi/actions/[id]">) {
+export async function POST(request: Request, ctx: { params: Promise<{ id: string }> }) {
   const headers = { "Cache-Control": "no-store" };
   if (!actionsEnabled()) return Response.json({ ok: false, message: "Rozi actions are off." }, { status: 404, headers });
   const { id } = await ctx.params;

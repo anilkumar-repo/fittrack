@@ -16,9 +16,9 @@ Legend: ✅ done · 🟡 partly done · ⬜ not started. "DB" = needs a migratio
 | M5 Rozi exercise intelligence | 🟡 | Equipment-aware swaps, muscle filters, `plan_custom_workout` and home/gym plans already exist. What's left is variation and alias understanding. |
 | M6 Level 4 planning | ⬜ | Re-scoped below (goal plan as a sequence of weeks, not a generic task graph). |
 | M7 Level 4 execution | ⬜ | |
-| M8 Advanced fitness intelligence | 🟡 | Weekly report, progress, recovery and missed-day reshuffle exist. Missing: plateau detection and post-workout recap. |
+| M8 Advanced fitness intelligence | ✅ | Weekly report, progress, recovery and missed-day reshuffle, plus plateau detection, post-workout recap and plain "why this workout" (R12, 2026-11-24). |
 | M9 Personalization + scheduling | ⬜ | `pg_cron` push exists. |
-| M10 Final validation | ⬜ | |
+| M10 Final validation | 🟡 | Review done 2026-11-24 (R13). Lock migration applied. Waiting: preview deploy and staging pass. |
 
 ## 2. Remaining work, in the order I recommend
 
@@ -35,8 +35,8 @@ Legend: ✅ done · 🟡 partly done · ⬜ not started. "DB" = needs a migratio
 | **R9** ✅ 2026-11-24 (migration applied; `ROZI_GOALS` off until deploy) | **Level 4: monitoring and replanning.** A weekly check compares progress with the plan ("2 of 3 workouts, weight −0.4 kg"). If you're behind, Rozi proposes a change (a card) and never changes the plan on its own. Pause / resume / cancel a plan. | 1 wk | small | — |
 | **R10** ✅ 2026-11-24, migration applied (flag `ROZI_MEMORY`) | **Memory you control.** "Rozi remembers" list: only things the profile doesn't already hold ("knee hurts on lunges", "prefers mornings"). Rozi asks before saving anything. You can view, edit and delete. | 3–4 d | `rozi_memory` | "Yes, apply it" |
 | **R11** ✅ 2026-11-24, migration applied (flag `ROZI_CHECKINS`) | **Scheduled check-ins** (opt-in). `pg_cron` builds the weekly summary from your data **without an AI call** (free and private); the AI runs only when you open it. | 3 d | small | consent wording OK |
-| **R12** | **Advanced intelligence:** plateau detection (no e1RM gain for 3+ weeks → suggest a variation from R6), post-workout recap, "why this workout". | 1 wk | — | — |
-| **R13** | **Security review + final validation** (M10): RLS and advisors on every new table, race tests, prompt-injection tests on goals and memory, both providers, latency and cost check, staging pass. | 3–4 d | — | deploy approval |
+| **R12** ✅ built 2026-11-24 (no migration) | **Advanced intelligence:** plateau detection (no e1RM gain for 3+ weeks → suggest a variation from R6), post-workout recap, "why this workout". | 1 wk | — | — |
+| **R13** 🟡 review done 2026-11-24 (`docs/ROZI_R13_SECURITY_REVIEW.md`); lock migration applied; staging pass waiting | **Security review + final validation** (M10): RLS and advisors on every new table, race tests, prompt-injection tests on goals and memory, both providers, latency and cost check, staging pass. | 3–4 d | — | deploy approval |
 
 ## 3. Where I disagree with the ChatGPT plan (and why)
 
