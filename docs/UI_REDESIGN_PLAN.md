@@ -186,3 +186,21 @@ Your words: "are we skipping 21 questions and making 6 questions? if yes dont do
   - the progress bar;
   - dark-theme readability.
 - No question is added, removed, merged or moved later.
+
+## Follow-up: phone review (2026-11-24)
+
+After the 9 phases, a real-iPhone pass fixed:
+- the Today card overlap (split title, smaller Rozi, streak above the button);
+- Progress folds (records, history) and the even body weight form;
+- the page-switch flicker (the fade-up animation is removed);
+- Settings sections opening mid-page;
+- the area beside the dock;
+- a lighter orange.
+
+The details are in `docs/SETUP_AND_HISTORY.md`.
+
+A second pass (2026-11-25) fixed:
+- the water card (a glass orb with waves, the undo button tidied);
+- tab bars sliding like the dock;
+- the motion when opening and closing an exercise;
+- text-link arrows.
