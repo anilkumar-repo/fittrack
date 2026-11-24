@@ -129,8 +129,9 @@ export function roziMoment({ streak, todaySession, hour, name, wins, why }: Mome
     }
     return { mood: "grumpy", title: "Hmph. We missed one.", message: "It happens. Your next workout starts a fresh streak, and I’ll be here." };
   }
-  if (streak.todayPlanned && !streak.todayDone && hour >= 17) {
-    return { mood: "streak-risk", title: "Still time today!", message: run > 0 ? `Keep your ${inARow} going. Even a short session counts.` : "A short session tonight still counts." };
+  // Only a real streak can be "at risk". With nothing to lose yet (day 1), Rozi is simply ready to train: never worried.
+  if (streak.todayPlanned && !streak.todayDone && hour >= 17 && run > 0) {
+    return { mood: "streak-risk", title: "Still time today!", message: `Keep your ${inARow} going. Even a short session counts.` };
   }
   const period = timeOfDay(hour);
   if (!streak.todayPlanned) {

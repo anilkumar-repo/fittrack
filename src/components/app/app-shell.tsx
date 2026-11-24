@@ -11,11 +11,10 @@ import { DockScrub } from "./dock-scrub";
 import { ProfileGate } from "./profile-gate";
 import { Avatar } from "./avatar";
 import { unexplainedMissedDays } from "@/lib/missed-days";
-import { AlertCircle, BookOpen, ChartColumn, Check, ChevronUp, CloudOff, Dumbbell, House, MessageCircle, Settings, UserRound, Users, X, type LucideIcon } from "lucide-react";
+import { AlertCircle, ArrowLeft, ChartColumn, Check, ChevronUp, CloudOff, Dumbbell, House, MessageCircle, UserRound, Users, X, type LucideIcon } from "lucide-react";
 import { noticeDuration, noticeIsProblem } from "@/lib/notice";
 import { usePathname, useRouter } from "next/navigation";
 import { dateLabel, weekdayOf } from "@/lib/dates";
-import { RULE_VERSION } from "@/lib/templates";
 import { hasSupabaseConfig } from "@/lib/supabase-browser";
 import { sessionForDate, useFitTrack } from "./fit-track-provider";
 import { START_TODAY_KEY, WANT_PUSH_KEY, Welcome } from "./welcome";
@@ -25,19 +24,54 @@ import { InstallHint } from "./install-hint";
 import { RoziLoader } from "./rozi-loader";
 import { useChats } from "@/components/screens/chats-screen";
 
-const navItems: Array<{ href: string; label: string; shortLabel: string; icon: LucideIcon; title: string }> = [
-  { href: "/", label: "Home", shortLabel: "Home", icon: House, title: "Home" },
-  { href: "/today", label: "Train", shortLabel: "Train", icon: Dumbbell, title: "Train" },
-  { href: "/progress", label: "Progress", shortLabel: "Progress", icon: ChartColumn, title: "Your progress" },
-  { href: "/friends", label: "Friends", shortLabel: "Friends", icon: Users, title: "Friends" },
-  { href: "/library", label: "Library", shortLabel: "Library", icon: BookOpen, title: "Exercise library" },
-  { href: "/profile", label: "Profile", shortLabel: "Profile", icon: UserRound, title: "Your profile" },
-  { href: "/rozi", label: "Ask Rozi", shortLabel: "Rozi", icon: MessageCircle, title: "Ask Rozi" },
-  { href: "/settings", label: "Settings", shortLabel: "Settings", icon: Settings, title: "Settings" },
+/**
+ * The four main tabs (docs/DESIGN.md §7): Today · Workouts · (Rozi) · Progress · Together. Each tab also lights up for
+ * the pages that belong to it, so you always know where you are. Profile opens from your picture in the top bar.
+ */
+interface Tab { href: string; label: string; icon: LucideIcon; pages: string[] }
+const TABS: Tab[] = [
+  { href: "/", label: "Today", icon: House, pages: ["/", "/today"] },
+  { href: "/library", label: "Workouts", icon: Dumbbell, pages: ["/library", "/routines", "/mobility"] },
+  { href: "/progress", label: "Progress", icon: ChartColumn, pages: ["/progress", "/streak", "/recovery", "/report"] },
+  { href: "/friends", label: "Together", icon: Users, pages: ["/friends", "/chats", "/feed", "/discover", "/buddies", "/people", "/clients", "/join"] },
 ];
 
-/** The phone dock: Library moves into Profile, Settings into Profile's menu, and Rozi takes the round corner button. */
-const DOCK_HREFS = ["/", "/today", "/progress", "/friends", "/profile"];
+function tabFor(pathname: string | null): Tab | undefined {
+  const path = pathname ?? "/";
+  return TABS.find((tab) => tab.pages.some((page) => page === "/" ? path === "/" || path === "/today" : path === page || path.startsWith(`${page}/`)));
+}
+
+/** Page titles in the top bar. */
+const TITLES: Record<string, string> = {
+  "/": "Today", "/today": "Train", "/library": "Workouts", "/routines": "My routines", "/mobility": "Stretch & mobility",
+  "/progress": "Your progress", "/streak": "Your streak", "/recovery": "Recovery", "/report": "Your week",
+  "/friends": "Together", "/chats": "Chats", "/feed": "Feed", "/discover": "Find friends", "/buddies": "Train together", "/clients": "My clients",
+  "/profile": "Your profile", "/settings": "Settings", "/rozi": "Ask Rozi", "/install": "Install the app", "/sign-in": "Sign in",
+};
+function titleFor(pathname: string | null): string {
+  const path = pathname ?? "/";
+  if (TITLES[path]) return TITLES[path];
+  if (path.startsWith("/people/")) return "Profile";
+  if (path.startsWith("/chats/")) return "Chat";
+  if (path.startsWith("/join/")) return "Add your trainer";
+  return "RozFit";
+}
+
+/** Pages one level down get a back button to where they belong (not browser history, so it's predictable). */
+const PARENTS: Record<string, string> = {
+  "/today": "/", "/routines": "/library", "/mobility": "/library",
+  "/streak": "/progress", "/recovery": "/progress", "/report": "/progress",
+  // Feed, Chats and Train together are tabs of Together (Phase 6), so they need no back button.
+  "/discover": "/friends", "/clients": "/friends",
+  "/settings": "/profile", "/install": "/settings",
+};
+function parentFor(pathname: string | null): string | null {
+  const path = pathname ?? "/";
+  if (PARENTS[path]) return PARENTS[path];
+  if (path.startsWith("/chats/")) return "/chats";
+  if (path.startsWith("/people/")) return "/friends";
+  return null;
+}
 
 function Icon({ children }: { children: React.ReactNode }) {
   return <span className="nav-icon" aria-hidden="true">{children}</span>;
@@ -113,8 +147,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   if (!state.onboarded) return <><Welcome /><InstallHint /></>;
   const missedDays = unexplainedMissedDays(state.profile, state.sessions, currentDate);
 
-  const active = navItems.find((item) => item.href === pathname);
-  const pageTitle = active?.title ?? (pathname === "/sign-in" ? "Sign in" : pathname === "/streak" ? "Your streak" : pathname === "/install" ? "Install the app" : pathname === "/mobility" ? "Stretch & mobility" : pathname === "/recovery" ? "Recovery" : pathname === "/report" ? "Your week" : pathname === "/routines" ? "My routines" : pathname === "/clients" ? "My clients" : pathname === "/buddies" ? "Train together" : pathname === "/chats" ? "Chats" : pathname === "/feed" ? "Feed" : pathname === "/discover" ? "Find friends" : pathname?.startsWith("/people/") ? "Profile" : pathname?.startsWith("/chats/") ? "Chat" : pathname?.startsWith("/join/") ? "Add your trainer" : "RozFit");
+  const activeTab = tabFor(pathname);
+  const pageTitle = titleFor(pathname);
+  const parent = parentFor(pathname);
+  const onProfile = pathname === "/profile" || pathname === "/settings";
   const dueToday = state.profile.trainingDays.includes(weekdayOf(currentDate)) || Boolean(sessionForDate(state, currentDate));
   const saveLabel = isDemo
     ? accountLoading ? "Loading your account…" : "Saved on this device"
@@ -135,11 +171,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </Link>
         <div className="side-caption">YOUR SPACE</div>
         <nav aria-label="Main navigation" className="side-nav">
-          {navItems.map((item) => (
-            <Link key={item.href} href={item.href} className={`nav-link ${active?.href === item.href ? "active" : ""}`} aria-current={active?.href === item.href ? "page" : undefined}>
-              <Icon><item.icon aria-hidden="true" strokeWidth={2} /></Icon><span>{item.label}</span>{item.href === "/today" && dueToday && <span className="nav-dot" />}
+          {TABS.map((tab) => (
+            <Link key={tab.href} href={tab.href} className={`nav-link ${activeTab?.href === tab.href ? "active" : ""}`} aria-current={activeTab?.href === tab.href ? "page" : undefined}>
+              <Icon><tab.icon aria-hidden="true" strokeWidth={2} /></Icon><span>{tab.label}</span>{tab.href === "/" && dueToday && <span className="nav-dot" />}{tab.href === "/friends" && unreadChats > 0 && <span className="nav-dot" />}
             </Link>
           ))}
+          <Link href="/rozi" className={`nav-link ${pathname === "/rozi" ? "active" : ""}`} aria-current={pathname === "/rozi" ? "page" : undefined}><Icon><MessageCircle aria-hidden="true" strokeWidth={2} /></Icon><span>Ask Rozi</span></Link>
+          <Link href="/profile" className={`nav-link ${onProfile ? "active" : ""}`} aria-current={onProfile ? "page" : undefined}><Icon><UserRound aria-hidden="true" strokeWidth={2} /></Icon><span>Profile</span></Link>
         </nav>
         <div className="sidebar-bottom">
           <div className="support-card"><span className="support-icon">✦</span><strong>Small steps count</strong><p>Your plan adapts as you build a steady routine.</p></div>
@@ -154,8 +192,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <main className="main-area">
         {/* Home has no top bar: its hero carries the picture, greeting and date. */}
         {pathname === "/" ? <h1 className="sr-only">Home</h1> : <header className="topbar">
-          <div><span className="eyebrow">{dateLabel(currentDate, { month: "long", day: "numeric", year: "numeric" })}</span><h1>{pageTitle}</h1></div>
-          <div className="topbar-actions">{!isDemo && (savingSession || saveError) && <span className={`save-state ${saveError ? "sync-error" : "connected"}`}><span className="save-dot" />{saveLabel}</span>}{isDemo && hasSupabaseConfig() && pathname !== "/sign-in" && <Link className="button button-subtle topbar-sign-in" href="/sign-in">Sign in</Link>}{!isDemo && <Link className={`topbar-chat ${pathname?.startsWith("/chats") ? "active" : ""}`} href="/chats" aria-label={unreadChats ? `Chats, ${unreadChats} unread` : "Chats"}><MessageCircle aria-hidden="true" />{unreadChats > 0 && <span className="topbar-chat-badge" aria-hidden="true">{unreadChats > 9 ? "9+" : unreadChats}</span>}</Link>}<Link className="round-avatar has-picture" aria-label="Open your profile" href="/profile"><Avatar value={state.profile.avatar} name={state.profile.displayName} size={36} /></Link></div>
+          {parent && <Link className="icon-button topbar-back" href={parent} aria-label="Back"><ArrowLeft aria-hidden="true" /></Link>}<div className="topbar-text"><span className="eyebrow">{dateLabel(currentDate, { month: "long", day: "numeric", year: "numeric" })}</span><h1>{pageTitle}</h1></div>
+          <div className="topbar-actions">{!isDemo && (savingSession || saveError) && <span className={`save-state ${saveError ? "sync-error" : "connected"}`}><span className="save-dot" />{saveLabel}</span>}{isDemo && hasSupabaseConfig() && pathname !== "/sign-in" && <Link className="button button-subtle topbar-sign-in" href="/sign-in">Sign in</Link>}{!onProfile && <Link className="round-avatar has-picture" aria-label="Open your profile" href="/profile"><Avatar value={state.profile.avatar} name={state.profile.displayName} size={36} /></Link>}</div>
         </header>}
 
         {/* Messages float at the top as small glass toasts; information closes by itself, sync errors stay. */}
@@ -175,22 +213,32 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
         {children}
 
-        <footer className="app-footer"><span>RozFit · Small steps, every day</span><span>Rules {RULE_VERSION}</span></footer>
       </main>
 
       {/* During a workout the dock slides away; this handle (shown only then) brings it back, or tucks it away again. */}
       <button type="button" className="dock-handle" aria-label="Show or hide the navigation" onClick={() => document.body.classList.toggle("dock-peek")}><ChevronUp aria-hidden="true" /></button>
-      {/* Phone navigation: a floating glass pill for the main pages, and a round glass button for Settings. */}
-      <nav className="mobile-nav" aria-label="Mobile navigation" onClick={() => document.body.classList.remove("dock-peek")}>
-        <div className="dock-pill">{navItems.filter((item) => DOCK_HREFS.includes(item.href)).map((item) => {
-          const on = active?.href === item.href || (item.href === "/profile" && (pathname === "/settings" || pathname === "/library")) || (item.href === "/friends" && (pathname?.startsWith("/chats") === true || pathname === "/buddies" || pathname === "/feed" || pathname === "/discover" || pathname?.startsWith("/people/") === true));
-          return <Link key={item.href} href={item.href} className={on ? "active" : ""} aria-label={item.label} aria-current={on ? "page" : undefined}><Icon>{item.href === "/profile" ? <Avatar value={state.profile.avatar} name={state.profile.displayName} size={24} className="dock-avatar" /> : <item.icon aria-hidden="true" strokeWidth={1.8} />}</Icon><small>{item.shortLabel}</small>{item.href === "/today" && dueToday && active?.href !== "/today" && <span className="dock-dot" aria-hidden="true" />}{item.href === "/friends" && unreadChats > 0 && <span className="dock-dot chat" aria-hidden="true" />}</Link>;
-        })}</div>
-        <Link href="/rozi" className={`dock-round dock-rozi ${active?.href === "/rozi" ? "active" : ""}`} aria-label="Ask Rozi" aria-current={active?.href === "/rozi" ? "page" : undefined}>
-          {/* eslint-disable-next-line @next/next/no-img-element -- small static Rozi face */}
-          <img src="/rozi/faces/v1/happy.webp" alt="" width={52} height={52} />
-        </Link>
+      {/* Phone dock (docs/DESIGN.md §7): Today · Workouts · Rozi (raised, centre) · Progress · Together. It hides in Rozi
+          chat and during a workout, and shrinks while you scroll down (see "dock-compact"). */}
+      <nav className="mobile-nav" aria-label="Main" onClick={() => document.body.classList.remove("dock-peek")}>
+        <div className="dock-pill">
+          {TABS.slice(0, 2).map((tab) => <DockLink key={tab.href} tab={tab} on={activeTab?.href === tab.href} dot={tab.href === "/" && dueToday && pathname !== "/today"} />)}
+          <Link href="/rozi" className={`dock-rozi dock-center ${pathname === "/rozi" ? "active" : ""}`} aria-label="Ask Rozi" aria-current={pathname === "/rozi" ? "page" : undefined}>
+            {/* eslint-disable-next-line @next/next/no-img-element -- small static Rozi face */}
+            <img src="/rozi/faces/v1/happy.webp" alt="" width={52} height={52} />
+          </Link>
+          {TABS.slice(2).map((tab) => <DockLink key={tab.href} tab={tab} on={activeTab?.href === tab.href} dot={tab.href === "/friends" && unreadChats > 0} chat />)}
+        </div>
       </nav>
     </div>
+  );
+}
+
+function DockLink({ tab, on, dot, chat = false }: { tab: Tab; on: boolean; dot: boolean; chat?: boolean }) {
+  return (
+    <Link href={tab.href} className={on ? "active" : ""} aria-label={tab.label} aria-current={on ? "page" : undefined}>
+      <span className="nav-icon" aria-hidden="true"><tab.icon aria-hidden="true" strokeWidth={1.8} /></span>
+      <small>{tab.label}</small>
+      {dot && <span className={`dock-dot${chat ? " chat" : ""}`} aria-hidden="true" />}
+    </Link>
   );
 }

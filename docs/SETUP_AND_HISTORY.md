@@ -2301,3 +2301,341 @@ After "Start R13". The full report is `docs/ROZI_R13_SECURITY_REVIEW.md`. Opus d
 **Fix:** the three routes now type their second argument directly as `{ params: Promise<{ id: string }> }`, so the type check doesn't depend on generated files. Behaviour is unchanged.
 
 **Checked:** the type check passes with `.next/` moved aside (as in CI), the build passes, and lint on `app/api/rozi` is clean.
+
+### 2026-11-24 — UI review and redesign plan (plan only; no app code changed)
+
+After "review complete UI design … design the plan complete UI step by step". The full plan is `docs/UI_REDESIGN_PLAN.md`.
+
+**How:** I walked every main screen at 375 px (light and dark) as a new user, measured `app/globals.css`, and read impeccable.style, getdesign.md and ui.watermelon.sh. Opus did the review; a web-fetch helper summarised the three sites.
+
+**Main findings:**
+- **No single design system:** 35 font sizes, 28 radii, about 370 raw colours, 99 shadows and 72 `!important` overrides.
+- **Repeated entry points:** the avatar is in both the top bar and the dock; the Profile menu repeats the dock; progress and social are each split across 5–6 pages.
+- **Weak hierarchy:** Start workout is below the fold on Home; Train's first screen is four body pictures.
+- **A long first run:** install sheet, 3 slides, 21 questions and a 7-card tour.
+
+**Plan:** 9 phases (foundation, navigation, Today, workout mode, Progress, Together, Workouts and Rozi, onboarding, polish), each shippable on its own with screenshots and checks.
+
+**Waiting for you:** the 3 decisions in §7 of the plan.
+
+### 2026-11-24 — Redesign mockup (clickable; no app code changed)
+
+After "Yes, mockup first". A private, clickable phone mockup: https://claude.ai/artifact/7cTxGV7mMkhBzr4u7rhRi2
+
+**What it shows:**
+- the new Today screen (one workout card, one Start button above the fold, the week shown once, a compact recovery row);
+- the new dock: Today · Workouts · Rozi · Progress · Together;
+- the You sheet opened from the avatar;
+- empty states for Workouts, Progress and Together;
+- the Rozi chat;
+- the focused workout mode (one move at a time, tick a set to start a 60-second rest ring) and the finish recap.
+
+It uses the Phase 1 tokens from `docs/UI_REDESIGN_PLAN.md` and Rozi's real face images. Opus built it.
+
+### 2026-11-24 — UI redesign Phase 1: foundation (design system; dark premium default)
+
+After "Start Phase 1". The source of truth is now `docs/DESIGN.md`; the plan is `docs/UI_REDESIGN_PLAN.md`.
+
+**Who did what:**
+- **Opus:** `DESIGN.md`, the tokens and the dark palette, the font-size, radius and colour migration, the guard test, the dark-mode fixes and the browser check.
+- **Sonnet (builder):** the UI kit components and their CSS.
+
+**What changed:**
+- **Tokens** (top of `app/globals.css`):
+  - 11 text sizes (`--text-2xs` … `--text-5xl`) and 7 spacing steps (`--space-1` … `--space-7`);
+  - 6 radii (`--radius-xs` … `--radius-pill`);
+  - 3 shadows and motion timings (`--dur-fast/med/slow`, `--ease`);
+  - water colours (`--water`, `--water-soft`).
+- **Dark premium is the default** for anyone who hasn't chosen a theme:
+  - ink `#0B0F12` with orange and teal glows;
+  - frosted glass cards;
+  - an orange gradient primary button with dark text;
+  - mint for recovery;
+  - the browser and app theme colours are dark.
+  - Light stays in Settings → Appearance, and saved choices are kept.
+  - Changed in `app/layout.tsx` (the before-paint script and themeColor), `fit-track-provider.tsx` (default theme and meta colour) and `app/manifest.ts`.
+- **Migration:**
+  - All 776 font sizes now use the 11 text tokens (each within ±2 px of before). Only the 4 giant display words (54–72 px) stay raw, as documented exceptions.
+  - All 365 single-value radii now use the 6 radius tokens.
+  - 32 dead colour fallbacks were removed, and the bare brand orange and teal now use `--accent` and `--tint` (48 colour values in all).
+  - The rest of the raw colours are fixed screen by screen in later phases.
+- **UI kit** (`src/components/ui/`): `Button` and `ButtonLink`, `Card`, `PageHeader`, `ListRow`, `Segmented`, `Stat`, `Chip`, with a tokens-only CSS block at the end of `globals.css`. Screens adopt these from Phase 2.
+- **Guard** (`src/lib/design-guard.test.ts`, in `npm test`) fails when:
+  - a raw font size or single-value radius appears;
+  - a `var()` points at an undefined token;
+  - the raw colours go above the ceiling (476 now; it only goes down).
+- **Dark-mode fixes found in the browser:** the Library tile titles and the "N moves" line were hard-coded dark ink, almost invisible on dark glass. They now use `--ink`, `--muted` and an orange selected edge.
+
+**Checked:**
+- 435 tests pass (4 new guard tests).
+- Type check and build pass.
+- Lint shows the same single old warning.
+- In the browser at 375 px, dark: Home, Train, Library, Progress, Profile and Settings render correctly. Layouts are unchanged by design.
+
+**Not checked:** every secondary screen in dark mode (chats, feed, buddies, clients, routines, mobility, report, streak, recovery). These are reviewed as each is rebuilt in Phases 3–7. Phase 2 is navigation and the shell.
+
+### 2026-11-24 — UI redesign Phase 2: navigation and shell
+
+After "Start Phase 2". Opus did all of it: the shell, Profile, Settings and the new links. No helpers, since the shell ties into everything.
+
+**What changed:**
+- **The dock** (`app-shell.tsx`): Today · Workouts · **Rozi** (raised in the centre, inside the pill) · Progress · Together.
+  - Each tab also lights up for its own pages:
+    - Today: `/today`;
+    - Workouts: `/routines`, `/mobility`;
+    - Progress: `/streak`, `/recovery`, `/report`;
+    - Together: chats, feed, discover, buddies, people, clients, join.
+  - The unread-chat dot moved to Together.
+  - Still as before: the dock hides in Rozi chat and in workout mode, and shrinks while scrolling down. The sliding glass highlight and drag-to-switch keep working (same `.dock-pill > a` structure).
+- **Top bar:**
+  - the chat icon is gone (Chats lives in Together);
+  - your picture opens Profile and is hidden on Profile and Settings;
+  - pages one level down get a ← back button to their parent (for example Settings → Profile, Streak → Progress, Chat → Chats);
+  - page titles come from one table.
+- **Desktop sidebar:** the same four tabs, plus Ask Rozi and Profile.
+- **Footer removed** ("Rules …" is still in Settings → About this plan).
+- **Profile:** the list of 10 links that repeated the dock is gone. ☰ (top right) opens Settings.
+- **Settings:**
+  - the repeated picture and name are gone; the sync status stays as a slim card;
+  - the "Your profile" and "Ask Rozi" rows are removed.
+- **New homes for pages that only Profile linked to** (using the new UI kit `Card` + `ListRow`):
+  - Progress → Streak calendar, Recovery map, Your week with Rozi;
+  - Workouts → My routines.
+- **Old URLs:** every old URL still works.
+
+**Checked:**
+- 435 tests pass, type check and build pass, and lint shows the same single old warning.
+- In the browser at 375 px (dark), all correct:
+  - Today with the new dock;
+  - Workouts with the tab active and the My routines row;
+  - Progress with the new links;
+  - Profile with ☰ and no repeated picture;
+  - Settings with the back button and the sync card (fixed: its old layout squeezed the text);
+  - Rozi chat with the dock hidden.
+
+**Not checked:** the desktop sidebar in a wide window, and signed-in social pages (the Together tab highlight on chats and feed).
+
+### 2026-11-24 — UI redesign Phase 3: the new Today screen
+
+After "Start Phase 3". Opus did all of it: the screen, the styles, the Rozi mood fix and the browser checks.
+
+**What changed** (`src/components/screens/overview-screen.tsx`, a "Today, Phase 3" CSS block):
+- **Header:** the date, "Good evening, Asha", Sign in (demo only) and your picture, which opens Profile.
+- **One hero card, first on screen:**
+  - Rozi's scene for the moment (evening training with the gym bag, rest-day reading, and so on);
+  - the tag (Today's workout / In progress / Done today / Recovery today);
+  - the workout title, "40 min · 5 moves · 10 sets", and Rozi's line;
+  - the target muscles as chips;
+  - **one** big Start / Continue / View button;
+  - the streak chip when there is a streak.
+  - Rest day: "Rest is part of the plan", the next session date, then "Train today anyway" and "See next session".
+- **Cards that only show when they matter** (unchanged components): live session, weigh-in due, buddy, trainer, nudges.
+- **Water** stays.
+- **"This week" shown once:** the week strip, with "N of M done" linking to Progress. It replaces the separate ring card.
+- **Recovery as one row** ("Fresh start" / "5 of 6 muscle groups ready" plus Rozi's one-line advice), linking to the Recovery map. It replaces the large 3-ring carousel.
+- **Removed from Today:**
+  - the giant "Day N" word;
+  - "Today's thought";
+  - the duplicate goal ring;
+  - "Recent workouts" (your history is in Progress).
+- **Rozi on day 1** (`src/lib/rozi.ts`):
+  - The worried "Still time today!" face now appears only when there is a real streak to keep. A brand-new person in the evening gets the friendly training Rozi.
+  - New test: `rozi.test.ts`.
+  - The header greeting isn't repeated in Rozi's line.
+
+**Checked:**
+- 436 tests pass, type check and build pass, and lint shows the same single old warning.
+- In the browser at 375 px (dark):
+  - the training day (Start above the fold, Rozi with the gym bag, water, the week once, the recovery row, the dock shrinking on scroll);
+  - the rest day (rest Rozi, next session, Train anyway).
+- **Fixed during the check:**
+  - Rozi's line ran under his picture;
+  - the recovery row stacked vertically (the UI kit's `display: block` won).
+
+**Not checked:** the in-progress and done states in the browser. They use the same card with a different tag and button text, and need a logged workout to see.
+
+**Known edge (also in the old Home):** if a workout was saved for today and the training days then change so today isn't one, the card shows the workout while Rozi says it's a rest day.
+
+### 2026-11-24 — UI redesign Phase 4: workout mode
+
+After "Start Phase 4". Opus did all of it. Only the presentation changed: starting, logging, saving, rest and review logic are untouched.
+
+**What changed:**
+- **Focus bar while you train** (`today-screen.tsx`):
+  - × leaves the workout (it stays saved; Today shows "Continue workout");
+  - the workout name, "N of M sets · Saved as you go" and a progress bar;
+  - a rest-timer toggle.
+  - The shell's top bar and the big Train header hide in workout mode (`body.workout-mode .topbar`).
+- **Sets first** (`exercise-log-card.tsx`): name → last time → the set rows → Add set / Warm-up & plates / Swap. "How to do it" and the long load-guidance text moved into one "How to do it & tips" fold under the sets. Now a whole exercise, with Previous / Next, fits on one phone screen.
+- **The plan before you start:**
+  - one compact "Today's targets" card (chips, time · moves · sets, one body figure) instead of four large body pictures;
+  - the warm-up card offered **before** the exercise list;
+  - one full-width Start button (no round floating button that changed on scroll).
+- **The rest bar:**
+  - its Skip button uses the action colour instead of an off-palette blue;
+  - the page leaves room so Previous / Next can always scroll above the bar.
+- **One selection style everywhere:**
+  - selected chips, toggles, scales, onboarding options and the sliding highlight use the action colour (orange glow in dark, ink in light) instead of teal;
+  - teal/mint now only means recovery and done sets, as DESIGN.md says.
+- **Colours:** the raw-colour ceiling dropped from 476 to 463.
+
+**Checked:**
+- 436 tests pass, type check and build pass, and lint shows the same single old warning.
+- A full workout in the browser at 375 px (dark):
+  - plan → check-in → begin;
+  - tick a set (mint row, progress bar, rest ring with −10 / +10 / Skip);
+  - jump to the last exercise → Finish and review → Save;
+  - the celebration ("A streak is born!", the week ticked, moves / sets / minutes, the R12 recap line).
+- The orange selected chip in the Library.
+- Note: the test workout is saved in this browser's demo data only.
+
+**Not checked:**
+- the "Show all exercises" view;
+- editing a saved session;
+- the done card under the celebration;
+- the light theme's new selection colour.
+
+### 2026-11-24 — UI redesign Phase 5: the Progress hub
+
+After "Start Phase 5". Opus did all of it. Every calculation is unchanged; only the order and presentation changed (`progress-screen.tsx`, a "Progress, Phase 5" CSS block).
+
+**The new order** (one scroll, with small section headings):
+1. **This week:** Rozi with his report card, the week's headline from `weeklyReport` (for example "Every planned workout done. Brilliant week!"), "N of M workouts · sets · new records", and "Your week with Rozi".
+2. **Consistency:** the three numbers, the 4-week calendar, and the Streak calendar link.
+3. **Strength:** **Stalled lifts** (new, from R12 `findPlateaus`: no gain for 3+ weeks, with the variation to try; only shown when there is one), exercise charts and personal records.
+4. **Body:** BMI and body weight side by side. Before, they were far apart, near the top and near the bottom.
+5. **Level and badges:** the level panel, then badges. Earned badges come first with the two closest to earning; the rest fold under "N more to earn" instead of a wall of locks.
+6. **Recovery:** check-in patterns and missed workouts side by side, plus the Recovery map link.
+7. **History**, then "How these numbers are worked out".
+
+The Phase 2 links card was split up: the Week link went into the story, Streak into Consistency, and Recovery map into Recovery.
+
+**Checked:**
+- 436 tests pass, type check and build pass, and lint shows the same single old warning.
+- In the browser at 375 px (dark), using the saved test workout: the story hero, Consistency, Strength (chart and records), Body together, the level panel, and Badges (earned first, the rest folded).
+- **Fixed during the check:** "1 sets" in the story line, and the story button's text wrapping.
+
+**Not checked:** the Stalled lifts card in the browser (it needs weeks of logged lifts; its logic is covered by `insights.test.ts`), and the light theme.
+
+### 2026-11-24 — UI redesign Phase 6: the Together hub
+
+After "Start Phase 6". Opus did all of it. No social logic changed.
+
+**What changed:**
+- **New `src/components/app/together-tabs.tsx`:** one row of tabs (Friends · Feed · Chats · Buddies) at the top of `/friends`, `/feed`, `/chats` and `/buddies`, added in each page file so it shows in every state (signed out, loading, error).
+  - The active tab uses the sliding orange highlight.
+  - The Chats tab shows the unread count.
+  - The Together dock tab stays lit on all four pages.
+- **The Friends hub tiles:**
+  - Chats and Feed are gone (they're tabs now);
+  - Train together only shows when an invite is waiting;
+  - Find friends stays, with its request count.
+  - The Friends screen no longer opens its own chat subscription; the tabs own it.
+- **Back buttons:** Feed, Chats and Train together no longer get one (they're tabs). Find friends, Clients, people's profiles and a single chat still do.
+- **Naming:** the fourth tab is called "Buddies", so it isn't "Together" inside Together. Its page title stays "Train together".
+
+**Checked:**
+- 436 tests pass, type check and build pass, and lint shows the same single old warning.
+- In the browser at 375 px (dark), signed out: Friends and Feed, each with the tabs and the right tab highlighted.
+
+**Not checked:** the signed-in social pages (friend list, feed posts, chats with the unread badge, buddies). The demo account can't open them, and I don't sign in to your accounts. Please check these after deploying.
+
+### 2026-11-24 — UI redesign Phase 7: Workouts and Rozi chat
+
+After "Start Phase 7". Opus did all of it. Rozi's answers, actions and the library filters are unchanged.
+
+**Workouts** (`library-screen.tsx`):
+- The mascot tiles stay as they were (you asked to keep them). They already match the mockup size (about 104 px tall with 78 px mascots).
+- The A–Z letter rail now appears only once the exercise list reaches the middle of the screen (an IntersectionObserver). Before, it floated over the tiles from the top of the page.
+- Mobility and My routines are already part of this tab (Phase 2).
+
+**Rozi chat** (`rozi-chat-screen.tsx`):
+- **One header row:** ← back, "Ask Rozi" and (with Rozi AI on) History / New chat / Changes. The app's top bar hides in Rozi chat (`.rozi-mode .topbar`), so the title isn't shown twice.
+- **Fixed during the check:** an old rule dissolved the header row when Rozi AI is off, which stacked the button and the title.
+- **Starter questions:** all 7 wrap onto the first screen instead of being cut off in a sideways scroll. Once you've asked something, they go back to one scrolling row.
+- **The dock** still hides in chat (decision from mockup v3).
+
+**Checked:**
+- 436 tests pass, type check and build pass, and lint shows the same single old warning.
+- In the browser at 375 px (dark):
+  - Rozi chat with one header row and all 7 questions visible;
+  - Workouts with no rail over the tiles, and the rail shown beside the list.
+
+**Not checked:**
+- the chat header with Rozi AI switched on (History / New chat buttons in the same row);
+- a long conversation.
+
+### 2026-11-24 — UI redesign Phase 8: setup polish (all 21 questions kept)
+
+After "Start Phase 8", following your decision: "keep that same and make ui polish". Opus did all of it.
+
+**Not changed:**
+- The setup questions: `BASE_QUESTIONS` in `welcome.tsx` is the same list, in the same order, with the same answers saved. Confirmed after the change.
+- No question was added, removed, merged or moved. Only CSS changed in this phase.
+
+**What changed** (a "Setup, Phase 8" CSS block):
+- **Intro slides:** the title, sentence, Rozi picture and dots now sit together, centred between the top bar and Continue. Before, a stretched grid spread big empty gaps between them.
+- **On/off switches** (equipment list and elsewhere): on is now the action colour instead of teal (`.toggle.on`, `.switch.on`). Mint stays for recovery only.
+- **The "Recommended / Suggested for you" badge** on a selected option is now a subtle dark pill on the orange, instead of a bright white one.
+- **The unit toggle:** "Feet and inches" stays on one line.
+- **Already improved by earlier phases:** the dark theme and the orange selection style (Phase 4) already apply to every setup screen.
+- **Colours:** the raw-colour ceiling dropped from 463 to 461.
+
+**Checked:**
+- 436 tests pass, type check and build pass, and lint shows the same single old warning.
+- In the browser at 375 px (dark), as a new user:
+  - welcome and the intro slides (before and after);
+  - name, height and weight pickers;
+  - activity (selected state), birth year and sex, the details summary with BMI;
+  - why (chips), the fact card, level, goal (Suggested badge), focus muscle, figure, days, session length, gym, equipment (switches), first workout.
+- Afterwards this browser's test data was restored.
+
+**Not checked in the browser:** the last three screens (reminders, building the plan, your program). Finishing setup would have overwritten the test data. They use the same styles.
+
+**Noted, not changed:** the figure cards look teal-tinted because the page's teal glow shows through the glass. That's intended.
+
+### 2026-11-24 — UI redesign Phase 9: accessibility, motion and performance (the redesign plan is complete)
+
+After "Start Phase 9". Opus did all of it.
+
+**Measured first:**
+- **Contrast of every colour token in both themes:**
+  - main text 17:1 (dark) and 14:1 (light);
+  - secondary text 8.2:1 / 5.1:1;
+  - dark text on the orange button 6.2:1;
+  - the "faint" colour **failed**: 3.8–4.4:1 in dark, 2.5:1 in light.
+- A label and tap-size audit of Today, Workouts, Progress, Profile, Settings, Train and Rozi at 375 px.
+- The number of blurred glass layers on Today.
+
+**Fixed:**
+- **Faint text colour:**
+  - dark `#737b7a` → `#939b9a` (6.8:1 on the page, 5:1 on cards);
+  - light `#8f9c9a` → `#646f6e` (4.6:1).
+  - Both stay dimmer than the secondary text, so the hierarchy holds.
+- **Keyboard focus ring:** a 2 px orange ring on everything you can tap (`:focus-visible`). Before, only 6 elements had one, and 8 older rules removed outlines.
+- **Reduced motion:** one app-wide rule turns off animations and transitions when the phone asks for less motion. Before, each animation opted out on its own. Reduced transparency (solid cards instead of glass) already existed.
+- **Tap targets raised to 44 px:**
+  - the top-bar picture (was 32);
+  - setup Skip (30);
+  - Rozi's starter questions (31);
+  - the water buttons (36);
+  - Progress's exercise dropdown and Save measurement (36);
+  - the "Why this workout" / "How these numbers…" folds (18);
+  - the celebration's "See my streak calendar" link (15).
+- **Design guard:** it now ignores CSS comments, which it had been counting as colours. The true raw-colour count is 457, and the ceiling is set to it.
+
+**Checked and fine:**
+- Every image has alt text, and every control has a name. Four Library filters looked unnamed, but only because they sit in a closed fold; they have proper labels.
+- **Glass:** 8 blurred layers on Today and none blurred inside another.
+- **Desktop at 1280 px:** the sidebar (Today, Workouts, Progress, Together, Ask Rozi, Profile) and a centred Today column.
+- 436 tests pass, type check and build pass, and lint shows the same single old warning.
+
+**Known exceptions:** the two 7-day calendars (week strip 40 px wide, 4-week grid 37 px) can't be 44 px wide in seven columns on a phone. Both are above WCAG 2.2's 24 px minimum.
+
+**Not done (needs you or real devices):**
+- Lighthouse and VoiceOver/TalkBack on a real phone;
+- a 60 fps scroll check on a mid-range Android;
+- the light theme across every screen;
+- a friends retest.
+
+DESIGN.md §9 now records the accessibility rules.

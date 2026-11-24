@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { Bell, Check, ChevronRight, Copy, Dumbbell, Flame, MessageCircle, MoreHorizontal, Search, Share2, Trophy, UserMinus, UserPlus, UserRound, Users } from "lucide-react";
+import { Bell, Check, ChevronRight, Copy, Dumbbell, Flame, MoreHorizontal, Search, Share2, Trophy, UserMinus, UserPlus, UserRound, Users } from "lucide-react";
 import { Rozi } from "@/components/app/rozi";
 import { Avatar } from "@/components/app/avatar";
 import { useFitTrack } from "@/components/app/fit-track-provider";
@@ -25,7 +25,6 @@ import { useBuddies } from "@/components/screens/buddies-screen";
 import { shortDate } from "@/lib/dates";
 import { EmptyState } from "@/components/ui/empty-state";
 import { MessageButton } from "@/components/app/message-button";
-import { useChats } from "@/components/screens/chats-screen";
 import { useScrollLock } from "@/components/app/use-scroll-lock";
 import { SheetGrip } from "@/components/ui/sheet-grip";
 import { loadFriendRequests } from "@/lib/discover-repository";
@@ -63,7 +62,6 @@ export function FriendsScreen() {
   const [trainerInfo, setTrainerInfo] = useState<Map<string, TrainerProfile>>(new Map());
   // Train together: who's already in your group or invited, and whether there's room for one more.
   const { overview: buddies, refresh: refreshBuddies } = useBuddies();
-  const { unread: unreadChats } = useChats();
   const buddyStatus = new Map((buddies?.members ?? []).map((member) => [member.userId, member.status]));
   const groupFull = (buddies?.members.length ?? 0) >= MAX_GROUP;
   useEffect(() => {
@@ -146,10 +144,9 @@ export function FriendsScreen() {
       </article>
 
       <nav className="friends-hub" aria-label="Friends hub">
-        <HubTile href="/chats" icon={<MessageCircle aria-hidden="true" />} title="Chats" note={unreadChats ? `${unreadChats} unread` : "Friends & group"} badge={unreadChats} />
-        <HubTile href="/feed" icon={<span className="hub-emoji" aria-hidden="true">💪</span>} title="Feed" note="Workouts" />
         <HubTile href="/discover" icon={<UserPlus aria-hidden="true" />} title="Find friends" note={requestsWaiting ? `${requestsWaiting} ${requestsWaiting === 1 ? "request" : "requests"}` : "Search people"} badge={requestsWaiting} />
-        <HubTile href="/buddies" icon={<Users aria-hidden="true" />} title="Train together" note={buddies?.group ? `${buddies.members.filter((member) => member.status === "active").length} on one plan` : buddies?.invites.length ? `${buddies.invites.length} ${buddies.invites.length === 1 ? "invite" : "invites"}` : "Same plan"} badge={buddies?.invites.length ?? 0} />
+        {/* Chats, Feed and Train together are tabs above (Phase 6); a tile stays only for something waiting on you. */}
+        {(buddies?.invites.length ?? 0) > 0 && <HubTile href="/buddies" icon={<Users aria-hidden="true" />} title="Train together" note={buddies?.group ? `${buddies.members.filter((member) => member.status === "active").length} on one plan` : buddies?.invites.length ? `${buddies.invites.length} ${buddies.invites.length === 1 ? "invite" : "invites"}` : "Same plan"} badge={buddies?.invites.length ?? 0} />}
       </nav>
 
       {loadError && <p className="error-inline" role="alert">{loadError}</p>}

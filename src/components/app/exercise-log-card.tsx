@@ -61,9 +61,6 @@ export function ExerciseLogCard({ exercise, index, log, substitutedForName, last
       <p className="last-time">{last
         ? <><strong>Last time</strong> ({shortDate(last.date)}): {describeLastPerformance(last, unit, counted)}</>
         : <><strong>First time</strong> logging this movement. Start light and comfortable.</>}</p>
-      <button type="button" className="exercise-visual" onClick={onOpenGuide} aria-label={`Open the guide for ${exercise.name}`}><span className="exercise-visual-thumb"><MuscleThumb exercise={exercise} /></span><span className="exercise-visual-text"><strong>How to do it</strong><small>{exercise.targetMuscles.join(" · ")}</small></span></button>
-      {/* Load and rep advice only fits rep sets; timed moves (planks, cardio) skip it. */}
-      {exercise.progressionAdvice && counted === "reps" && <div className="progression-note"><strong>{exercise.progressionAction === "consider_small_load_step" ? "Progression check" : exercise.progressionAction === "hold_load_add_reps" ? "Rep target" : "Load guidance"}</strong><p>{exercise.progressionAdvice} {exercise.loadGuidance}</p></div>}
 
       <div className="pro-sets" role="table" aria-label={`${exercise.name} sets`}>
         <div className="pro-set-head" role="row"><span role="columnheader">Set</span><span role="columnheader">Previous</span><span role="columnheader">{showLoad ? unit : showDistance ? "km" : ""}</span><span role="columnheader">{UNIT_HEADING[counted]}</span><span role="columnheader" aria-label="Done"><Check aria-hidden="true" /></span></div>
@@ -128,6 +125,13 @@ export function ExerciseLogCard({ exercise, index, log, substitutedForName, last
         }))}
         onClose={() => setPlates(false)} />}
 
+      {/* Workout mode (Phase 4): the sets come first; how-to and load advice are one tap away. */}
+      <details className="exercise-coach">
+        <summary>How to do it &amp; tips</summary>
+        <button type="button" className="exercise-visual" onClick={onOpenGuide} aria-label={`Open the guide for ${exercise.name}`}><span className="exercise-visual-thumb"><MuscleThumb exercise={exercise} /></span><span className="exercise-visual-text"><strong>How to do it</strong><small>{exercise.targetMuscles.join(" · ")}</small></span></button>
+        {/* Load and rep advice only fits rep sets; timed moves (planks, cardio) skip it. */}
+        {exercise.progressionAdvice && counted === "reps" && <div className="progression-note"><strong>{exercise.progressionAction === "consider_small_load_step" ? "Progression check" : exercise.progressionAction === "hold_load_add_reps" ? "Rep target" : "Load guidance"}</strong><p>{exercise.progressionAdvice} {exercise.loadGuidance}</p></div>}
+      </details>
       <details className="exercise-more">
         <summary>Notes, form, and why this exercise</summary>
         {exercise.selectionReason && <p className="exercise-reason">{exercise.selectionReason}</p>}
