@@ -2697,3 +2697,29 @@ CSS and screen code only, no database or API change.
   row under a hairline with a flame badge, "N in a row", "Best N" when higher, and a chevron. It opens the streak page.
 - The primary button gets a little extra space above it.
 - Files: `overview-screen.tsx`, `app/globals.css`. 436 tests pass, type check clean, lint (1 old warning).
+
+### 2026-11-25 — Phone review fixes 3: Train button, Rozi chat header, Workouts letters, Today greeting
+
+CSS and screen code only, no database or API change.
+
+- **Train:** "Start workout" is the full-width button at the top of the page. Once you scroll it shrinks into a round
+  play button on the right above the dock, so it stops covering the exercise list, and it grows again back at the top.
+  The shrink style already existed but nothing turned it on. It now follows the shell's `scrolled` class.
+- **Rozi chat header:** rebuilt as one aligned, frosted row pinned at the top: the back button; Rozi's face with "Rozi"
+  and a status line ("Your coach", "AI on", "Thinking…"); and History / New chat / Changes as round 44 px icon
+  buttons with labels for screen readers. Before, the "Ask Rozi" title wrapped and the text buttons overlapped it.
+  The suggested questions are now one row you swipe, with faded edges, instead of a tall stack above the message box.
+- **Workouts A–Z letters:** the sticky letter headers stuck at a guessed 44 px, but the shrunk top bar is taller, so
+  the letters slid under "Workouts". The app shell now writes the bar's real height to `--topbar-h` (on scroll and
+  after the bar's resize animation), and the letters stick right under it.
+- **Today greeting:** redesigned. The top row holds a date pill (sunrise / sun / moon for the time of day) and your
+  picture, centred on one line. Below it, "Good morning," in soft text and your first name large. Long names no
+  longer wrap with the picture hanging below.
+- Files: `rozi-chat-screen.tsx`, `app-shell.tsx`, `overview-screen.tsx`, `app/globals.css`.
+- Checks: 436 tests pass, type check clean, lint (1 old warning). Checked at 375 px in the browser.
+
+### 2026-11-25 — Orange back to the original
+
+The lighter orange from the first phone review didn't suit the app, so it is reverted at the owner's request. The dark
+theme is back to `--accent` `#FF8A5C`, `--accent-strong` `#F0683F`, and the primary button gradient `#FF9A6E` →
+`#F0683F` with its original glow. `docs/DESIGN.md` is updated to match.

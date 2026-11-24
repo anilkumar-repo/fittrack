@@ -241,16 +241,21 @@ export function RoziChatScreen() {
   return (
     <RoziActionsContext.Provider value={actionsContext}>
     <section className="rozi-chat">
-      <div className="rozi-chat-top">
-        {/* One header (Phase 7): the app's top bar hides here, so the back button and the title live in this row. */}
+      <header className="rozi-chat-top">
+        {/* One header row: back, who you're talking to, and round icon buttons, so nothing wraps or overlaps
+            (2026-11-25). The app's top bar hides in Rozi chat. */}
         <button type="button" className="icon-button rozi-back" aria-label="Back" onClick={() => (window.history.length > 1 ? router.back() : router.push("/"))}><ArrowLeft aria-hidden="true" /></button>
-        <h1 className="rozi-chat-title">Ask Rozi</h1>
+        <div className="rozi-chat-who">
+          {/* eslint-disable-next-line @next/next/no-img-element -- small static Rozi face */}
+          <img src="/rozi/faces/v1/happy.webp" alt="" width={36} height={36} className="rozi-chat-avatar" />
+          <div><h1 className="rozi-chat-title">Rozi</h1><small>{thinking ? "Thinking…" : aiOn ? "Your coach · AI on" : "Your coach"}</small></div>
+        </div>
         {aiOn && <div className="rozi-chat-actions">
-          <button type="button" className="text-button" onClick={() => setShowHistory(true)}><History aria-hidden="true" /> History</button>
-          <button type="button" className="text-button" onClick={newChat} disabled={messages.length <= 1}><Plus aria-hidden="true" /> New chat</button>
-          {actions !== null && <button type="button" className="text-button" onClick={() => { setShowActions(true); void listActions().then((loaded) => { if (loaded) setActions(loaded); }); }}><ListChecks aria-hidden="true" /> Changes</button>}
+          <button type="button" className="icon-button" aria-label="Chat history" title="History" onClick={() => setShowHistory(true)}><History aria-hidden="true" /></button>
+          <button type="button" className="icon-button" aria-label="New chat" title="New chat" onClick={newChat} disabled={messages.length <= 1}><Plus aria-hidden="true" /></button>
+          {actions !== null && <button type="button" className="icon-button" aria-label="Changes Rozi suggested" title="Changes" onClick={() => { setShowActions(true); void listActions().then((loaded) => { if (loaded) setActions(loaded); }); }}><ListChecks aria-hidden="true" /></button>}
         </div>}
-      </div>
+      </header>
       <div className="chat-hero" aria-hidden="true"><Image src="/rozi/chat-hello.webp" alt="" width={480} height={480} sizes="150px" priority data-motion="wave" /></div>
       <div className="chat-log" aria-live="polite">
         {messages.map((message, index) => (
@@ -288,7 +293,7 @@ export function RoziChatScreen() {
         </div>}
         <div ref={end} className="rozi-chat-end" />
       </div>
-      <div className={`chat-suggestions ${messages.length <= 1 ? "first" : ""}`}>{SUGGESTED_QUESTIONS.map((question) => <button key={question} type="button" className="chip" onClick={() => ask(question)}>{question}</button>)}</div>
+      <div className="chat-suggestions" role="group" aria-label="Suggested questions">{SUGGESTED_QUESTIONS.map((question) => <button key={question} type="button" className="chip" onClick={() => ask(question)}>{question}</button>)}</div>
       {showActions && <RoziActionsSheet actions={actions} onClose={() => setShowActions(false)} />}
       {showHistory && browserClient && <RoziHistorySheet client={browserClient} today={currentDate} currentId={conversationId}
         onOpen={(id) => void openConversation(id)} onDeleted={(id) => { if (id === null || id === conversationId) newChat(); }} onClose={() => setShowHistory(false)} />}
