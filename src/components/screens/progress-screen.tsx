@@ -177,9 +177,19 @@ export function ProgressScreen() {
             </> : <EmptyState mood="upper-body" title="No exercise results yet" text="Your set and rep trends appear here after you log workouts." />}
           </article>
           <article className="panel progress-panel">
-            <div className="section-heading"><div><h3>Personal records</h3><p>Record = highest positive load on a completed set with actual reps recorded in the loaded history.</p></div></div>
-            {personalRecords.length ? <div className="record-list">{personalRecords.map((record) => <div className="record-row" key={record.exerciseId}><span className="record-icon"><Trophy aria-hidden="true" /></span><div><strong>{record.exerciseName}</strong><small>{formatWeight(record.loadKg, weightUnit)} × {record.reps} reps · {shortDate(record.date)}</small></div></div>)}</div> : <div className="empty-inline">No recorded weighted sets yet. Unweighted sets and missing loads do not create a weight record.</div>}
-            <p className="metric-definition">These are recorded load records, not estimated one-rep maxes. Substituted exercises are tracked under the substituted movement’s name.</p>
+            <div className="panel-title"><h3>Personal records</h3>{personalRecords.length > 0 && <span className="panel-count">{personalRecords.length} lifts</span>}</div>
+            {/* The top few show; the rest and the fine print fold away so the card stays short (docs/DESIGN.md §1). */}
+            {personalRecords.length ? <>
+              <div className="record-list">{personalRecords.slice(0, RECORDS_SHOWN).map((record) => <RecordRow key={record.exerciseId} record={record} unit={weightUnit} />)}</div>
+              {personalRecords.length > RECORDS_SHOWN && <details className="progress-more">
+                <summary>Show {personalRecords.length - RECORDS_SHOWN} more</summary>
+                <div className="record-list">{personalRecords.slice(RECORDS_SHOWN).map((record) => <RecordRow key={record.exerciseId} record={record} unit={weightUnit} />)}</div>
+              </details>}
+            </> : <div className="empty-inline">No recorded weighted sets yet. Unweighted sets and missing loads do not create a weight record.</div>}
+            <details className="progress-more">
+              <summary>How records are counted</summary>
+              <p className="metric-definition">A record is the heaviest load on a completed set with reps logged. It isn’t an estimated one-rep max. Swapped exercises count under the swapped movement’s name.</p>
+            </details>
           </article>
         </div>
         <h2 className="progress-section">Body</h2>
@@ -236,17 +246,13 @@ export function ProgressScreen() {
 
         <article className="panel">
           <div className="panel-title"><h3>Workout history</h3><span className="panel-count">{historySessions.length} saved</span></div>
-          {historySessions.length ? <div className="recent-rows">{historySessions.map((session) => {
-            const status = recordedSessionStatus(session);
-            const setsDone = session.exerciseLogs.reduce((sum, item) => sum + item.sets.filter((set) => set.completed).length, 0);
-            return (
-              <button key={session.id} className="recent-item" onClick={() => setSelectedHistorySession(session)}>
-                <span className={`recent-check ${status === "completed" ? "" : "pending"}`}>{status === "completed" ? <Check aria-hidden="true" /> : <Clock aria-hidden="true" />}</span>
-                <span className="recent-text"><strong>{session.plan.title}</strong><small>{dateLabel(session.date, { weekday: "short", month: "short", day: "numeric" })} · {progressStatusLabel(status)}{setsDone ? ` · ${setsDone} ${setsDone === 1 ? "set" : "sets"}` : ""}{session.review ? ` · effort ${session.review.effort}/10` : ""}</small></span>
-                <ChevronRight aria-hidden="true" />
-              </button>
-            );
-          })}</div> : <EmptyState mood="workout" title="No workouts yet" text="Finish your first session and it shows up here with every set." action={{ label: "Go to Train", href: "/today" }} />}
+          {historySessions.length ? <>
+            <div className="recent-rows">{historySessions.slice(0, HISTORY_SHOWN).map((session) => <HistoryRow key={session.id} session={session} onOpen={setSelectedHistorySession} />)}</div>
+            {historySessions.length > HISTORY_SHOWN && <details className="progress-more">
+              <summary>Show {historySessions.length - HISTORY_SHOWN} older</summary>
+              <div className="recent-rows">{historySessions.slice(HISTORY_SHOWN).map((session) => <HistoryRow key={session.id} session={session} onOpen={setSelectedHistorySession} />)}</div>
+            </details>}
+          </> : <EmptyState mood="workout" title="No workouts yet" text="Finish your first session and it shows up here with every set." action={{ label: "Go to Train", href: "/today" }} />}
         </article>
 
         <details className="why-plan">
@@ -258,5 +264,27 @@ export function ProgressScreen() {
       </section>
       {selectedHistorySession && <HistoryDetailModal session={selectedHistorySession} onClose={() => setSelectedHistorySession(null)} />}
     </>
+  );
+}
+
+/** Progress lists show this many rows; the rest open under "Show more". */
+const RECORDS_SHOWN = 5;
+const HISTORY_SHOWN = 5;
+
+function RecordRow({ record, unit }: { record: ReturnType<typeof calculatePersonalRecords>[number]; unit: Parameters<typeof formatWeight>[1] }) {
+  return (
+    <div className="record-row"><span className="record-icon"><Trophy aria-hidden="true" /></span><div><strong>{record.exerciseName}</strong><small>{formatWeight(record.loadKg, unit)} × {record.reps} reps · {shortDate(record.date)}</small></div></div>
+  );
+}
+
+function HistoryRow({ session, onOpen }: { session: WorkoutSession; onOpen: (session: WorkoutSession) => void }) {
+  const status = recordedSessionStatus(session);
+  const setsDone = session.exerciseLogs.reduce((sum, item) => sum + item.sets.filter((set) => set.completed).length, 0);
+  return (
+    <button className="recent-item" onClick={() => onOpen(session)}>
+      <span className={`recent-check ${status === "completed" ? "" : "pending"}`}>{status === "completed" ? <Check aria-hidden="true" /> : <Clock aria-hidden="true" />}</span>
+      <span className="recent-text"><strong>{session.plan.title}</strong><small>{dateLabel(session.date, { weekday: "short", month: "short", day: "numeric" })} · {progressStatusLabel(status)}{setsDone ? ` · ${setsDone} ${setsDone === 1 ? "set" : "sets"}` : ""}{session.review ? ` · effort ${session.review.effort}/10` : ""}</small></span>
+      <ChevronRight aria-hidden="true" />
+    </button>
   );
 }

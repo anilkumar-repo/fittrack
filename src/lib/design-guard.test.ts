@@ -4,7 +4,7 @@ import test from "node:test";
 
 // Design guard (docs/DESIGN.md §9): app/globals.css may only use the design tokens for font sizes and radii, and its raw
 // colours may only go down. Lower RAW_COLOUR_CEILING whenever a phase moves colours onto tokens; never raise it.
-const RAW_COLOUR_CEILING = 457;
+const RAW_COLOUR_CEILING = 448;
 /** Display words (the giant "Day 1") are the only sizes outside the type scale. */
 const DISPLAY_SIZES = new Set([54, 60, 64, 72]);
 

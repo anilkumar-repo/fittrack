@@ -2639,3 +2639,61 @@ After "Start Phase 9". Opus did all of it.
 - a friends retest.
 
 DESIGN.md §9 now records the accessibility rules.
+
+### 2026-11-24 — Phone review fixes: Today card, Progress, page switching, lighter orange
+
+Found on a real iPhone after the redesign. CSS and screen code only, no database or API change.
+
+- **Today card:** the plan title is split at " · ": the short name ("Pull B") is the title and the muscles go on a
+  line below. Rozi is 120 px instead of 156 px, so long titles no longer run into Rozi. The streak pill moved above the
+  button, so the one big button always closes the card.
+- **Page switching glitch:** the cards' fade-up animation on every page open is removed. On iPhone a fading glass
+  card loses its blur and snaps back, which looked like the whole page glitching.
+- **Settings sections:** opening or leaving a section (`?section=`) now scrolls to the top and brings the full dock
+  back. Before, the section title started hidden under the top bar and the dock could stay shrunk.
+- **Progress:**
+  - Personal records show the top 5; the rest and the "how records are counted" note fold under "Show more".
+  - Workout history shows the 5 latest; older ones fold under "Show N older".
+  - History rows no longer run past the card edge (the list grid gets `minmax(0, 1fr)`).
+  - Body weight: the date and weight fields are the same height (48 px), size and alignment. The text is 17 px, so
+    iOS no longer zooms in on focus. The chart's lowest/highest line sits on its own line.
+- **Dock:** a soft fade behind the phone dock, so page text never shows sharp beside the pill when it shrinks.
+- **Orange (dark theme):** lighter and brighter. `--accent` `#FF9B72`, `--accent-strong` `#FF7D50`, primary button
+  gradient `#FFB48F` → `#FF8A5C`. Text on it stays dark (`--on-accent`).
+- Files: `overview-screen.tsx`, `progress-screen.tsx`, `settings-screen.tsx`, `app/globals.css`, `docs/DESIGN.md`.
+- Checks: 436 tests pass, type check clean, lint (1 old warning). Checked at 375 px in the browser.
+
+### 2026-11-25 — Phone review fixes 2: water card, tab sliding, exercise sheet motion, link arrows
+
+CSS and screen code only, no database or API change.
+
+- **Water card (Today):** the bottle is replaced by a round glass orb:
+  - two wave layers drift at different speeds, bubbles rise, and the percentage sits in the middle;
+  - it fills smoothly to the share of today's target, and splashes with a floating "+250 ml" when you add a drink;
+  - the buttons now show their size ("+ Glass 250 ml", "+ Bottle 500 ml"). Undo sits at the end of the same row as an
+    even 44 px round button instead of wrapping onto its own line.
+- **Tab bars slide like the dock:** the dock's press-and-slide (`DockScrub`) now also works on every one-row tab bar
+  (`.segmented`, `.library-chips`): the Workouts categories, the Together tabs and the other segmented controls. Press
+  lifts the orange lens, sliding moves it with your finger, and letting go picks the tab. A tap works as before, and a
+  bar that is wider than the screen keeps its normal sideways scroll.
+  - Workouts categories fit one row now: "Conditioning" shows as "Cardio" (`CATEGORY_LABEL` in `exercise-picker.tsx`;
+    the filter value is unchanged), with slightly smaller text.
+- **Opening an exercise:** the backdrop fades in, the sheet glides up and its content follows a moment later. Closing
+  (×, Close, the backdrop or Escape) plays it in reverse before the guide closes. Swipe-down still works as before.
+- **Text links with an arrow** ("Check your recovery map ›"): the arrow sits centred on the text, with no underline
+  and a 44 px tap height.
+- The design guard's colour ceiling went down from 457 to 448.
+- Files: `water-card.tsx`, `dock-scrub.tsx`, `exercise-guide-modal.tsx`, `library-screen.tsx`, `exercise-picker.tsx`,
+  `app/globals.css`, `design-guard.test.ts`.
+- Checks: 436 tests pass, type check clean, lint (1 old warning). Checked at 375 px in the browser (slide from All to
+  Cardio, open/close an exercise, add and undo water). The test water was removed from the demo afterwards.
+
+### 2026-11-25 — Today card: spacing restored, streak becomes a footer
+
+- **Cause of the overlap:** the hero is a `Card`, and `.ui-card { display: block }` comes later in `globals.css` than
+  `.today-hero { display: grid; gap }`. So the 12 px gap never applied, and the text, the streak pill and the button
+  touched. `.today-hero.ui-card` now sets the grid and gap (the same fix the recovery row needed in Phase 3).
+- **Streak:** it's no longer a pill squeezed between the text and the button. It's the card's footer: a full-width
+  row under a hairline with a flame badge, "N in a row", "Best N" when higher, and a chevron. It opens the streak page.
+- The primary button gets a little extra space above it.
+- Files: `overview-screen.tsx`, `app/globals.css`. 436 tests pass, type check clean, lint (1 old warning).

@@ -59,6 +59,15 @@ export function OverviewScreen() {
   const recovery = muscleRecovery(recordedSessions, currentDate);
   const ready = readyCount(recovery);
   const tag = status === "completed" ? "Done today" : status === "in_progress" ? "In progress" : plan?.sessionType === "recovery" ? "Recovery today" : "Today's workout";
+  // "Pull B · Back, biceps, forearms": the short name is the title, the muscles go on their own line, so a long
+  // title never runs into Rozi.
+  const [titleMain, ...titleRest] = (plan?.title ?? "").split(" · ");
+  const titleSub = titleRest.join(" · ");
+  const streakLink = streak.started && <Link className="today-streak" href="/streak">
+    <span className="today-streak-flame"><Flame aria-hidden="true" /></span>
+    <span className="today-streak-text">{streak.repair ? <strong>Win back your {streak.repair.lostStreak}-day streak</strong> : <><strong>{streak.current} in a row</strong>{streak.best > streak.current && <small>Best {streak.best}</small>}</>}</span>
+    <ChevronRight aria-hidden="true" />
+  </Link>;
   const cta = status === "completed" ? "View session" : status === "in_progress" ? "Continue workout" : "Start workout";
 
   return (
@@ -74,12 +83,14 @@ export function OverviewScreen() {
         </div>
       </header>
 
+      {/* The streak is the card's footer: a full-width row under a hairline, below the buttons, never touching them. */}
       <Card padding="lg" className={`today-hero ${status === "completed" ? "is-done" : ""}`} aria-labelledby="today-title">
-        <Rozi mood={moment.mood} size={156} priority className="today-rozi" />
+        <Rozi mood={moment.mood} size={120} priority className="today-rozi" />
         {plan ? <>
           <div className="today-hero-copy">
             <p className="today-tag">{status === "completed" && <Check aria-hidden="true" />}{tag}</p>
-            <h3 id="today-title" className="today-title">{plan.title}</h3>
+            <h3 id="today-title" className="today-title">{titleMain}</h3>
+            {titleSub && <p className="today-sub">{titleSub}</p>}
             <p className="today-meta">{plan.durationMinutes} min · {plan.exercises.length} moves · {totalSets} sets</p>
           </div>
           <p className="today-say">{sayTitle && <strong>{sayTitle} </strong>}{moment.message}</p>
@@ -99,7 +110,7 @@ export function OverviewScreen() {
             </div>
             : <ButtonLink href="/settings?section=plan" variant="primary" size="lg" block>Choose your training days</ButtonLink>}
         </>}
-        {streak.started && <Link className="today-streak" href="/streak"><Flame aria-hidden="true" />{streak.repair ? `Win back your ${streak.repair.lostStreak}-day streak` : `${streak.current} in a row${streak.best > streak.current ? ` · best ${streak.best}` : ""}`}<ChevronRight aria-hidden="true" /></Link>}
+        {streakLink}
       </Card>
 
       <SessionLiveCard />

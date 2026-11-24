@@ -1,5 +1,6 @@
 "use client";
 
+import { CATEGORY_LABEL } from "@/components/app/exercise-picker";
 import Link from "next/link";
 import { MOBILITY_MOVES, MOBILITY_ROUTINES } from "@/lib/mobility";
 import { useCallback, useState } from "react";
@@ -88,7 +89,7 @@ export function LibraryScreen() {
         <Card padding="md" className="library-routines">
           <ListRow href="/routines" title="My routines" detail="Build and save your own workouts" leading={<span className="profile-link-icon"><ListPlus aria-hidden="true" /></span>} />
         </Card>
-        <div className="library-chips" role="group" aria-label="Category">{["All", "Strength", "Core", "Conditioning"].map((filter) => <button key={filter} type="button" className={libraryFilter === filter ? "selected" : ""} aria-pressed={libraryFilter === filter} onClick={() => setLibraryFilter(filter)}>{filter}<span className="chip-count">{categoryCount(filter)}</span></button>)}</div>
+        <div className="library-chips" role="group" aria-label="Category">{["All", "Strength", "Core", "Conditioning"].map((filter) => <button key={filter} type="button" className={libraryFilter === filter ? "selected" : ""} aria-pressed={libraryFilter === filter} onClick={() => setLibraryFilter(filter)}>{CATEGORY_LABEL[filter] ?? filter}<span className="chip-count">{categoryCount(filter)}</span></button>)}</div>
         <details className="library-more">
           <summary><SlidersHorizontal aria-hidden="true" /> More filters{extraFilters > 0 ? ` (${extraFilters})` : ""}</summary>
           <div className="library-selects">
