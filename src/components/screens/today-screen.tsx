@@ -6,7 +6,8 @@ import { notifyBuddies } from "@/lib/buddies-repository";
 import { levelTitle } from "@/lib/levels";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { ArrowLeft, ArrowLeftRight, ArrowRight, Check, ChevronRight, Clock, ListChecks, MessageCircle, Pencil, Play, Repeat } from "lucide-react";
+import { ArrowLeft, ArrowLeftRight, ArrowRight, Check, ChevronRight, MessageCircle, Pencil, Play, Timer, X } from "lucide-react";
+import { Chip } from "@/components/ui/chip";
 import Link from "next/link";
 import { ShareWorkoutSheet } from "./chats-screen";
 import { PostWorkoutSheet } from "./feed-screen";
@@ -69,13 +70,6 @@ function WorkoutDayView({ date, extraDay = false, startAtReview = false }: { dat
   /** True while a saved session is reopened to correct its entries. */
   const [editing, setEditing] = useState(false);
   const [sharing, setSharing] = useState(false);
-  // Start button: a small round button while you're at the top of the page, the full bar once you scroll down.
-  const [ctaWide, setCtaWide] = useState(false);
-  useEffect(() => {
-    const onScroll = () => setCtaWide(window.scrollY > 120);
-    window.addEventListener("scroll", onScroll, { passive: true });
-    return () => window.removeEventListener("scroll", onScroll);
-  }, []);
   // "Post to feed?" after a finished workout (signed in, last week only); which days are already posted.
   const [posting, setPosting] = useState(false);
   const [postedDates, setPostedDates] = useState<Set<string>>(new Set());
@@ -253,13 +247,22 @@ function WorkoutDayView({ date, extraDay = false, startAtReview = false }: { dat
   return (
     <>
       <section className="train">
-        <header className="train-head">
+        {workoutMode && todaySession && <div className="workout-bar">
+          <Link href="/" className="icon-button" aria-label="Leave the workout (it stays saved, continue any time)"><X aria-hidden="true" /></Link>
+          <div className="workout-bar-text">
+            <strong>{todaySession.plan.title}</strong>
+            <span>{editing ? "Editing your entries" : `${setsDone} of ${setsPlanned} sets · ${saveNote}`}</span>
+            <div className="logger-progress-bar" role="progressbar" aria-label="Sets completed" aria-valuemin={0} aria-valuemax={setsPlanned} aria-valuenow={Math.min(setsDone, setsPlanned)}><span style={{ width: `${setsPlanned ? Math.min(100, (setsDone / setsPlanned) * 100) : 0}%` }} /></div>
+          </div>
+          <button type="button" role="switch" aria-checked={restOn} aria-label="Rest timer" className={`icon-button workout-bar-rest ${restOn ? "on" : ""}`} onClick={() => { const next = !restOn; setRestOn(next); if (!next) setRest(null); try { window.localStorage.setItem("rozfit-rest-on", next ? "1" : "0"); } catch { /* remembered for this visit */ } }}><Timer aria-hidden="true" /></button>
+        </div>}
+        {!workoutMode && <header className="train-head">
           <p>{date === currentDate ? "Today" : dateLabel(date)}</p>
           <h2>{plan?.title ?? "Rest day"}</h2>
           {plan?.stage ? <span className={`stage-chip ${plan.recoveryWeek ? "light" : ""}`}>{plan.level ? `${levelTitle(plan.level)} · ` : ""}Week {plan.weekNumber} of 52 · {plan.stage}</span>
             : plan?.level && plan.sessionType !== "recovery" && <span className="stage-chip">{levelTitle(plan.level)} level</span>}
           {plan?.lightWeek && <span className="stage-chip light">Lighter week from your trainer · fewer sets</span>}
-        </header>
+        </header>}
 
         {!plan && <article className="panel train-rest">
           <Rozi mood={hourIn(state.profile.timeZone) >= 21 ? "night" : "rest"} size={150} />
@@ -271,11 +274,13 @@ function WorkoutDayView({ date, extraDay = false, startAtReview = false }: { dat
         </article>}
 
         {plan && preStart && displayFlowStep === "preview" && <>
-          {regions.length > 0 ? <article className="panel target-card pictures">
-            <h3>Today’s targets</h3>
-            <ul className="muscle-grid">{regions.map((region, index) => (
-              <li key={region} className="muscle-card"><MusclePicture figure={figure} region={region} priority={index < 2} /><strong>{REGION_LABELS[region]}</strong></li>
-            ))}</ul>
+          {regions.length > 0 ? <article className="panel train-summary">
+            <div className="train-summary-copy">
+              <h3>Today’s targets</h3>
+              <div className="today-chips">{regions.map((region) => <Chip key={region}>{REGION_LABELS[region]}</Chip>)}</div>
+              <p className="today-meta">About {plan.durationMinutes} min · {plan.exercises.length} moves · {totalSets} sets</p>
+            </div>
+            <div className="train-summary-figure"><MusclePicture figure={figure} region={regions[0]} highlight={regions} priority /></div>
           </article> : <article className="panel target-card">
             <div className="target-figure">{plan.sessionType === "recovery" ? <Rozi mood={checkIn.pain ? "care" : "stretch"} size={180} /> : <MusclePicture figure={figure} />}</div>
             <div className="target-copy">
@@ -285,12 +290,11 @@ function WorkoutDayView({ date, extraDay = false, startAtReview = false }: { dat
                 : <p>Easy movement only. Skip anything that does not feel comfortable.</p>}
             </div>
           </article>}
-          <div className="chip-row">
-            <span className="chip"><Clock aria-hidden="true" /> About {plan.durationMinutes} min</span>
-            <span className="chip"><ListChecks aria-hidden="true" /> {plan.exercises.length} moves</span>
-            <span className="chip"><Repeat aria-hidden="true" /> {totalSets} sets</span>
-          </div>
+          {regions.length === 0 && <p className="today-meta">About {plan.durationMinutes} min · {plan.exercises.length} moves · {totalSets} sets</p>}
           <p className="train-description">{plan.description}</p>
+
+          {/* Warm up first: offered before the list and the Start button, not after them. */}
+          {plan.sessionType !== "recovery" && <WarmUpCard focus={`${plan.focus} ${plan.title}`} date={date} />}
 
           <h3 className="train-subhead">Exercises</h3>
           <ol className="exercise-list">
@@ -320,13 +324,11 @@ function WorkoutDayView({ date, extraDay = false, startAtReview = false }: { dat
             <small>Template {plan.templateVersion} · Rules {plan.ruleVersion}</small>
           </details>
 
-          {plan.sessionType !== "recovery" && <WarmUpCard focus={`${plan.focus} ${plan.title}`} date={date} />}
-
           {isFuture ? <div className="train-cta future-note">
             <p>This workout is planned for <strong>{dateLabel(date)}</strong>. It opens for logging on that day, so it is saved on the right date.</p>
             <button className="button button-primary" onClick={() => router.push(state.profile.trainingDays.includes(weekdayOf(currentDate)) ? "/today" : "/today?extra=1")}>Train today instead <Play aria-hidden="true" /></button>
           </div>
-            : <div className={`train-cta ${ctaWide ? "wide" : "compact"}`}><button className="button button-primary" aria-label="Start workout" onClick={() => { setFormError(""); setFlowStep("checkin"); }}><span className="train-cta-label">Start workout</span> <Play aria-hidden="true" /></button></div>}
+            : <div className="train-cta wide"><button className="button button-primary" aria-label="Start workout" onClick={() => { setFormError(""); setFlowStep("checkin"); }}><span className="train-cta-label">Start workout</span> <Play aria-hidden="true" /></button></div>}
         </>}
 
         {plan && preStart && displayFlowStep === "checkin" && <article className="panel flow-card">
@@ -367,13 +369,13 @@ function WorkoutDayView({ date, extraDay = false, startAtReview = false }: { dat
         </article>}
 
         {logging && todaySession && plan && displayFlowStep !== "review" && <article className="logger">
-          <div className="logger-progress">
+          {!workoutMode && <div className="logger-progress">
             <div className="logger-progress-text"><strong>{editing ? "Editing your entries" : `${setsDone} of ${setsPlanned} sets done`}</strong><span>{saveNote}</span></div>
             <div className="logger-progress-bar" role="progressbar" aria-label="Sets completed" aria-valuemin={0} aria-valuemax={setsPlanned} aria-valuenow={Math.min(setsDone, setsPlanned)}><span style={{ width: `${setsPlanned ? Math.min(100, (setsDone / setsPlanned) * 100) : 0}%` }} /></div>
-          </div>
+          </div>}
           <div className="logger-mode">
             <span>{oneAtATime ? `Exercise ${shownIndex + 1} of ${exerciseCount}` : `${exerciseCount} exercises`}</span>
-            <button type="button" role="switch" aria-checked={restOn} className="rest-switch" onClick={() => { const next = !restOn; setRestOn(next); if (!next) setRest(null); try { window.localStorage.setItem("rozfit-rest-on", next ? "1" : "0"); } catch { /* remembered for this visit */ } }}><span className={`switch ${restOn ? "on" : ""}`} aria-hidden="true" /> Rest timer</button>
+            {!workoutMode && <button type="button" role="switch" aria-checked={restOn} className="rest-switch" onClick={() => { const next = !restOn; setRestOn(next); if (!next) setRest(null); try { window.localStorage.setItem("rozfit-rest-on", next ? "1" : "0"); } catch { /* remembered for this visit */ } }}><span className={`switch ${restOn ? "on" : ""}`} aria-hidden="true" /> Rest timer</button>}
             <button type="button" className="text-button" onClick={() => setOneAtATime((value) => !value)}>{oneAtATime ? "Show all exercises" : "One at a time"}</button>
           </div>
           {oneAtATime && <div className="logger-steps" role="tablist" aria-label="Exercises in this workout">{todaySession.plan.exercises.map((exercise, index) => {

@@ -2,8 +2,10 @@
 
 import Link from "next/link";
 import { MOBILITY_MOVES, MOBILITY_ROUTINES } from "@/lib/mobility";
-import { useState } from "react";
-import { ChevronRight, Search, SlidersHorizontal, X } from "lucide-react";
+import { useCallback, useState } from "react";
+import { ChevronRight, ListPlus, Search, SlidersHorizontal, X } from "lucide-react";
+import { Card } from "@/components/ui/card";
+import { ListRow } from "@/components/ui/list-row";
 import { ExerciseGuideModal, toGuideExercise } from "@/components/app/exercise-guide-modal";
 import { MuscleThumb } from "@/components/app/muscle-thumb";
 import { useFitTrack } from "@/components/app/fit-track-provider";
@@ -23,6 +25,14 @@ export function LibraryScreen() {
   const { session: todaySession, plan } = useWorkoutDay(currentDate, DEFAULT_CHECK_IN);
   const [guideExercise, setGuideExercise] = useState<ExerciseDefinition | null>(null);
   const [libraryFilter, setLibraryFilter] = useState("All");
+  // The A–Z rail floats at mid-screen: show it only once the exercise list reaches it, so it never covers the tiles.
+  const [listInView, setListInView] = useState(false);
+  const listRef = useCallback((node: HTMLUListElement | null) => {
+    if (!node) { setListInView(false); return; }
+    const observer = new IntersectionObserver(([entry]) => setListInView(entry.isIntersecting), { rootMargin: "0px 0px -50% 0px" });
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, []);
   const [libraryArea, setLibraryArea] = useState<BodyArea>("full");
   const [librarySearch, setLibrarySearch] = useState("");
   const [libraryMuscleFilter, setLibraryMuscleFilter] = useState("");
@@ -75,6 +85,9 @@ export function LibraryScreen() {
             <Rozi mood="mobility" size={96} className="area-rozi" />
           </Link>
         </div>
+        <Card padding="md" className="library-routines">
+          <ListRow href="/routines" title="My routines" detail="Build and save your own workouts" leading={<span className="profile-link-icon"><ListPlus aria-hidden="true" /></span>} />
+        </Card>
         <div className="library-chips" role="group" aria-label="Category">{["All", "Strength", "Core", "Conditioning"].map((filter) => <button key={filter} type="button" className={libraryFilter === filter ? "selected" : ""} aria-pressed={libraryFilter === filter} onClick={() => setLibraryFilter(filter)}>{filter}<span className="chip-count">{categoryCount(filter)}</span></button>)}</div>
         <details className="library-more">
           <summary><SlidersHorizontal aria-hidden="true" /> More filters{extraFilters > 0 ? ` (${extraFilters})` : ""}</summary>
@@ -87,7 +100,7 @@ export function LibraryScreen() {
         </details>
         <div className="library-count"><span>{libraryResults.length} {libraryResults.length === 1 ? "exercise" : "exercises"}</span>{anyFilter && <button type="button" className="text-button" onClick={clearFilters}>Clear filters</button>}</div>
 
-        {libraryResults.length ? <ul className="library-list grouped has-alpha">{sortedResults.flatMap((exercise, index) => {
+        {libraryResults.length ? <ul ref={listRef} className="library-list grouped has-alpha">{sortedResults.flatMap((exercise, index) => {
           const equipmentReady = exerciseEquipmentIsAvailable(exercise, planningProfile);
           const letter = firstLetter(exercise.name);
           const best = ranked[index].best;
@@ -105,7 +118,7 @@ export function LibraryScreen() {
             </li>
           )];
         })}</ul> : <div className="panel"><EmptyState mood="grumpy" title="No matching exercises" text="Rozi looked everywhere. Try a different word or clear the filters." action={{ label: "Clear filters", onClick: clearFilters }} /></div>}
-        {libraryResults.length > 0 && !searching && <AlphabetIndex letters={letters} prefix="lib" />}
+        {libraryResults.length > 0 && !searching && listInView && <AlphabetIndex letters={letters} prefix="lib" />}
       </section>
       {guideExercise && <ExerciseGuideModal exercise={guideExercise} workout={{ date: currentDate, session: todaySession, plan }} onOpen={(exercise) => setGuideExercise(toGuideExercise(exercise))} onClose={() => setGuideExercise(null)} />}
     </>

@@ -54,6 +54,13 @@ test("a brand-new person who has not trained yet is never shown as grumpy", () =
   assert.notEqual(roziMoment({ streak, hour: 10, name: "Priya" }).mood, "grumpy");
 });
 
+test("day 1 in the evening: Rozi is ready to train, not worried (nothing is at risk yet)", () => {
+  const streak = calculateStreak(profile, [], "2026-11-04");
+  const moment = roziMoment({ streak, hour: 19, name: "Priya" });
+  assert.notEqual(moment.mood, "streak-risk");
+  assert.equal(moment.mood, "train-evening");
+});
+
 test("Rozi's mood follows the day: done, at risk, broken, care, rest, and time of day", () => {
   const base = calculateStreak(profile, [done("2026-11-02")], "2026-11-04");
   assert.equal(roziMoment({ streak: base, hour: 8, name: "P" }).mood, "train-morning");
