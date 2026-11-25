@@ -2478,12 +2478,12 @@ html.scroll-locked body { position: fixed; left: 0; right: 0; width: 100%; }
 
 /* Big page titles that shrink into a frosted bar as you scroll (phones). */
 @media (max-width: 700px) {
-  .topbar { position: sticky; top: 0; z-index: 40; margin: 0 -16px; padding: calc(10px + env(safe-area-inset-top)) 16px 10px; min-height: 0 !important; transition: background-color .25s ease, box-shadow .25s ease, padding .25s ease; }
+  .topbar { position: sticky; top: 0; z-index: 40; margin: 0 -16px; padding: calc(10px + env(safe-area-inset-top)) 16px 10px; min-height: 0 !important; transition: background-color .25s ease, box-shadow .25s ease; }
   .topbar h1 { font-size: var(--text-4xl) !important; letter-spacing: -.8px; line-height: 1.1; transition: font-size .25s ease; }
   .topbar .eyebrow { display: block; max-height: 20px; overflow: hidden; transition: max-height .25s ease, opacity .2s ease; }
-  html.scrolled .topbar { background: var(--surface-solid); background: color-mix(in srgb, var(--surface-solid) 78%, transparent); -webkit-backdrop-filter: blur(20px) saturate(1.6); backdrop-filter: blur(20px) saturate(1.6); box-shadow: 0 1px 0 var(--line); padding-top: calc(6px + env(safe-area-inset-top)); padding-bottom: 6px; }
-  html.scrolled .topbar h1 { font-size: var(--text-xl) !important; }
-  html.scrolled .topbar .eyebrow { max-height: 0; opacity: 0; }
+  html.scrolled .topbar { background: var(--surface-solid); background: color-mix(in srgb, var(--surface-solid) 78%, transparent); -webkit-backdrop-filter: blur(20px) saturate(1.6); backdrop-filter: blur(20px) saturate(1.6); box-shadow: 0 1px 0 var(--line); }
+  /* (2026-11-25) The bar used to shrink here (smaller title, date hidden, less padding). It sits in the page flow, so
+     everything below jumped ~30px the moment you scrolled. It now keeps its size; only the frosted background fades in. */
 }
 
 /* Pills with counts ("Strength 34"). */
@@ -4341,3 +4341,47 @@ a.text-button > svg { flex: none; width: 16px; height: 16px; }
 .rest-bar.finished .rest-bar-text strong, .rest-bar.small.finished .rest-bar-main > strong { display: inline-block; transform-origin: left center; animation: rest-go .45s cubic-bezier(.2, 1.3, .4, 1) both; }
 .rest-bar.leaving { animation: rest-leave .28s cubic-bezier(.4, 0, 1, 1) forwards; pointer-events: none; }
 @media (prefers-reduced-motion: reduce) { .rest-bar.finished, .rest-bar.finished .rest-bar-text strong, .rest-bar.small.finished .rest-bar-main > strong, .rest-bar.leaving { animation: none; } }
+
+/* Logger bottom (2026-11-25): round Previous + one wide Next that names the next move (never wraps). */
+.logger .logger-nav { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-2); align-items: stretch; }
+.logger .logger-nav.has-prev { grid-template-columns: 56px minmax(0, 1fr); }
+.logger-prev { display: grid; place-items: center; width: 56px; height: 56px; padding: 0; border: var(--glass-edge); border-radius: 50%; color: var(--ink); background: var(--surface-2); cursor: pointer; }
+.logger-prev svg { width: 20px; height: 20px; }
+.logger-prev:disabled { opacity: .35; cursor: default; }
+.logger .logger-nav .logger-next { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); min-height: 56px; padding: 0 var(--space-5); border-radius: var(--radius-pill); text-align: left; }
+.logger-next-text { display: grid; min-width: 0; line-height: 1.15; }
+.logger-next-text small { color: color-mix(in srgb, var(--on-accent) 70%, transparent); font-size: var(--text-xs); font-weight: 800; letter-spacing: .06em; text-transform: uppercase; }
+.logger-next-text strong { overflow: hidden; font-size: var(--text-base); font-weight: 800; text-overflow: ellipsis; white-space: nowrap; }
+.logger .logger-nav .logger-next svg { flex: none; width: 20px; height: 20px; }
+.logger-finish-early { display: block; margin: var(--space-1) auto 0; min-height: 44px; color: var(--muted); font-size: var(--text-md); font-weight: 700; }
+
+/* Logger set actions (2026-11-25): Add set · Warm-up & plates · Swap as three equal pills on one line, same height,
+   same text size, icons aligned (the "＋" character sat lower than the icons before). */
+.pro-set-actions { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); margin-top: var(--space-3); }
+.pro-set-actions .pro-action { display: inline-flex; align-items: center; justify-content: center; gap: var(--space-1); min-height: 40px; margin: 0; padding: 0 var(--space-3); border: var(--glass-edge); border-radius: var(--radius-pill); color: var(--accent-ink); background: var(--surface-2); font-size: var(--text-sm); font-weight: 700; line-height: 1; white-space: nowrap; }
+.pro-set-actions .pro-action svg { flex: none; width: 15px; height: 15px; }
+.pro-set-actions .pro-action:disabled { opacity: .45; }
+/* How to do it & tips: the guide link card fits inside the box instead of running past its right edge. */
+.exercise-coach { overflow: hidden; }
+.exercise-coach .exercise-visual { box-sizing: border-box; width: 100%; max-width: 100%; margin-left: 0; margin-right: 0; }
+
+/* Search fields (swap sheet, Workouts, Friends): the field's own pill is the box, so the input inside draws none. The
+   global input style uses !important (and a dark-theme copy), hence the matching weight here. */
+:root :is(.swap-search, .library-find, .friends-search) input:not([type="range"]):not([type="checkbox"]):not([type="radio"]),
+:root[data-theme="dark"] :is(.swap-search, .library-find, .friends-search) input:not([type="range"]):not([type="checkbox"]):not([type="radio"]) {
+  min-height: 0; padding: 0; border: 0 !important; border-radius: 0; background: transparent !important; box-shadow: none; -webkit-appearance: none; appearance: none;
+}
+.swap-search { border-radius: var(--radius-pill); }
+
+/* Settings section header (2026-11-25): replaces the app top bar inside a section — round back, "Settings" eyebrow,
+   the section name as the title. Pinned like the top bar. */
+html.settings-detail-mode .topbar { display: none; }
+.settings-detail-head { position: sticky; top: 0; z-index: 40; display: flex; align-items: center; gap: var(--space-3); margin: 0 calc(-1 * var(--space-4)) var(--space-2); padding: calc(var(--space-3) + env(safe-area-inset-top)) var(--space-4) var(--space-3); background: color-mix(in srgb, var(--page) 78%, transparent); -webkit-backdrop-filter: blur(18px) saturate(1.4); backdrop-filter: blur(18px) saturate(1.4); }
+.settings-detail-back { display: grid; place-items: center; flex: none; width: 44px; height: 44px; padding: 0; border-radius: 50%; }
+.settings-detail-back svg { width: 20px; height: 20px; }
+.settings-detail-head > div { display: grid; min-width: 0; }
+.settings-detail-head .eyebrow { color: var(--muted); font-size: var(--text-sm); font-weight: 700; }
+.settings-detail-head h1 { margin: 0; overflow: hidden; color: var(--ink); font-size: var(--text-3xl); font-weight: 800; line-height: 1.1; text-overflow: ellipsis; white-space: nowrap; }
+.pro-set-actions { display: grid; grid-template-columns: repeat(auto-fit, minmax(0, 1fr)); justify-content: stretch; }
+.pro-set-actions .pro-action { width: 100%; min-width: 0; padding: 0 var(--space-2); }
+.exercise-coach .exercise-visual { width: calc(100% - 2 * var(--space-3)); margin: 0 var(--space-3) var(--space-2); }
