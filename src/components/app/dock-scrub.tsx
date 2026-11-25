@@ -31,9 +31,27 @@ export function DockScrub() {
       try { navigator.vibrate?.(4); } catch { /* optional */ }
     }
 
+    /**
+     * Dock magnification (2026-11-25, after Aceternity UI's Floating Dock / the macOS dock): while a finger slides along
+     * the phone dock, each icon swells by how close it is to the finger (up to 1.45× right under it, back to normal
+     * 80 px away) and lifts a little. Only the dock, not tab bars; reduced motion skips it.
+     */
+    function magnify(pill: HTMLElement, clientX: number | null) {
+      if (!pill.classList.contains("dock-pill") || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+      for (const link of links(pill)) {
+        const icon = link.querySelector<HTMLElement>(".nav-icon, .dock-rozi-face, img");
+        if (!icon) continue;
+        if (clientX === null) { icon.style.transform = ""; continue; }
+        const box = link.getBoundingClientRect();
+        const near = Math.max(0, 1 - Math.abs(clientX - (box.left + box.width / 2)) / 80);
+        icon.style.transform = near > 0 ? `translateY(${-6 * near}px) scale(${1 + 0.45 * near})` : "";
+      }
+    }
+
     function follow(clientX: number) {
       if (!drag) return;
       const { pill, glider } = drag;
+      magnify(pill, clientX);
       const box = pill.getBoundingClientRect();
       const width = glider.offsetWidth;
       const x = Math.min(Math.max(clientX - box.left - width / 2, EDGE), box.width - width - EDGE);
@@ -55,6 +73,7 @@ export function DockScrub() {
       const { pill, glider, moving, hovered } = drag;
       drag = null;
       pill.classList.remove("dock-pressing", "dock-dragging", "scrub-pressing", "scrub-dragging");
+      magnify(pill, null);
       hovered?.classList.remove("dock-hover");
       if (!moving) return;
       // Let GlassGlider glide the lens to the chosen tab (it animates when the position "changed").
