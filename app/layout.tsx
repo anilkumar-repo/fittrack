@@ -26,6 +26,11 @@ export const viewport: Viewport = {
 
 const APP_FEEL_SCRIPT = `try{var s=window.matchMedia("(display-mode: standalone)").matches||navigator.standalone===true;if(s){document.documentElement.classList.add("standalone");document.addEventListener("gesturestart",function(e){e.preventDefault()},{passive:false});document.addEventListener("touchmove",function(e){if(e.touches&&e.touches.length>1)e.preventDefault()},{passive:false})}}catch(e){}`;
 
+// iOS can't switch a Home Screen web app's icon with the system appearance: it copies the icon once, when the app is
+// added. So the page offers the icon that matches the phone right now — dark Rozi when the phone is in dark mode —
+// and iOS keeps whichever one is current at "Add to Home Screen". (Native-only: dark/tinted icons that change later.)
+const ICON_SCRIPT = `try{var q=matchMedia("(prefers-color-scheme: dark)");var f=function(){var l=document.querySelector('link[rel="apple-touch-icon"]');if(l)l.href=q.matches?"/icons/apple-touch-icon-dark.png":"/icons/apple-touch-icon.png"};if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",f);else f();q.addEventListener("change",f)}catch(e){}`;
+
 const THEME_SCRIPT = `try{var t=localStorage.getItem("fittrack-theme");if(t===null||t==="dark"||(t==="auto"&&matchMedia("(prefers-color-scheme: dark)").matches)){document.documentElement.dataset.theme="dark";var m=document.querySelector('meta[name="theme-color"]');if(m)m.setAttribute("content","#0b0f12")}}catch(e){}`;
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
@@ -37,7 +42,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
         {/* In the installed Home Screen app, block pinch zoom so it feels like a native app. */}
         <script dangerouslySetInnerHTML={{ __html: APP_FEEL_SCRIPT }} />
       </head>
-      <body>{children}<ServiceWorkerRegistration /></body>
+      <body>{children}<ServiceWorkerRegistration /><script dangerouslySetInnerHTML={{ __html: ICON_SCRIPT }} /></body>
     </html>
   );
 }
