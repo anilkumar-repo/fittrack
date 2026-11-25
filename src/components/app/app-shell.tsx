@@ -105,10 +105,28 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   // only get a short fade.
   const previousPath = useRef<string | null>(null);
   const historyMove = useRef(false);
+  // The slide waiting for the new page's content; the content can arrive a moment after the address changes (after
+  // loading), so new elements are animated when they show up, for up to 900 ms. Elements already animated are skipped.
+  const pending = useRef<{ frames: Keyframe[]; duration: number; until: number } | null>(null);
+  const animated = useRef(new WeakSet<Element>());
   useEffect(() => {
     const onPop = () => { historyMove.current = true; };
     window.addEventListener("popstate", onPop);
-    return () => window.removeEventListener("popstate", onPop);
+    const main = document.querySelector<HTMLElement>(".main-area");
+    const isPagePart = (element: Element): element is HTMLElement => element instanceof HTMLElement && !element.matches(".topbar, .toasts, .sr-only, .together-tabs");
+    // Whatever is on screen at the start counts as already shown.
+    if (main) for (const child of main.children) animated.current.add(child);
+    const watcher = new MutationObserver((changes) => {
+      const plan = pending.current;
+      if (!plan || performance.now() > plan.until) return;
+      for (const change of changes) for (const node of change.addedNodes) {
+        if (!isPagePart(node as Element) || animated.current.has(node as Element)) continue;
+        animated.current.add(node as Element);
+        (node as HTMLElement).animate(plan.frames, { duration: plan.duration, easing: "cubic-bezier(.2, .8, .2, 1)" });
+      }
+    });
+    if (main) watcher.observe(main, { childList: true });
+    return () => { window.removeEventListener("popstate", onPop); watcher.disconnect(); };
   }, []);
   useLayoutEffect(() => {
     const from = previousPath.current;
@@ -120,11 +138,16 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     const main = document.querySelector<HTMLElement>(".main-area");
     if (!main) return;
     const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    const parts = [...main.children].filter((element): element is HTMLElement => element instanceof HTMLElement && !element.matches(".topbar, .toasts, .sr-only, .together-tabs"));
-    // (The Together tab row is shared by its four pages, so it stays still and only what's under it moves.)
     const shift = reduce || fromHistory ? 0 : slideFor(from, to) * 28;
     const frames: Keyframe[] = shift ? [{ opacity: 0, transform: `translateX(${shift}px)` }, { opacity: 1, transform: "none" }] : [{ opacity: 0 }, { opacity: 1 }];
-    for (const part of parts) part.animate(frames, { duration: shift ? 320 : 180, easing: "cubic-bezier(.2, .8, .2, 1)" });
+    const duration = shift ? 320 : 180;
+    pending.current = { frames, duration, until: performance.now() + 900 };
+    // The new page's elements already in place now; later ones are caught by the watcher above.
+    for (const child of main.children) {
+      if (!(child instanceof HTMLElement) || child.matches(".topbar, .toasts, .sr-only, .together-tabs") || animated.current.has(child)) continue;
+      animated.current.add(child);
+      child.animate(frames, { duration, easing: "cubic-bezier(.2, .8, .2, 1)" });
+    }
     // The top bar stays put; only its title cross-fades to the new page's name.
     main.querySelector(".topbar-text")?.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 220, easing: "ease-out" });
   }, [pathname]);

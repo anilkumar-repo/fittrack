@@ -2822,3 +2822,35 @@ CSS and screen code only, no database or API change.
 - Files: `rest-timer.tsx`, `app/globals.css`. 436 tests pass, type check clean, lint clean for the file. The three
   animations were checked in the browser on a timer element. A full rest timer needs a logged set, so check it on the
   phone.
+
+### 2026-11-25 — Phone review fixes 6: workout logger, search fields, Settings header, smooth scroll, reliable transitions
+
+CSS and screen code only, no database or API change.
+
+- **Swap sheet search bar:** the input drew its own box inside the pill. The global input style uses `!important`
+  (plus a dark-theme copy). One rule now strips the inner box for every search field (`.swap-search`, `.library-find`,
+  `.friends-search`), and the swap search is a pill.
+- **Logger Previous / Next:** Previous is now a round 56 px button. Next is one wide pill that names the next move
+  ("NEXT · Prone W raise"), so its label never wraps. On the last move it reads "All done? · Finish and review".
+  "Finish workout early" is a quiet link under them.
+- **Logger actions:** Add set · Plates · Swap are three equal pills on one line, with the same height and aligned
+  icons. The "＋" character had sat lower than the icons. "Warm-up & plates" shows as "Plates" (the screen-reader
+  label keeps the full name).
+- **How to do it & tips:** the guide card ran past the box's right edge. It's now inset to match the Load guidance box.
+- **Rest timer ±10 flicker:** the timer was keyed by its total length, so every −10/+10 rebuilt it and replayed its
+  slide-in. Each rest now gets a fixed id when it starts (`rest.id`); ±10 only updates the time. Checked: +10 took
+  1:15 → 1:24 on the same element.
+- **Settings sections:** one header instead of two (the app's "← Settings" bar plus "‹ Settings / Appearance").
+  Inside a section the app top bar hides (`settings-detail-mode`). The section shows a round back button to
+  Settings, "Settings" as a small label, and the section name as the title, pinned like the top bar.
+- **Smoother scrolling:** the top bar used to shrink as soon as you scrolled (smaller title, date hidden, less
+  padding). It sits in the page flow, so the whole page jumped ~30 px at that moment. It now keeps its size and only
+  its frosted background fades in.
+- **Page transitions that sometimes didn't play:** the slide ran the moment the address changed, but a page's content
+  often arrives a moment later (after loading), so there was nothing new to animate. The shell now watches the main
+  area and slides in the new page's elements whenever they arrive (up to 0.9 s after the change), each one once.
+  Checked: Workouts, Progress, Friends, Feed and Today all slid in.
+- Files: `swap-sheet` CSS, `today-screen.tsx`, `exercise-log-card.tsx`, `settings-screen.tsx`, `app-shell.tsx`,
+  `app/globals.css`.
+- Checks: 436 tests pass, type check clean, lint (1 old warning). Checked at 375 px in the browser, including a demo
+  workout (logger buttons, actions, How-to, rest timer ±10). The demo data was backed up first and restored afterwards.
