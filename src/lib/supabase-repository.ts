@@ -1,3 +1,4 @@
+import { parsePlanAdjustments } from "./coach-plan.ts";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { createDemoState, defaultDisplayName, localTimeZone, todayInTimeZone } from "./demo-data";
 import { canAccessOwnerProgress } from "./progress";
@@ -107,6 +108,8 @@ function mapProfile(row: DbRow, id: string, trainerRole: boolean, deadliftEnable
     ...(typeof row.share_lifts === "boolean" ? { shareLifts: row.share_lifts } : {}),
     ...(typeof row.buddy_anchor === "string" && row.buddy_anchor ? { buddyAnchor: row.buddy_anchor } : {}),
     ...(typeof row.light_week_start === "string" && row.light_week_start ? { lightWeekStart: row.light_week_start } : {}),
+    // R14 coach review: read defensively (unknown or out-of-range parts are dropped).
+    ...(row.plan_adjustments && typeof row.plan_adjustments === "object" && Object.keys(row.plan_adjustments as object).length ? { planAdjustments: parsePlanAdjustments(row.plan_adjustments) } : {}),
     ...(typeof row.username === "string" && row.username ? { username: row.username } : {}),
     ...(typeof row.bio === "string" && row.bio ? { bio: row.bio } : {}),
     ...(typeof row.findable === "boolean" ? { findable: row.findable } : {}),
@@ -476,12 +479,13 @@ export async function saveCloudProfile(client: SupabaseClient, profile: Profile)
     ...(typeof profile.shareLifts === "boolean" ? { share_lifts: profile.shareLifts } : {}),
     ...(profile.birthDate ? { birth_date: profile.birthDate } : {}),
     ...(profile.dailyActivity ? { daily_activity: profile.dailyActivity } : {}),
+    ...(profile.planAdjustments ? { plan_adjustments: parsePlanAdjustments(profile.planAdjustments) } : {}),
   };
   const { error } = await client.from("profiles").upsert(row, { onConflict: "id" });
-  // Before a migration adds the newer optional columns (focus_area, gym_type, share_lifts, birth_date, daily_activity), save everything else rather than fail.
-  if (error && (error.code === "PGRST204" || error.code === "42703") && (row.focus_area || row.gym_type || row.share_lifts !== undefined || row.birth_date || row.daily_activity)) {
-    const { focus_area: _focus, gym_type: _gym, share_lifts: _share, birth_date: _birthDate, daily_activity: _activity, ...rest } = row;
-    void _focus; void _gym; void _share; void _birthDate; void _activity;
+  // Before a migration adds the newer optional columns (focus_area, gym_type, share_lifts, birth_date, daily_activity, plan_adjustments), save everything else rather than fail.
+  if (error && (error.code === "PGRST204" || error.code === "42703") && (row.focus_area || row.gym_type || row.share_lifts !== undefined || row.birth_date || row.daily_activity || row.plan_adjustments)) {
+    const { focus_area: _focus, gym_type: _gym, share_lifts: _share, birth_date: _birthDate, daily_activity: _activity, plan_adjustments: _plan, ...rest } = row;
+    void _focus; void _gym; void _share; void _birthDate; void _activity; void _plan;
     const { error: retryError } = await client.from("profiles").upsert(rest, { onConflict: "id" });
     if (retryError) throw retryError;
     return;

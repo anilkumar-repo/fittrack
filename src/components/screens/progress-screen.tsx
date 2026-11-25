@@ -1,6 +1,7 @@
 "use client";
 
 import { MissedDaysList } from "@/components/app/missed-days-card";
+import { CoachReviewCard } from "@/components/app/coach-review-card";
 import { LevelPanel } from "@/components/app/level-panel";
 import { BodyPanel } from "@/components/app/body-panel";
 
@@ -133,6 +134,8 @@ export function ProgressScreen() {
           <p className="today-meta">{week.completed} of {week.planned || state.profile.sessionsPerWeek} {(week.planned || state.profile.sessionsPerWeek) === 1 ? "workout" : "workouts"} · {week.sets} {week.sets === 1 ? "set" : "sets"}{week.newRecords.length ? ` · ${week.newRecords.length} new ${week.newRecords.length === 1 ? "record" : "records"}` : ""}</p>
           <ButtonLink href="/report" variant="glass" icon={<ChevronRight aria-hidden="true" />}>Your week with Rozi</ButtonLink>
         </article>
+        {/* R14: what to change in your plan, from your logged weeks. */}
+        <CoachReviewCard />
         <h2 className="progress-section">Consistency</h2>
         <div className="stat-row">
           <article className="panel stat"><span className="stat-ico"><Target aria-hidden="true" /></span><strong>{consistency?.percent === null || consistency?.percent === undefined ? "—" : <><CountUp value={consistency.percent} />%</>}</strong><small>Consistency</small><em>{consistency?.completedScheduledDays ?? 0} of {consistency?.scheduledDays ?? 0} planned days · 4 weeks</em></article>

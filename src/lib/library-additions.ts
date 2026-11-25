@@ -379,8 +379,138 @@ export const BATCH_C_CARDIO_HOME: ProgramExercise[] = [
   },
 ];
 
+/** Batch D (2026-11-25): 17 gaps found in the coverage review. Sumo deadlift and good morning follow the deadlift/RDL trainer-approval rule. */
+export const BATCH_D_GAPS: ProgramExercise[] = [
+  {
+    id: "decline_bench_press", name: "Decline barbell bench press", equipment: "Barbell + decline bench", category: "strength", sets: 3, reps: "6–10", restSeconds: 150,
+    pattern: "horizontal_push", needs: ["barbell", "bench"], fallback: "dumbbell_bench", targetMuscles: ["Chest", "Triceps", "Front shoulders"], difficulty: "intermediate",
+    cues: ["Lock your legs in under the pads.", "Lower the bar to your lower chest.", "Press up over your shoulders."],
+    instructions: ["Lie back on a decline bench and hook your legs under the pads.", "Grip slightly wider than your shoulders and unrack with straight arms.", "Lower the bar to your lower chest under control.", "Press back up until your arms are straight."],
+    cautions: ["Use safety bars or a spotter; it is hard to bail out on a decline.", "Come up slowly after the set, as the blood rushes to your head.", PAIN_STOP],
+  },
+  {
+    id: "decline_machine_press", name: "Decline chest press (machine)", equipment: "Decline chest press machine", category: "strength", sets: 3, reps: "10–12", restSeconds: 90,
+    pattern: "horizontal_push", needs: ["gym_machines"], fallback: "machine_chest_press", targetMuscles: ["Chest", "Triceps", "Front shoulders"], difficulty: "beginner",
+    cues: ["Handles at lower-chest height.", "Back flat against the pad.", "Press smoothly; don't lock your elbows hard."],
+    instructions: ["Set the seat so the handles line up with your lower chest.", "Sit with your back on the pad and feet on the footrest or floor.", "Press the handles forward until your arms are almost straight.", "Return slowly until you feel a gentle chest stretch."],
+    cautions: ["Start with a light pin setting to learn the path.", PAIN_STOP],
+  },
+  {
+    id: "decline_db_press", name: "Decline dumbbell press", equipment: "Dumbbells + decline bench", category: "strength", sets: 3, reps: "8–12", restSeconds: 90,
+    pattern: "horizontal_push", needs: ["bench", "dumbbells"], fallback: "dumbbell_bench", targetMuscles: ["Chest", "Triceps", "Front shoulders"], difficulty: "intermediate",
+    cues: ["Keep your feet locked in the pads.", "Lower the weights beside your lower chest.", "Press up and slightly together."],
+    instructions: ["Sit on a decline bench with the dumbbells on your thighs, then lie back and hook your feet in.", "Press the dumbbells up over your chest.", "Lower them slowly beside your lower chest.", "Press back up without letting them drift apart."],
+    cautions: ["Ask for a hand getting the dumbbells into position when they are heavy.", "Come up slowly after the set.", PAIN_STOP],
+  },
+  {
+    id: "chest_dip", name: "Chest dip", equipment: "Parallel dip bars (or assisted dip machine)", category: "strength", sets: 3, reps: "6–10", restSeconds: 120,
+    pattern: "horizontal_push", needs: ["pullup_bar"], fallback: "bench_dips", targetMuscles: ["Chest", "Triceps", "Front shoulders"], difficulty: "intermediate",
+    cues: ["Lean your chest slightly forward.", "Lower until your upper arms are about level.", "Press up without shrugging."],
+    instructions: ["Hold the parallel bars with straight arms and your body leaning slightly forward.", "Bend your elbows to lower your body until your upper arms are about level with the floor.", "Pause briefly at the bottom.", "Press back up to straight arms."],
+    cautions: ["Don't drop deeper than comfortable; it strains the front of the shoulder.", "Use an assisted dip machine if you can't do 5 controlled reps.", PAIN_STOP],
+  },
+  {
+    id: "arnold_press", name: "Arnold press", equipment: "Bench + dumbbells", category: "strength", sets: 3, reps: "8–12", restSeconds: 90,
+    pattern: "vertical_push", needs: ["bench", "dumbbells"], fallback: "shoulder_press", targetMuscles: ["Shoulders", "Triceps", "Upper chest"], difficulty: "intermediate",
+    cues: ["Start with palms facing you.", "Turn your palms out as you press.", "Reverse the turn on the way down."],
+    instructions: ["Sit tall with the dumbbells at chest height and your palms facing you.", "Press up, rotating your palms to face forward as you go.", "Finish with your arms straight over your shoulders.", "Lower while rotating your palms back to face you."],
+    cautions: ["Use lighter weights than a standard shoulder press.", PAIN_STOP],
+  },
+  {
+    id: "front_raise", name: "Dumbbell front raise", equipment: "Dumbbells", category: "strength", sets: 3, reps: "10–15", restSeconds: 60,
+    pattern: "shoulder_raise", needs: ["dumbbells"], fallback: "lateral_raise", targetMuscles: ["Front shoulders", "Upper chest"], difficulty: "beginner",
+    cues: ["Lift to shoulder height, no higher.", "Keep a soft bend in your elbows.", "Lower slowly; don't swing."],
+    instructions: ["Stand tall with a light dumbbell in each hand in front of your thighs.", "Raise your arms straight forward to shoulder height.", "Pause for a moment.", "Lower slowly back to your thighs."],
+    cautions: ["Use a light weight and don't lean back to lift it.", PAIN_STOP],
+  },
+  {
+    id: "upright_row", name: "Cable upright row", equipment: "Cable machine", category: "strength", sets: 3, reps: "10–15", restSeconds: 60,
+    pattern: "shoulder_raise", needs: ["cable_machine"], fallback: "lateral_raise", targetMuscles: ["Side shoulders", "Traps", "Biceps"], difficulty: "intermediate",
+    cues: ["Lead with your elbows.", "Stop when your elbows reach shoulder height.", "Keep the bar close to your body."],
+    instructions: ["Attach a straight bar to the low pulley and hold it with a shoulder-width overhand grip.", "Stand tall with the bar at your thighs.", "Pull the bar up along your body, elbows leading, until your elbows reach shoulder height.", "Lower slowly to your thighs."],
+    cautions: ["Don't pull above shoulder height; a wide grip is kinder to your shoulders.", "Skip this one if it pinches the front of your shoulder.", PAIN_STOP],
+  },
+  {
+    id: "t_bar_row", name: "T-bar row", equipment: "T-bar row station or landmine barbell", category: "strength", sets: 3, reps: "8–12", restSeconds: 120,
+    pattern: "horizontal_pull", needs: ["barbell"], fallback: "one_arm_db_row", targetMuscles: ["Mid back", "Lats", "Biceps"], difficulty: "intermediate",
+    cues: ["Hinge forward with a flat back.", "Pull your elbows towards your hips.", "Squeeze, then lower slowly."],
+    instructions: ["Stand over the bar with knees soft and hinge forward with a flat back.", "Grip the handle with straight arms.", "Pull the handle up towards your lower chest, elbows close to your body.", "Lower slowly until your arms are straight."],
+    cautions: ["Keep your back flat; lower the weight if it rounds.", PAIN_STOP],
+  },
+  {
+    id: "seated_calf_raise", name: "Seated calf raise", equipment: "Seated calf raise machine", category: "strength", sets: 3, reps: "12–20", restSeconds: 45,
+    pattern: "calf_raise", needs: ["gym_machines"], fallback: "calf_raise", targetMuscles: ["Calves"], difficulty: "beginner",
+    cues: ["Balls of your feet on the platform.", "Rise as high as you can.", "Lower slowly for a full stretch."],
+    instructions: ["Sit on the machine with the pads resting on your lower thighs and the balls of your feet on the platform.", "Release the safety catch and lower your heels for a stretch.", "Rise up onto your toes as high as you can.", "Pause, then lower slowly."],
+    cautions: ["Don't bounce at the bottom.", PAIN_STOP],
+  },
+  {
+    id: "hip_adduction_machine", name: "Hip adduction machine", equipment: "Hip adduction machine", category: "strength", sets: 3, reps: "12–15", restSeconds: 60,
+    pattern: "single_leg", needs: ["gym_machines"], fallback: "bodyweight_squat", targetMuscles: ["Adductors", "Hips"], difficulty: "beginner",
+    cues: ["Sit tall with your back on the pad.", "Squeeze your knees together.", "Open slowly; don't let the weight slam."],
+    instructions: ["Sit on the machine with your legs against the pads and set a comfortable starting width.", "Hold the handles and sit tall.", "Squeeze your legs together until the pads meet.", "Open slowly back to the start."],
+    cautions: ["Don't set the start width wider than is comfortable for your hips.", PAIN_STOP],
+  },
+  {
+    id: "hip_abduction_machine", name: "Hip abduction machine", equipment: "Hip abduction machine", category: "strength", sets: 3, reps: "12–15", restSeconds: 60,
+    pattern: "single_leg", needs: ["gym_machines"], fallback: "glute_bridge", targetMuscles: ["Glutes", "Hips"], difficulty: "beginner",
+    cues: ["Sit tall with your back on the pad.", "Push your knees out to the sides.", "Return slowly; keep the tension."],
+    instructions: ["Sit on the machine with the pads against the outsides of your knees.", "Hold the handles and sit tall.", "Push your legs out to the sides as far as is comfortable.", "Bring them back slowly without letting the weights rest."],
+    cautions: ["Use a light weight; the hips tire quickly.", PAIN_STOP],
+  },
+  {
+    id: "front_squat", name: "Barbell front squat", equipment: "Barbell + rack", category: "strength", sets: 3, reps: "5–8", restSeconds: 150,
+    pattern: "squat", needs: ["barbell", "rack"], fallback: "goblet_squat", targetMuscles: ["Quadriceps", "Glutes", "Core"], difficulty: "intermediate",
+    cues: ["Elbows high, bar on your shoulders.", "Chest tall.", "Sit straight down between your knees."],
+    instructions: ["Rest the bar across the front of your shoulders with your elbows pointing forward.", "Step back from the rack with feet shoulder-width apart.", "Squat down, keeping your chest tall and elbows up.", "Stand back up through your whole foot."],
+    cautions: ["Use safety bars set at the bottom of your squat.", "If your wrists are stiff, try crossing your arms over the bar.", PAIN_STOP],
+  },
+  {
+    id: "sumo_deadlift", name: "Sumo deadlift", equipment: "Barbell", category: "strength", sets: 3, reps: "5", restSeconds: 180,
+    pattern: "hip_extension", needs: ["barbell"], fallback: "db_glute_bridge", targetMuscles: ["Glutes", "Hamstrings", "Lower back"], difficulty: "intermediate", restriction: "trainer_deadlift_approval",
+    cues: ["Only after trainer approval.", "Wide stance, toes turned out.", "Push the floor away; bar stays close."],
+    instructions: ["This movement is only available after explicit trainer approval.", "Stand with a wide stance, toes turned out and the bar over your mid-foot, and grip it inside your knees.", "Brace, keep your back flat and push the floor away to stand up with the bar close to your legs.", "Lower it the same way, hips back first, until it touches the floor."],
+    cautions: ["This is a deadlift variation and stays locked until your trainer approves it.", PAIN_STOP],
+  },
+  {
+    id: "good_morning", name: "Barbell good morning", equipment: "Barbell + rack", category: "strength", sets: 3, reps: "8–12", restSeconds: 120,
+    pattern: "hip_extension", needs: ["barbell", "rack"], fallback: "db_glute_bridge", targetMuscles: ["Hamstrings", "Glutes", "Lower back"], difficulty: "intermediate", restriction: "trainer_deadlift_approval",
+    cues: ["Only after trainer approval.", "Push your hips back, soft knees.", "Flat back all the way."],
+    instructions: ["This movement is only available after explicit trainer approval.", "Rest a light barbell across your upper back and stand with feet hip-width apart.", "Push your hips back and lean forward with a flat back until you feel your hamstrings stretch.", "Drive your hips forward to stand tall."],
+    cautions: ["This is a hip-hinge like the Romanian deadlift and stays locked until your trainer approves it.", "Start very light; it loads the lower back.", PAIN_STOP],
+  },
+  {
+    id: "cable_glute_kickback", name: "Cable glute kickback", equipment: "Cable machine + ankle strap", category: "strength", sets: 3, reps: "10–15 each leg", restSeconds: 60,
+    pattern: "hip_extension", needs: ["cable_machine"], fallback: "glute_bridge", targetMuscles: ["Glutes", "Hamstrings"], difficulty: "beginner",
+    cues: ["Hold the frame and stand tall.", "Kick straight back, squeeze your glute.", "Don't arch your lower back."],
+    instructions: ["Clip the ankle strap to the low pulley and your ankle, then face the machine and hold on.", "Stand tall with a slight lean forward.", "Kick your leg straight back, squeezing your glute at the top.", "Return slowly, then finish the reps and switch legs."],
+    cautions: ["Keep the movement in your hip; swinging or arching the back adds nothing.", PAIN_STOP],
+  },
+  {
+    id: "ab_wheel_rollout", name: "Ab wheel rollout", equipment: "Ab wheel + mat", category: "core", sets: 3, reps: "6–10", restSeconds: 60,
+    pattern: "core", fallback: "floor_plank", targetMuscles: ["Abs", "Core", "Shoulders"], difficulty: "intermediate",
+    cues: ["Ribs down, glutes tight.", "Roll out only as far as you can control.", "Pull back with your abs."],
+    instructions: ["Kneel on a mat holding the wheel under your shoulders.", "Tuck your hips under and brace your abs.", "Roll forward slowly, keeping your back flat, as far as you can control.", "Pull the wheel back to the start using your abs."],
+    cautions: ["If your lower back sags, shorten the roll-out.", "Start with the wheel against a wall to limit the range.", PAIN_STOP],
+  },
+  {
+    id: "concentration_curl", name: "Dumbbell concentration curl", equipment: "Dumbbell + bench", category: "strength", sets: 3, reps: "10–12 each arm", restSeconds: 60,
+    pattern: "arm_curl", needs: ["dumbbells"], fallback: "db_curl", targetMuscles: ["Biceps", "Forearms"], difficulty: "beginner",
+    cues: ["Elbow rests against your inner thigh.", "Curl up, squeeze.", "Lower slowly to a full stretch."],
+    instructions: ["Sit on a bench or chair with your feet wide and a dumbbell in one hand.", "Rest the back of your upper arm against your inner thigh.", "Curl the dumbbell up towards your shoulder.", "Lower slowly, finish the reps, then switch arms."],
+    cautions: ["Keep the upper arm still; don't swing to lift.", PAIN_STOP],
+  },
+  {
+    id: "triceps_kickback", name: "Dumbbell triceps kickback", equipment: "Dumbbells", category: "strength", sets: 3, reps: "12–15", restSeconds: 60,
+    pattern: "arm_extension", needs: ["dumbbells"], fallback: "db_triceps_extension", targetMuscles: ["Triceps"], difficulty: "beginner",
+    cues: ["Hinge forward, upper arm by your side.", "Straighten only at the elbow.", "Light weight, slow lowering."],
+    instructions: ["Hold a light dumbbell and hinge forward with a flat back, your upper arm tight against your side.", "Bend your elbow to about a right angle.", "Straighten your arm backward until it is in line with your body.", "Lower slowly under control."],
+    cautions: ["Go light; the move is about control, not load.", PAIN_STOP],
+  },
+];
+
 /** Every exercise added in R6 so far, in batch order. */
-export const LIBRARY_ADDITIONS: ProgramExercise[] = [...BATCH_A_UPPER, ...BATCH_B_LOWER_CORE, ...BATCH_C_CARDIO_HOME];
+export const LIBRARY_ADDITIONS: ProgramExercise[] = [...BATCH_A_UPPER, ...BATCH_B_LOWER_CORE, ...BATCH_C_CARDIO_HOME, ...BATCH_D_GAPS];
 
 /**
  * The planner never picks these as automatic fill-ins (when an exercise was skipped or its pattern repeats), so adding

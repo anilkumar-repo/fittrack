@@ -78,6 +78,8 @@ export interface Profile {
   findable?: boolean;
   /** Monday of a week your trainer made lighter: fewer sets, the same session (Train together stays in step). */
   lightWeekStart?: string;
+  /** R14 coach review: plan changes you approved (or let Rozi apply). See src/lib/coach-plan.ts. */
+  planAdjustments?: import("./coach-plan").PlanAdjustments;
   /** Profile picture: "photo:<url>", "rozi:<mood>" or "color:<hex>". */
   avatar?: string;
   /** Share best lifts with friends (exercise leaderboard). Unset = on, or off for anyone under 18. */
@@ -212,6 +214,10 @@ export interface TrainerClient {
 }
 
 export interface WorkoutPlan {
+  /** R14: the lighter week is one the person accepted in their coach review (not the trainer's). */
+  ownLightWeek?: boolean;
+  /** R14: the coach changes this plan was built with (coach-key.ts); absent = none. */
+  coachKey?: string;
   id: string;
   date: string;
   focus: WorkoutFocus;

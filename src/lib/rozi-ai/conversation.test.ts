@@ -62,7 +62,7 @@ test("Rozi asks for the facts, gets them from the app, and answers from them", a
   assert.equal(result.kind, "tool-result");
   assert.equal(result.result.heaviestChangeKg, 2.5);
   // Every call offers the tools and Rozi's rules; nothing personal is in the rules.
-  assert.ok(requests.every((request) => request.tools?.length === ROZI_TOOLS.length && ROZI_TOOLS.length === 14));
+  assert.ok(requests.every((request) => request.tools?.length === ROZI_TOOLS.length && ROZI_TOOLS.length === 15));
   assert.ok(!requests[0].system.includes("Secret Person"));
 });
 

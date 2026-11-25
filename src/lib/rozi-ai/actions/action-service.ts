@@ -25,7 +25,7 @@ export function actionsEnabled(env: Record<string, string | undefined> = process
 /** The one tool through which the model can ask for a change. It never changes anything by itself. */
 export const PROPOSE_ACTION_TOOL: AiTool = {
   name: "propose_action",
-  description: "Propose a change to the user's RozFit data. Nothing changes until the user taps Approve on the card. Use only when the user asks for the change. Types: swap_exercise {exercise, replacement} (today's workout); start_plan_today {area, minutes}; save_routine {area, minutes}; update_training_preferences {goal: general|tone|fatloss|muscle, sessionMinutes, focusArea, typicalDay: seated|light|on_feet|active}; log_body_weight {kg}; log_water {ml}. Always include a short 'why'.",
+  description: "Propose a change to the user's RozFit data. Nothing changes until the user taps Approve on the card. Use only when the user asks for the change. Types: swap_exercise {exercise, replacement} (today's workout); start_plan_today and save_routine: EITHER {exercises: [{name, sets, reps}], name} when the user lists their own exercises (use their exact words for each name, their sets/reps if given; this is how 'save my workout for today' works) OR {area, minutes} for a workout Rozi picks; update_training_preferences {goal: general|tone|fatloss|muscle, sessionMinutes, focusArea, typicalDay: seated|light|on_feet|active}; log_body_weight {kg}; log_water {ml}. Always include a short 'why'.",
   parameters: {
     type: "object",
     properties: {
@@ -33,6 +33,12 @@ export const PROPOSE_ACTION_TOOL: AiTool = {
       why: { type: "string", description: "One short sentence: why this change helps." },
       exercise: { type: "string" }, replacement: { type: "string" },
       area: { type: "string" }, minutes: { type: "integer" },
+      exercises: {
+        type: "array",
+        description: "The user's own exercises, in order (start_plan_today / save_routine). Up to 10.",
+        items: { type: "object", properties: { name: { type: "string" }, sets: { type: "integer" }, reps: { type: "string", description: "e.g. \"8\", \"8-12\", \"30 sec\", \"10 each side\"" } }, required: ["name"] },
+      },
+      name: { type: "string", description: "A short title for the user's own workout, e.g. \"Chest day\". Optional." },
       goal: { type: "string" }, sessionMinutes: { type: "integer" }, focusArea: { type: "string" }, typicalDay: { type: "string" },
       kg: { type: "number" }, ml: { type: "integer" },
     },

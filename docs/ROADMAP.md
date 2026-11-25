@@ -279,6 +279,10 @@ The ChatGPT Level 4 + exercise library plan has been audited. Items 6–11 above
 - **R7:** variation intelligence (**✅ 2026-11-24**).
 - **R8–R11:** Level 4 goals (**R8 ✅ 2026-11-24, migration applied**), monitoring (**R9 ✅ 2026-11-24**), memory (**R10 ✅ 2026-11-24, migration applied**) and scheduled check-ins (**R11 ✅ 2026-11-24, migration applied**).
 - **R12–R13:** plateau detection, post-workout recap and plain "why this workout" (**R12 ✅ 2026-11-24, no migration**), and the final review (**R13 🟡 review done 2026-11-24; lock migration applied; staging pass waiting**).
+- **R14 Coach review:** a weekly review that suggests plan changes from your logged weeks, which you approve with one
+  tap and can undo, with optional auto-apply for the safe ones. (**R14 ✅ 2026-11-25: built, tested, migration
+  `20261125120000_coach_plan_adjustments` applied and verified.** Next: a weekly push, chat approval
+  cards, training days.)
 
 Exercise gaps are listed in `docs/EXERCISE_LIBRARY_COVERAGE.md`.
 
