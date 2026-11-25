@@ -2920,3 +2920,29 @@ CSS and screen code only, no database or API change.
   restored afterwards): a logged workout with pain showed "Take a lighter week". Apply saved it, the Train page
   re-planned from 9 to 5 sets labelled "Your lighter week", and Undo restored it.
 - **Who did what:** Opus designed and wrote R14 (it touches the database, the planner and Rozi AI).
+
+### 2026-11-25 — Workout-done buttons, dark Home Screen icon
+
+- **After a workout** (`today-screen.tsx`): the buttons had different widths, and "See my streak" was a second orange
+  button next to "Post to feed". Now:
+  - "See my streak" is a full-width row with a flame badge and an arrow;
+  - "Edit entries" | "Share to chat" sit below it as two equal halves (or one full-width "Edit entries" when there's no
+    chat);
+  - "Post to feed" is the screen's one primary button.
+- **App icon in dark mode.** What iOS allows: native App Store apps (ChatGPT, Teams, Claude) ship light, dark and
+  tinted icons that follow the Home Screen setting. A Home Screen web app can't. iOS copies its `apple-touch-icon` once,
+  when it's added, and ignores dark/tinted for it (Apple developer forum threads 761615 and 787919). So:
+  - `public/icons/apple-touch-icon-dark.png` (plus `icon-dark-192/512.png`): Rozi from the original icon, unchanged, on
+    the app's dark ink with a warm glow. The cream background was found by a flood fill from the edges, with fur
+    edges blended.
+  - `ICON_SCRIPT` in `app/layout.tsx` points the `apple-touch-icon` at the dark icon while the phone is in dark mode,
+    and switches with the appearance. Whichever is current at "Add to Home Screen" is the one iOS keeps. To switch,
+    remove RozFit from the Home Screen and add it again in the other appearance.
+  - Android: `icon-monochrome-512.png` in the manifest (`purpose: "monochrome"`), so themed icons tint Rozi's shape.
+  - For a future App Store build (a native app can switch automatically): `docs/assets/app-icons/` holds
+    `icon-light-512.png`, `icon-dark-1024.png` and `icon-tinted-1024.png` (greyscale on transparent, as Apple's tinted
+    icons expect).
+- Checked in the browser:
+  - the icon link is the dark one in dark mode and the normal one in light mode;
+  - the done buttons are 305×52 full width; with sharing they're two 149 px halves, and the labels fit.
+  - 448 tests pass, type check clean, lint (1 old warning).

@@ -6,7 +6,7 @@ import { notifyBuddies } from "@/lib/buddies-repository";
 import { levelTitle } from "@/lib/levels";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { ArrowLeft, ArrowLeftRight, ArrowRight, Check, ChevronRight, MessageCircle, Pencil, Play, Timer, X } from "lucide-react";
+import { ArrowLeft, ArrowLeftRight, ArrowRight, Check, ChevronRight, Flame, MessageCircle, Pencil, Play, Timer, X } from "lucide-react";
 import { Chip } from "@/components/ui/chip";
 import Link from "next/link";
 import { ShareWorkoutSheet } from "./chats-screen";
@@ -358,7 +358,13 @@ function WorkoutDayView({ date, extraDay = false, startAtReview = false }: { dat
             <div><dd>{todaySession.review?.effort ?? "—"}<small>/10</small></dd><dt>effort</dt></div>
           </dl>
           <CoolDownCard focus={`${todaySession.plan.focus} ${todaySession.plan.title}`} />
-          <div className="done-actions"><button className="button button-primary" onClick={() => router.push("/streak")}>See my streak <ArrowRight aria-hidden="true" /></button><button className="button button-subtle" onClick={() => { setEditing(true); setFlowStep("workout"); }}><Pencil aria-hidden="true" /> Edit entries</button>{!isDemo && browserClient && <button className="button button-subtle" onClick={() => setSharing(true)}><MessageCircle aria-hidden="true" /> Share to chat</button>}</div>
+          {/* After a workout (2026-11-25): one full-width streak row, then two equal buttons; "Post to feed" below is the
+              screen's one primary action. */}
+          <div className={`done-actions ${!isDemo && browserClient ? "has-share" : ""}`}>
+            <button type="button" className="done-streak" onClick={() => router.push("/streak")}><span className="done-streak-icon"><Flame aria-hidden="true" /></span><span>See my streak</span><ArrowRight aria-hidden="true" /></button>
+            <button type="button" className="done-action" onClick={() => { setEditing(true); setFlowStep("workout"); }}><Pencil aria-hidden="true" /> Edit entries</button>
+            {!isDemo && browserClient && <button type="button" className="done-action" onClick={() => setSharing(true)}><MessageCircle aria-hidden="true" /> Share to chat</button>}
+          </div>
           {sharing && <ShareWorkoutSheet session={todaySession} onClose={() => setSharing(false)} />}
           {!isDemo && browserClient && canPostDate(todaySession.date, currentDate) && <div className={`post-ask ${postedDates.has(todaySession.date) ? "done" : ""}`}>
             {postedDates.has(todaySession.date)

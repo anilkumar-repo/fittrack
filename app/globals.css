@@ -4427,3 +4427,15 @@ img.coach-rozi { flex: none; width: 56px; height: 56px; }
 .coach-auto small { color: var(--muted); font-size: var(--text-sm); line-height: 1.4; }
 .coach-ask { display: inline-flex; align-items: center; justify-self: start; gap: var(--space-1); min-height: 44px; color: var(--accent-ink); font-size: var(--text-md); font-weight: 700; text-decoration: none; }
 .coach-ask svg { width: 16px; height: 16px; }
+
+/* Workout done (2026-11-25): even buttons — a full-width streak row, then Edit entries | Share to chat as equal halves. */
+.done-actions { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-2); width: 100%; }
+.done-actions.has-share { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.done-actions.has-share .done-streak { grid-column: 1 / -1; }
+.done-streak, .done-action { display: inline-flex; align-items: center; justify-content: center; gap: var(--space-2); min-height: 52px; padding: 0 var(--space-4); border: var(--glass-edge); border-radius: var(--radius-pill); color: var(--ink); background: var(--surface-2); font: inherit; font-size: var(--text-base); font-weight: 700; white-space: nowrap; cursor: pointer; }
+.done-streak { justify-content: flex-start; }
+.done-streak > span:nth-child(2) { flex: 1; text-align: left; }
+.done-streak-icon { display: grid; place-items: center; width: 32px; height: 32px; border-radius: 50%; color: var(--accent-ink); background: var(--accent-soft); }
+.done-actions .done-streak-icon svg { width: 16px; height: 16px; }
+.done-action svg, .done-streak > svg { width: 18px; height: 18px; color: var(--muted); }
+.done-streak:active, .done-action:active { transform: scale(.97); }
