@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
+import { GooeySearch } from "@/components/ui/gooey-search";
 import { Bell, Check, ChevronRight, Copy, Dumbbell, Flame, MoreHorizontal, Search, Share2, Trophy, UserMinus, UserPlus, UserRound, Users } from "lucide-react";
 import { Rozi } from "@/components/app/rozi";
 import { Avatar } from "@/components/app/avatar";
@@ -137,13 +138,11 @@ export function FriendsScreen() {
     <section className="friends friends-v2">
       {/* Top of Friends (2026-11-25): a real search bar first (it opens Find friends with what you typed), friend
           requests as a chip inside it, then your week as one compact row with a pip per planned workout. */}
-      <form className="friends-search" role="search" onSubmit={(event) => { event.preventDefault(); router.push(`/discover${search.trim() ? `?q=${encodeURIComponent(search.trim().slice(0, 60))}` : ""}`); }}>
-        <Search aria-hidden="true" />
-        <input type="search" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search people" aria-label="Find friends by name or @username" enterKeyHint="search" />
-        {requestsWaiting > 0
+      <GooeySearch value={search} onChange={setSearch} placeholder="Name or @username" label="Find friends by name or @username" collapsedLabel="Find friends"
+        onSubmit={() => router.push(`/discover${search.trim() ? `?q=${encodeURIComponent(search.trim().slice(0, 60))}` : ""}`)}
+        trailing={requestsWaiting > 0
           ? <Link href="/discover" className="friends-search-chip">{requestsWaiting} {requestsWaiting === 1 ? "request" : "requests"}</Link>
-          : <button type="submit" className="friends-search-go" aria-label="Search"><UserPlus aria-hidden="true" /></button>}
-      </form>
+          : <button type="submit" className="gooey-clear" aria-label="Search"><UserPlus aria-hidden="true" /></button>} />
 
       <article className="friends-me ui-card">
         <Avatar value={state.profile.avatar} name={state.profile.displayName} size={44} />

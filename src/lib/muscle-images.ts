@@ -1,6 +1,6 @@
 import type { BodyRegion, FigureChoice } from "./figure.ts";
 
-/** File name for each muscle group's picture in public/figures/v3 (made by scripts/build-figures.mjs). */
+/** File name for each muscle group's picture in public/figures/v4 (made by scripts/build-figures.mjs). */
 const REGION_FILES: Record<BodyRegion, string> = {
   shoulders: "shoulders", chest: "chest", back: "back", arms: "arms", forearms: "forearms",
   core: "core", hips: "glutes", thighs: "quads", hamstrings: "hamstrings", calves: "calves",
@@ -15,7 +15,7 @@ const HIDDEN_SIDE: Partial<Record<BodyRegion, Side>> = {
 };
 
 /** The picture folder is versioned, so phones never keep an older cached copy (pictures are cached for 30 days). */
-const DIR = "/figures/v3/";
+const DIR = "/figures/v4/";
 const HEIGHT = 820;
 /** Width of a one-figure picture; the front + back pictures are twice as wide. */
 const SINGLE_WIDTH = 489;
@@ -48,7 +48,7 @@ export type Side = "front" | "back";
 /**
  * Figures that have the side view (recovery map): a plain side picture and one per muscle group, built by
  * scripts/build-figures.mjs, with masks from scripts/build-recovery-masks.mjs. Add a figure here once its side
- * pictures are in public/figures/v3 (a test checks every file exists). Until then the map shows Front and Back only.
+ * pictures are in public/figures/v4 (a test checks every file exists). Until then the map shows Front and Back only.
  */
 export const SIDE_VIEW_FIGURES: readonly FigureChoice[] = [];
 

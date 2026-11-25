@@ -2963,3 +2963,74 @@ CSS and screen code only, no database or API change.
   dock fade is gone. The live scroll couldn't run in the hidden test pane, so the state was set directly — check the
   feel on the phone.
 - 448 tests pass, type check clean, lint (1 old warning).
+
+### 2026-11-25 — Body pictures: hair holes fixed (all figures), muscle animations removed
+
+- **Hair patches:** `scripts/build-figures.mjs` turned the originals' black background transparent by brightness
+  alone, so every dark pixel inside the figure (hair, eyes, shading lines) also became partly see-through. On the white
+  thumbnail tiles those holes showed as white patches. Most visible on back views, and on the female's dark hair.
+  - Fix in `cutOut`: only near-black pixels CONNECTED TO THE PICTURE'S EDGE (a flood fill, `BACKGROUND_MAX = 22`) are
+    background. A 3 px band along the outline keeps the soft edge, and everything inside the figure is solid.
+  - Rebuilt all 81 pictures into **`public/figures/v4`**: the same names and the same 489×820 canvas, so all pictures
+    and the recovery tap masks still line up. Checked on a magenta background: male, female and neutral heads, front
+    and back, have no holes.
+  - The new folder name also means phones fetch fresh pictures, because the offline cache serves `/figures/` cache-first.
+  - Updated: `muscle-images.ts`, `real-body.tsx`, `muscle-images.test.ts`, and the defaults in `build-figures.mjs` and
+    `build-recovery-masks.mjs`.
+  - `public/figures/v3` is no longer used. It's kept for now so an app still open on an old version doesn't lose its
+    pictures, and can be deleted after the next deploy.
+- **Animations removed:**
+  - the exercise sheet's "breathing" muscle highlight (`TurnableFigure` now shows one still picture per side);
+  - the pulsing "sore" tint on the recovery and week maps;
+  - the breathing stretch pictures in the recovery carousel.
+  - Kept: each muscle colour on the recovery map still fades in once. The 2–3 frame exercise demonstrations
+    (MoveLoop) also stay, because they show the movement.
+- Checked: 448 tests pass, type check clean, lint (1 old warning). In the browser, all 139 figure images on Workouts
+  load from v4, and the exercise sheet shows one still picture.
+
+### 2026-11-25 — Comments sheet band, double back on a person's profile
+
+- **Comments (Feed):** the comment bar used `background: inherit`, which redrew the sheet's see-through glass gradient
+  as a darker box behind the input.
+  - The comments sheet is now one solid surface, with the bar in the same colour and a soft top edge.
+  - The input is a 48 px pill, and send is a 48 px circle that dims when there's nothing to post.
+  - Checked: the sheet and bar background are identical (rgb 22,27,31 in dark).
+- **Person profile (`/people/…`):** the top bar's back button and an inner "← Back" link both showed. The inner link is
+  removed (`discover-screen.tsx`). The top bar's back goes to Together, as for other pages one level down.
+- 448 tests pass, type check clean, lint clean for the file.
+
+### 2026-11-25 — Gooey search and dock magnification (after Aceternity UI)
+
+The owner shared two Aceternity UI components (Gooey Input, Floating Dock). Both are written for Tailwind CSS v4 +
+Motion (+ shadcn). RozFit uses none of these: its styling is a token design system in `globals.css` with a design-guard
+test, and Tailwind v4's global reset would restyle the whole app. So both effects are rebuilt with the app's tokens
+and plain React, with no new dependencies.
+
+- **Gooey search** (`src/components/ui/gooey-search.tsx`, CSS "Gooey search"):
+  - a closed inverted pill ("Search exercises" / "Find friends") that stretches open while a round search bubble pulls
+    away with a liquid join;
+  - the same SVG goo filter (blur 5, alpha matrix `20 −10`), the same 0.4 s springy feel (`cubic-bezier(.34,1.45,.64,1)`
+    in place of Motion's spring with bounce 0.25), and the bubble scales in;
+  - it focuses on open, stays open while it holds text, and closes when empty and blurred;
+  - reduced motion turns the movement off.
+  - Used on Workouts (with a clear button) and Friends (search opens Find friends; the requests chip stays inside).
+  - Differences from the source:
+    - widths are 200 px closed (so "Search exercises" fits on one line) → full width open, instead of 115 → 200 px;
+    - the icon cross-fades into the bubble instead of a Motion `layoutId` morph;
+    - the focus ring is on the whole pill;
+    - the input text is 17 px so iOS doesn't zoom.
+- **Dock magnification** (`dock-scrub.tsx` `magnify`): while a finger slides along the phone dock, icons swell by how
+  close they are (up to 1.45× under the finger, normal 80 px away) and lift slightly, like the macOS dock the Floating
+  Dock copies. They settle back on release; reduced motion skips it.
+  - Not adopted: the Floating Dock's phone version, which hides all tabs behind one collapse button. That's worse for
+    the main navigation, so the dock keeps its five tabs.
+  - Its mouse hover-magnify needs a pointer, and RozFit's desktop uses the side menu instead of the dock.
+- Checked in the browser (375 px):
+  - the closed pill reads "Search exercises" on one line;
+  - open, the bubble sits left and the pill fills the rest, with the field focused;
+  - "bench" filters the list to 24 exercises, and the clear button empties it;
+  - a simulated finger slide magnified the two nearest dock icons (1.29× and 1.23×) and reset on release.
+- 448 tests pass, type check clean, lint (1 old warning).
+- Follow-up: the open search showed orange. The app-wide `!important` focus outline (accent colour) drew a square
+  inside the field, and the pill's own focus ring was also accent. Both are now neutral: no outline on the input, and a
+  soft ink-tinted ring around the pill.

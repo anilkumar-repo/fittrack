@@ -1,5 +1,5 @@
 /**
- * Builds the body pictures in public/figures/v3 from the one-figure originals in
+ * Builds the body pictures in public/figures/v4 from the one-figure originals in
  * design/figures-incoming/singles ({figure}-{muscle}-{front|back}.png, black background).
  *
  * Every picture: background removed, trimmed to the figure, scaled to the same height and centred
@@ -16,7 +16,7 @@ import fs from "node:fs";
 import path from "node:path";
 
 const SOURCE = "design/figures-incoming/singles";
-const OUT = process.env.FIGURES_OUT || "public/figures/v3";
+const OUT = process.env.FIGURES_OUT || "public/figures/v4";
 const HEIGHT = 820;
 const PAD_Y = 12;
 const PAD_X = 14;
@@ -26,15 +26,48 @@ const FRONT_ONLY = ["chest", "core", "quads"];
 const BACK_ONLY = ["back", "glutes", "hamstrings"];
 const SIDE = ["base", "shoulders", "chest", "back", "arms", "forearms", "core", "glutes", "quads", "hamstrings", "calves"];
 
-/** Black background → transparent; colours un-darkened at the soft edge. */
+/** Brightness at or below this, connected to the picture's edge, is the black background. */
+const BACKGROUND_MAX = 22;
+/** Pixels this close to the background keep a soft, brightness-based edge; everything further inside is solid. */
+const EDGE_BAND = 3;
+
+/**
+ * Black background → transparent; colours un-darkened at the soft edge.
+ * Only the background is cut out: near-black pixels CONNECTED TO THE EDGE (a flood fill), plus a soft band along the
+ * outline. Dark parts inside the figure (hair, eyes, shading lines) stay solid. Before 2026-11-25 every dark pixel
+ * became see-through by brightness alone, which punched holes in the hair that showed as white patches on light tiles.
+ */
 async function cutOut(file) {
   const { data, info } = await sharp(file).removeAlpha().raw().toBuffer({ resolveWithObject: true });
   const { width: w, height: h } = info;
+  const bright = (i) => Math.max(data[i * 3], data[i * 3 + 1], data[i * 3 + 2]);
+  const background = new Uint8Array(w * h);
+  const stack = [];
+  for (let x = 0; x < w; x++) stack.push(x, (h - 1) * w + x);
+  for (let y = 0; y < h; y++) stack.push(y * w, y * w + w - 1);
+  while (stack.length) {
+    const i = stack.pop();
+    if (background[i] || bright(i) > BACKGROUND_MAX) continue;
+    background[i] = 1;
+    const x = i % w, y = (i - x) / w;
+    if (x > 0) stack.push(i - 1); if (x < w - 1) stack.push(i + 1); if (y > 0) stack.push(i - w); if (y < h - 1) stack.push(i + w);
+  }
+  // Distance (in pixels, up to EDGE_BAND) from the background, so only the outline gets a soft edge.
+  const nearEdge = new Uint8Array(w * h);
+  for (let i = 0; i < w * h; i++) {
+    if (!background[i]) continue;
+    const x = i % w, y = (i - x) / w;
+    for (let dy = -EDGE_BAND; dy <= EDGE_BAND; dy++) for (let dx = -EDGE_BAND; dx <= EDGE_BAND; dx++) {
+      const xx = x + dx, yy = y + dy;
+      if (xx >= 0 && yy >= 0 && xx < w && yy < h) nearEdge[yy * w + xx] = 1;
+    }
+  }
   const rgba = Buffer.alloc(w * h * 4);
   let x0 = w, x1 = -1, y0 = h, y1 = -1;
   for (let i = 0; i < w * h; i++) {
     const r = data[i * 3], g = data[i * 3 + 1], b = data[i * 3 + 2];
-    const a = Math.max(0, Math.min(255, Math.round((Math.max(r, g, b) - 14) * 255 / 36)));
+    const soft = Math.max(0, Math.min(255, Math.round((Math.max(r, g, b) - 14) * 255 / 36)));
+    const a = background[i] || nearEdge[i] ? soft : 255;
     const k = a > 0 && a < 255 ? 255 / a : 1;
     rgba[i * 4] = Math.min(255, Math.round(r * k)); rgba[i * 4 + 1] = Math.min(255, Math.round(g * k)); rgba[i * 4 + 2] = Math.min(255, Math.round(b * k)); rgba[i * 4 + 3] = a;
     if (a > 8) { const x = i % w, y = (i - x) / w; x0 = Math.min(x0, x); x1 = Math.max(x1, x); y0 = Math.min(y0, y); y1 = Math.max(y1, y); }
