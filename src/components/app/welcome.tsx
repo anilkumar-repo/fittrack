@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import {
-  ArrowLeft, ArrowRight, Building2, CalendarCheck, Check, House, PersonStanding, Search, Sparkles, Target, TrendingUp, Warehouse, Zap, type LucideIcon,
+  ArrowLeft, ArrowRight, Building2, CalendarCheck, Check, Circle, CircleCheck, House, PersonStanding, Search, Sparkles, Target, TrendingUp, Warehouse, Zap, type LucideIcon,
 } from "lucide-react";
 import { MAX_TRAINING_DAYS, MIN_TRAINING_DAYS, shiftDate, trainingDaysHint, trainingDaysValid, WEEKDAY_LABELS } from "@/lib/dates";
 import { FIGURE_OPTIONS, type FigureChoice } from "@/lib/figure";
@@ -211,7 +211,8 @@ export function Welcome() {
   }
 
   if (step === "building") {
-    const label = BUILD_STEPS[Math.min(BUILD_STEPS.length - 1, Math.floor(built / (100 / (BUILD_STEPS.length - 1))))];
+    const current = Math.min(BUILD_STEPS.length - 1, Math.floor(built / (100 / (BUILD_STEPS.length - 1))));
+    const extra = focus !== "balanced" ? ` · extra ${FOCUS_OPTIONS.find((option) => option.id === focus)?.label.toLowerCase()}` : "";
     return (
       <main className="onb">
         <section className="onb-frame building" aria-live="polite">
@@ -219,7 +220,18 @@ export function Welcome() {
           <h1>A plan built around you{name.trim() ? `, ${name.trim()}` : ""}</h1>
           <div className="building-bar" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={built}><i style={{ width: `${built}%` }} /></div>
           <span className="building-percent">{built}%</span>
-          <span className="building-step">{label}{focus !== "balanced" && built > 40 && built < 80 ? ` · extra ${FOCUS_OPTIONS.find((option) => option.id === focus)?.label.toLowerCase()}` : ""}</span>
+          {/* Style 4 (2026-11-25): every step stays on screen and ticks off in turn, like a checklist. */}
+          <ol className="building-steps">
+            {BUILD_STEPS.map((text, index) => {
+              const state = index < current || built >= 100 ? "done" : index === current ? "current" : "todo";
+              return (
+                <li key={text} className={state} aria-current={state === "current" ? "step" : undefined}>
+                  {state === "done" ? <CircleCheck aria-hidden="true" /> : <Circle aria-hidden="true" />}
+                  <span>{text}{index === 1 ? extra : ""}</span>
+                </li>
+              );
+            })}
+          </ol>
         </section>
       </main>
     );

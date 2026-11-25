@@ -3034,3 +3034,39 @@ and plain React, with no new dependencies.
 - Follow-up: the open search showed orange. The app-wide `!important` focus outline (accent colour) drew a square
   inside the field, and the pill's own focus ring was also accent. Both are now neutral: no outline on the input, and a
   soft ink-tinted ring around the pill.
+
+### 2026-11-25 — New opening animation and "Building your plan" checklist
+
+The owner picked from 13 sketched styles: the opening combines style 13 (the icon opens up), 3 (Rozi lands) and
+6 (letters load onto a barbell and it lifts). Onboarding uses style 4 (a step checklist, after Aceternity UI's Multi Step
+Loader).
+
+- **Opening** (`src/components/app/rozi-opening.tsx`, CSS "Opening"; mounted in `app/(app)/layout.tsx`):
+  - the sequence: the home-screen icon (light or dark, matching the phone) grows and fades; Rozi drops in with a squash
+    and settle; R-O-Z-F-I-T slide on like plates from both ends inward; the bar lifts; then it fades into the app;
+  - about 2.4 s, once per app open (per browser session), on top of whatever is loading underneath; if the data still
+    isn't ready, the existing Rozi loader is already there below it;
+  - skipped entirely with reduced motion; it never blocks taps longer than its own 2.4 s (`pointer-events: none`);
+  - for comparing looks: `/?opening` replays it, and `/?opening=plain` shows it without Rozi (styles 13 + 6 only).
+- **Building your plan** (`welcome.tsx`): the single changing line under the progress bar is now the full list of
+  five steps, ticking off one by one (done = orange tick, current = orange and bold, upcoming = faded). The "extra
+  focus" note now sits on the "Picking moves" step. Same 3.2 s timing as before.
+  - Differences from the Aceternity source: no Tailwind/Motion (CSS only, app tokens); no full-screen blur overlay or
+    scrolling list, because it sits inside the existing onboarding screen with Rozi and the progress bar; no looping;
+    steps are the real plan-building steps.
+- Checked in the browser (375 px, dark): the opening plays and removes itself; both variants render; the checklist shows
+  done, current and upcoming steps at 53%. 448 tests pass, type check clean, lint (1 old warning).
+- Not done yet: iPhone splash pictures (`apple-touch-startup-image`) to replace the ~1 s black screen iOS shows before
+  the page loads.
+- Follow-up, same day: **iPhone launch pictures** replace the ~1 s black screen.
+  - `scripts/build-splash.mjs` builds 24 PNGs in `public/splash` (12 portrait iPhone sizes in
+    `src/lib/splash-devices.json` × light/dark phone appearance, ~2.8 MB total; each phone downloads only its own).
+    Each is the opening's first frame: the dark page colour with the 76 pt icon in the centre.
+  - The `<link rel="apple-touch-startup-image">` tags are written straight into `<head>` in `app/layout.tsx`, not via
+    `metadata.appleWebApp.startupImage`: Next 16 streams metadata into the body, and iOS only reads the head
+    (checked: all 24 are in the served `<head>`).
+  - The opening is now in the server-rendered page, so it starts at the very first paint, right after the launch
+    picture. It removes itself on a 2.5 s timer (the CSS animation can finish before React is listening).
+  - Known limit: the launch picture is always dark (the app's default). Someone who chose the light theme sees a dark
+    launch picture, then a light opening.
+  - Add a new iPhone size: add it to `splash-devices.json` and run `node scripts/build-splash.mjs`.
