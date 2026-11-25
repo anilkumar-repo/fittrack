@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Bell, Check, ChevronRight, Copy, Dumbbell, Flame, MoreHorizontal, Search, Share2, Trophy, UserMinus, UserPlus, UserRound, Users } from "lucide-react";
 import { Rozi } from "@/components/app/rozi";
 import { Avatar } from "@/components/app/avatar";
@@ -43,6 +43,8 @@ export function FriendsScreen() {
   const [tab, setTab] = useState<"friends" | "challenges" | "invite">("friends");
   const [sheetFor, setSheetFor] = useState<string | null>(null);
   const [requestsWaiting, setRequestsWaiting] = useState(0);
+  const [search, setSearch] = useState("");
+  const router = useRouter();
   const userId = state.profile.id;
   const me = useMemo(() => computeFriendStats(state.profile, recordedSessions, currentDate), [state.profile, recordedSessions, currentDate]);
 
@@ -133,21 +135,30 @@ export function FriendsScreen() {
 
   return (
     <section className="friends friends-v2">
-      <article className="panel friends-me">
-        <Avatar value={state.profile.avatar} name={state.profile.displayName} size={56} />
-        <div>
-          <span className="onb-kicker">Your week</span>
+      {/* Top of Friends (2026-11-25): a real search bar first (it opens Find friends with what you typed), friend
+          requests as a chip inside it, then your week as one compact row with a pip per planned workout. */}
+      <form className="friends-search" role="search" onSubmit={(event) => { event.preventDefault(); router.push(`/discover${search.trim() ? `?q=${encodeURIComponent(search.trim().slice(0, 60))}` : ""}`); }}>
+        <Search aria-hidden="true" />
+        <input type="search" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search people" aria-label="Find friends by name or @username" enterKeyHint="search" />
+        {requestsWaiting > 0
+          ? <Link href="/discover" className="friends-search-chip">{requestsWaiting} {requestsWaiting === 1 ? "request" : "requests"}</Link>
+          : <button type="submit" className="friends-search-go" aria-label="Search"><UserPlus aria-hidden="true" /></button>}
+      </form>
+
+      <article className="friends-me ui-card">
+        <Avatar value={state.profile.avatar} name={state.profile.displayName} size={44} />
+        <div className="friends-me-text">
+          <span className="friends-me-label">Your week</span>
           <strong>{me.weekCount} of {me.weekGoal} workouts</strong>
-          <div className="friend-week" aria-hidden="true"><span style={{ width: `${Math.min(100, (me.weekCount / Math.max(1, me.weekGoal)) * 100)}%` }} /></div>
+          <div className="friends-me-pips" aria-hidden="true">{Array.from({ length: Math.min(7, Math.max(1, me.weekGoal)) }, (_, index) => <i key={index} className={index < me.weekCount ? "on" : ""} />)}</div>
         </div>
-        <span className="friends-me-streak" aria-label={`${me.currentStreak} day streak`}><Flame aria-hidden="true" />{me.currentStreak}</span>
+        <Link href="/streak" className="friends-me-streak" aria-label={`${me.currentStreak} day streak`}><Flame aria-hidden="true" /><strong>{me.currentStreak}</strong><small>streak</small></Link>
       </article>
 
-      <nav className="friends-hub" aria-label="Friends hub">
-        <HubTile href="/discover" icon={<UserPlus aria-hidden="true" />} title="Find friends" note={requestsWaiting ? `${requestsWaiting} ${requestsWaiting === 1 ? "request" : "requests"}` : "Search people"} badge={requestsWaiting} />
-        {/* Chats, Feed and Train together are tabs above (Phase 6); a tile stays only for something waiting on you. */}
+      {/* Chats, Feed and Train together are tabs above (Phase 6); a row stays only for an invite waiting on you. */}
+      {(buddies?.invites.length ?? 0) > 0 && <nav className="friends-hub" aria-label="Waiting for you">
         {(buddies?.invites.length ?? 0) > 0 && <HubTile href="/buddies" icon={<Users aria-hidden="true" />} title="Train together" note={buddies?.group ? `${buddies.members.filter((member) => member.status === "active").length} on one plan` : buddies?.invites.length ? `${buddies.invites.length} ${buddies.invites.length === 1 ? "invite" : "invites"}` : "Same plan"} badge={buddies?.invites.length ?? 0} />}
-      </nav>
+      </nav>}
 
       {loadError && <p className="error-inline" role="alert">{loadError}</p>}
       {message && <p className="friends-message" role="status">{message}</p>}

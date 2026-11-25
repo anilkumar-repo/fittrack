@@ -2723,3 +2723,74 @@ CSS and screen code only, no database or API change.
 The lighter orange from the first phone review didn't suit the app, so it is reverted at the owner's request. The dark
 theme is back to `--accent` `#FF8A5C`, `--accent-strong` `#F0683F`, and the primary button gradient `#FF9A6E` →
 `#F0683F` with its original glow. `docs/DESIGN.md` is updated to match.
+
+### 2026-11-25 — Phone review fixes 4: old Rozi chat showing, chat fit, Today picture, Friends top, smooth scrolling
+
+- **Rozi chat opening "different ways" and "Try again":** the screenshots with the old chat header (one in the old
+  light default) were the app's previous build. An app left open keeps running the old version. After a new deploy it
+  asks for code files that no longer exist, fails with the error page, and "Try again" loads the new one. Fixes:
+  - `app/error.tsx`: a chunk-load error ("Loading chunk…", "dynamically imported module") reloads the page once by
+    itself (at most once a minute, so it can't loop) instead of showing the error.
+  - `service-worker-registration.tsx`: `updateViaCache: "none"`, plus a check for a new version each time the app
+    comes back to the front.
+  - `public/sw.js`: cache `rozfit-v6` (clears pages cached by older builds), and in-app page data (React Server
+    Components, `RSC: 1` / `?_rsc=`) is never cached, so one build's data can't be mixed into another.
+- **Rozi chat fit:** the back arrow is centred in its circle (it sat at the left edge). The message box sits just above
+  the iPhone home bar: the bottom gap is `max(8px, safe area − 14px)` instead of the full safe area plus 10 px.
+- **Today picture in the top-right corner:** an older `justify-content: space-between` on `.today-head` shrank the
+  new grid's column to its content, so the picture sat next to the date. The column is now full width.
+- **Friends top redesigned:**
+  - a real search bar first ("Search people"). Pressing search opens Find friends with what you typed (`/discover?q=`;
+    Discover now reads `q`). Friend requests show as a chip inside the bar;
+  - "Your week" is one compact row: your picture, "N of M workouts" with a pip per planned workout, and a streak tile
+    that opens the streak page;
+  - the "Find friends" tile is gone (the search bar replaces it). The Train together row only shows for an invite.
+- **Smooth scrolling (Friends lag, and every long page):**
+  - Every card had a live background blur over the fixed page gradient. That's nearly invisible, but iPhone redraws
+    each blurred card on every scroll frame. On phones (≤700 px) `--glass-blur` is now `none` for cards; floating
+    layers (dock, top bar, workout bar, sheets) keep their own blur. `docs/DESIGN.md` §5 is updated.
+  - The app shell wrote the top-bar height to the page root on every scroll frame, which restyled the whole page. It
+    now writes it only when the height changes.
+- Files: `app/error.tsx`, `service-worker-registration.tsx`, `public/sw.js`, `app-shell.tsx`, `friends-screen.tsx`, `discover-screen.tsx`, `overview-screen.tsx`, `app/globals.css`.
+- Checks: 436 tests pass, type check clean, lint (1 old warning). Checked at 375 px in the browser. The signed-in
+  Friends top was previewed with the same markup, because the demo shows the signed-out page. The service-worker
+  and error-page changes only act in a deployed build.
+
+### 2026-11-25 — Phone review fixes 5: Recovery row scroll, exercise sheet motion and blink, video button
+
+CSS and screen code only, no database or API change.
+
+- **Recovery muscle row wouldn't slide:** the "tab bars slide like the dock" change gave every `.segmented` row
+  `touch-action: pan-y`, which also blocked the sideways scroll of rows wider than the screen (Recovery's muscle
+  groups). `GlassGlider` now marks each row `data-fits="yes|no"`. Only rows that fit get the dock-style slide; wider
+  rows scroll normally again.
+- **Exercise sheet "blink" on open and close:** while a sheet is open, `use-scroll-lock` pins the page, so `scrollY`
+  reads 0. The app shell took that as "back at the top": the top bar jumped to its big header behind the sheet and
+  snapped small again on close. The shell now ignores scroll while the page is locked. The lock restores the position
+  with `behavior: "instant"`.
+- **Sheet motion:** the exercise sheet now slides up from the bottom edge (0.46 s, iOS-style curve) while the backdrop
+  fades in. Its content follows a beat later. Closing slides it back down (0.28 s) instead of fading it to see-through
+  over the page.
+- **Video button:** a floating button in the sheet's bottom-right corner. At the top of the sheet it reads
+  "▶ Watch video"; once you scroll it shrinks to a round play button, and grows back at the top. It opens the
+  trainer's chosen video or a YouTube search, as before. The two inline "Watch a demonstration" buttons are gone, and
+  the note under the figure now refers to the ▶ button.
+- Files: `glass-glider.tsx`, `use-scroll-lock.ts`, `app-shell.tsx`, `exercise-guide-modal.tsx`, `app/globals.css`.
+- Checks: 436 tests pass, type check clean, lint (1 old warning). Checked at 375 px in the browser (open, scroll, close
+  an exercise; Recovery rows).
+
+### 2026-11-25 — Page transitions
+
+- The fade-up removed earlier (it made glass cards flicker on iPhone) is replaced now that cards don't blur on phones.
+  Every page change animates: the new page fades in and slides 28 px from the side it comes from (320 ms,
+  `cubic-bezier(.2,.8,.2,1)`).
+  - Dock tabs follow their order: Today → Progress comes from the right, Progress → Workouts from the left.
+  - A page one level down (Progress → Recovery) comes from the right; going back up comes from the left.
+  - The top bar stays in place and its title cross-fades.
+  - A back swipe or the browser's back button only fades (180 ms), because iPhone already slides those pages.
+  - Reduced motion: a plain short fade.
+- How it works: `app-shell.tsx` (`slideFor` plus a layout effect on the path) animates the page's own elements with the
+  Web Animations API. There's no wrapper element, so layout rules that expect the page directly inside `.main-area`
+  keep working.
+- Checks: 436 tests pass, type check clean, lint (1 old warning). Checked in the browser: Today → Progress slides from
+  the right, Progress → Workouts from the left.

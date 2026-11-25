@@ -25,7 +25,8 @@ export function useScrollLock(active = true) {
       if (locks > 0) return;
       root.classList.remove("scroll-locked");
       body.style.top = "";
-      window.scrollTo(0, savedY);
+      // "instant": the page must be back where it was in the same frame, never a visible scroll.
+      window.scrollTo({ top: savedY, behavior: "instant" });
     };
   }, [active]);
 }
