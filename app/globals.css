@@ -4481,34 +4481,32 @@ img.coach-rozi { flex: none; width: 56px; height: 56px; }
 .gooey-search.gooey-search input:focus, .gooey-search.gooey-search input:focus-visible { outline: none !important; }
 .gooey-search .gooey-pill:focus-within { box-shadow: 0 0 0 3px color-mix(in srgb, var(--ink) 18%, transparent), var(--shadow-1); }
 
-/* Opening (2026-11-25, rozi-opening.tsx): icon opens up (0–.55 s) → Rozi lands (.4–1 s) → letters load onto the bar
-   like plates (1–1.6 s) → the bar lifts (1.7–2 s) → fades into the app (2.1–2.4 s). */
-.rozi-opening { position: fixed; inset: 0; z-index: 9999; display: grid; place-items: center; background: var(--page); pointer-events: none; animation: ro-out 2.4s ease-in forwards; }
-.ro-tile { position: absolute; width: 76px; height: 76px; border-radius: var(--radius-md); overflow: hidden; animation: ro-tile .6s cubic-bezier(.6, 0, .2, 1) forwards; }
-.ro-tile img { width: 100%; height: 100%; display: block; }
-.ro-stage { display: grid; justify-items: center; gap: var(--space-3); }
-.ro-rozi { width: 140px; height: 140px; object-fit: contain; opacity: 0; transform-origin: 50% 100%; animation: ro-land .65s .4s cubic-bezier(.3, 0, .3, 1) forwards; }
-.ro-lift { position: relative; display: grid; place-items: center; width: 250px; height: 56px; animation: ro-lift .35s 1.7s cubic-bezier(.34, 1.45, .64, 1) forwards; }
-.ro-bar { position: absolute; left: 0; right: 0; top: 50%; height: 5px; margin-top: -2.5px; border-radius: var(--radius-pill); background: var(--muted); opacity: 0; animation: ro-fade .25s .85s forwards; }
-.ro-plates { position: relative; display: flex; gap: 3px; }
-.ro-plates span { width: 30px; height: 56px; border-radius: var(--radius-xs); display: grid; place-items: center; color: var(--ink); background: color-mix(in srgb, var(--ink) 14%, var(--page)); font-size: var(--text-2xl); font-weight: 800; opacity: 0; animation: ro-plate .3s cubic-bezier(.2, .9, .3, 1.15) forwards; }
-.ro-plates span.from-left { --ro-from: -160px; }
-.ro-plates span.from-right { --ro-from: 160px; }
+/* Opening (approved 2026-11-25, rozi-opening.tsx), 4.4 s: the bar draws out from the middle (0–.5 s) → R-O-Z-F-I-T
+   slide on like plates, both ends inward, one every .22 s (.45–2.1 s) → Rozi rises from behind the name (2.25–3 s)
+   and rests his paws on the letters with a small press → blinks once (3.6 s) → fades into the app (3.8–4.4 s).
+   Smooth ease-out curves, no bounce. Rozi is drawn twice: behind the plates, and a paws-only copy (masked to two
+   ovals) in front of them. The blink is two fur-coloured eyelids (positions measured on rozi/peek.webp). */
+.rozi-opening { position: fixed; inset: 0; z-index: 9999; display: grid; place-items: center; background: var(--page); pointer-events: none; animation: ro-out 4.4s linear forwards; }
+.ro-lift { position: relative; display: grid; place-items: center; width: min(320px, calc(100vw - 32px)); height: 76px; margin-top: 200px; } /* margin keeps Rozi + name centred together */
+.ro-bar { position: absolute; left: 0; right: 0; top: 50%; height: 6px; margin-top: -3px; border-radius: var(--radius-pill); background: color-mix(in srgb, var(--ink) 35%, var(--page)); transform: scaleX(0); animation: ro-bar .5s cubic-bezier(.22, 1, .36, 1) forwards; }
+.ro-plates { position: relative; display: flex; gap: 5px; }
+.ro-plates span { width: 42px; height: 76px; border-radius: var(--radius-sm); display: grid; place-items: center; color: var(--ink); background: color-mix(in srgb, var(--ink) 14%, var(--page)); font-size: var(--text-3xl); font-weight: 800; opacity: 0; animation: ro-plate .65s cubic-bezier(.22, 1, .36, 1) forwards; }
+.ro-plates span.from-left { --ro-from: -180px; }
+.ro-plates span.from-right { --ro-from: 180px; }
 .ro-plates span.accent { color: var(--page); background: var(--accent); }
-.rozi-opening.plain .ro-rozi { display: none; }
+.ro-peek { position: absolute; left: 50%; bottom: 0; width: 230px; height: 278px; margin-left: -115px; overflow: hidden; pointer-events: none; }
+.ro-rozi { position: relative; display: block; width: 230px; height: 230px; transform: translateY(278px); animation: ro-peek 1.1s 2.25s cubic-bezier(.22, 1, .36, 1) forwards; }
+.ro-rozi img { display: block; width: 100%; height: 100%; }
+.ro-peek.paws { z-index: 1; }
+.ro-peek.paws .ro-rozi { opacity: 0; animation-name: ro-peek, ro-paws; animation-duration: 1.1s, 1.1s; animation-delay: 2.25s, 2.25s; animation-timing-function: cubic-bezier(.22, 1, .36, 1), linear; animation-fill-mode: forwards, forwards; }
+.ro-peek.paws img { -webkit-mask: radial-gradient(13% 11% at 25% 84%, black 92%, transparent), radial-gradient(13% 11% at 73% 84%, black 92%, transparent); mask: radial-gradient(13% 11% at 25% 84%, black 92%, transparent), radial-gradient(13% 11% at 73% 84%, black 92%, transparent); }
+.ro-lid { position: absolute; width: 17%; height: 15.5%; margin: -7.75% 0 0 -8.5%; border-radius: 50%; border-bottom: 2px solid saddlebrown; background: radial-gradient(ellipse at 50% 35%, coral 45%, chocolate 115%); filter: blur(.4px); transform: scaleY(0); transform-origin: 50% 0; animation: ro-blink .24s 3.6s ease-in-out; }
+.ro-lid.left { left: 33.75%; top: 47.9%; }
+.ro-lid.right { left: 65.4%; top: 47.1%; }
 @keyframes ro-out { 0%, 87% { opacity: 1; } 100% { opacity: 0; } }
-@keyframes ro-tile { 0% { transform: scale(1); opacity: 1; } 70% { opacity: 1; } 100% { transform: scale(3.2); border-radius: 50%; opacity: 0; } }
-@keyframes ro-land { 0% { opacity: 0; transform: translateY(-70px) scale(.7); } 55% { opacity: 1; transform: translateY(0) scale(1.12, .86); } 75% { transform: translateY(-8px) scale(.97, 1.04); } 100% { opacity: 1; transform: none; } }
-@keyframes ro-plate { from { opacity: 0; transform: translateX(var(--ro-from)); } to { opacity: 1; transform: none; } }
-@keyframes ro-lift { to { transform: translateY(-14px); } }
-@keyframes ro-fade { to { opacity: 1; } }
+@keyframes ro-bar { to { transform: scaleX(1); } }
+@keyframes ro-plate { from { opacity: 0; transform: translateX(var(--ro-from)); } 40% { opacity: 1; } to { opacity: 1; transform: none; } }
+@keyframes ro-peek { 0% { transform: translateY(278px); } 62% { transform: translateY(0); } 78% { transform: translateY(5px); } 100% { transform: translateY(0); } }
+@keyframes ro-paws { 0%, 60% { opacity: 0; } 70%, 100% { opacity: 1; } }
+@keyframes ro-blink { 0%, 100% { transform: scaleY(0); } 45%, 55% { transform: scaleY(1); } }
 @media (prefers-reduced-motion: reduce) { .rozi-opening { display: none; } }
-/* Building your plan: the steps as a checklist (style 4, 2026-11-25). */
-.building-steps { display: grid; gap: var(--space-2); margin: var(--space-2) 0 0; padding: 0; list-style: none; text-align: left; }
-.building-steps li { display: flex; align-items: center; gap: var(--space-2); color: var(--muted); font-size: var(--text-base); opacity: .55; transition: color .3s, opacity .3s; }
-.building-steps li svg { width: 20px; height: 20px; flex: none; }
-.building-steps li.current { color: var(--accent); font-weight: 700; opacity: 1; }
-.building-steps li.done { color: var(--ink); opacity: 1; }
-.building-steps li.done svg { color: var(--accent); animation: ro-tick .3s cubic-bezier(.34, 1.45, .64, 1); }
-@keyframes ro-tick { from { transform: scale(.4); } to { transform: none; } }
-@media (prefers-reduced-motion: reduce) { .building-steps li.done svg { animation: none; } }
