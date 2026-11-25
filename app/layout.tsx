@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { ServiceWorkerRegistration } from "@/components/app/service-worker-registration";
 import "./globals.css";
+import SPLASH_DEVICES from "@/lib/splash-devices.json";
 
 export const metadata: Metadata = {
   title: "RozFit · Small steps, every day",
@@ -41,6 +42,12 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
         <script dangerouslySetInnerHTML={{ __html: THEME_SCRIPT }} />
         {/* In the installed Home Screen app, block pinch zoom so it feels like a native app. */}
         <script dangerouslySetInnerHTML={{ __html: APP_FEEL_SCRIPT }} />
+        {/* iPhone launch pictures (scripts/build-splash.mjs): the opening's first frame instead of a black screen.
+            Written here, not in `metadata`, because Next streams metadata into the body and iOS only reads the head. */}
+        {SPLASH_DEVICES.flatMap(({ w, h, dpr }) => (["light", "dark"] as const).map((look) => (
+          <link key={`${w}x${h}@${dpr}-${look}`} rel="apple-touch-startup-image" href={`/splash/${w}x${h}@${dpr}-${look}.png`}
+            media={`(device-width: ${w}px) and (device-height: ${h}px) and (-webkit-device-pixel-ratio: ${dpr}) and (orientation: portrait) and (prefers-color-scheme: ${look})`} />
+        )))}
       </head>
       <body>{children}<ServiceWorkerRegistration /><script dangerouslySetInnerHTML={{ __html: ICON_SCRIPT }} /></body>
     </html>
