@@ -7,7 +7,9 @@
 
 import { ACTIVITY_OPTIONS, FOCUS_OPTIONS } from "../../onboarding.ts";
 import { GOAL_OPTIONS, goalTitle } from "../../program.ts";
-import { planWorkout } from "../../rozi-plan.ts";
+import { planWorkout, type RoziPlan } from "../../rozi-plan.ts";
+import { levelOf } from "../../levels.ts";
+import { plainCardText } from "../privacy.ts";
 import { canUseExercise, findInWorkout, findNamedExercise, swapBlock, SWAP_BLOCK_TEXT } from "../../exercise-swap.ts";
 import { generateWorkout } from "../../planner.ts";
 import { getExerciseDefinition } from "../../templates.ts";
@@ -46,19 +48,74 @@ function buildSwap(ctx: RoziContext, input: Input): BuildResult {
   };
 }
 
+/** Limits for a workout the person describes move by move. */
+export const LIST_LIMITS = { maxExercises: 10, minSets: 1, maxSets: 8 } as const;
+/** "8", "8–12", "8-12", "30 sec", "1 min", "8 each side", "10 per leg". */
+const REPS_TEXT = /^\d{1,3}(\s*[–-]\s*\d{1,3})?(\s*(sec|secs|seconds|s|min|mins|minutes|each side|per side|each leg|per leg|each arm|per arm))?$/i;
+
+/**
+ * A workout the person describes move by move ("bench 4×8, incline dumbbell 3×10, cable fly 3×12"). Each name is
+ * matched to the library with the same rules as a swap: equipment they have and their trainer's rules (deadlifts
+ * only with approval). A move they can't do is swapped for the closest version they can — said on the card — or the
+ * whole request is refused with the names that didn't match, so Rozi can ask. Sets and reps are kept within limits.
+ */
+export function planFromList(ctx: RoziContext, input: Input): { ok: true; plan: RoziPlan; notes: string[] } | { ok: false; reason: string } {
+  const raw = Array.isArray(input.exercises) ? input.exercises.slice(0, LIST_LIMITS.maxExercises + 1) : [];
+  if (!raw.length) return { ok: false, reason: "List the exercises (name, and sets/reps if the person gave them)." };
+  if (raw.length > LIST_LIMITS.maxExercises) return { ok: false, reason: `At most ${LIST_LIMITS.maxExercises} exercises in one workout.` };
+  const unknown: string[] = [];
+  const notes: string[] = [];
+  const items: RoziPlan["routine"]["exercises"] = [];
+  for (const entry of raw) {
+    const item = (entry && typeof entry === "object" ? entry : {}) as Input;
+    const asked = str(item, "name", 60);
+    const found = findNamedExercise(asked, ctx.planningProfile);
+    if (!found || !canUseExercise(found, ctx.planningProfile)) { unknown.push(asked || "(no name)"); continue; }
+    if (items.some((existing) => existing.exerciseId === found.id)) continue;
+    if (found.name.toLowerCase() !== asked.toLowerCase() && !found.name.toLowerCase().includes(asked.toLowerCase())) notes.push(`${asked} → ${found.name}`);
+    const sets = num(item, "sets");
+    const reps = str(item, "reps", 20).replace(/x/gi, "").trim();
+    items.push({
+      exerciseId: found.id,
+      sets: sets === null ? found.sets : Math.min(LIST_LIMITS.maxSets, Math.max(LIST_LIMITS.minSets, Math.round(sets))),
+      reps: REPS_TEXT.test(reps) ? reps.replace(/\s*-\s*/, "–") : found.reps,
+    });
+  }
+  if (unknown.length) return { ok: false, reason: `These aren't in RozFit's library or aren't allowed with this person's equipment/trainer rules: ${unknown.join(", ")}. Ask which exercise they mean, or suggest a close one with get_exercise_info.` };
+  if (!items.length) return { ok: false, reason: "None of those exercises could be used." };
+  const name = plainCardText(str(input, "name", 60), 40) || "Your workout · by Rozi";
+  const minutes = Math.min(90, Math.max(15, Math.round(items.reduce((sum, item) => sum + item.sets, 0) * 2.5)));
+  return {
+    ok: true,
+    notes,
+    plan: { target: "full", routine: { id: "", name, exercises: items, updatedAt: "" }, minutes, level: levelOf(ctx.planningProfile), note: "Your own exercises, checked against your equipment and trainer rules." },
+  };
+}
+
 function buildPlan(ctx: RoziContext, input: Input, kind: "start_plan_today" | "save_routine"): BuildResult {
-  const area = str(input, "area").toLowerCase().replace(/[\s-]+/g, "_");
-  if (!PLAN_AREAS.includes(area)) return { ok: false, reason: `Choose an area: ${PLAN_AREAS.join(", ")}.` };
-  const minutes = num(input, "minutes");
-  const plan = planWorkout(`plan a ${area.replace("_", " ")} workout${minutes ? ` ${Math.min(90, Math.max(15, Math.round(minutes)))} min` : ""}`, ctx.planningProfile);
+  let plan: RoziPlan | null;
+  let notes: string[] = [];
+  if (Array.isArray(input.exercises) && input.exercises.length) {
+    // The person's own list of moves.
+    const listed = planFromList(ctx, input);
+    if (!listed.ok) return listed;
+    plan = listed.plan;
+    notes = listed.notes.map((line) => `Swapped for what you can do: ${line}`);
+  } else {
+    const area = str(input, "area").toLowerCase().replace(/[\s-]+/g, "_");
+    if (!PLAN_AREAS.includes(area)) return { ok: false, reason: `Give either the person's exercises (exercises: [{name, sets, reps}]) or an area: ${PLAN_AREAS.join(", ")}.` };
+    const minutes = num(input, "minutes");
+    plan = planWorkout(`plan a ${area.replace("_", " ")} workout${minutes ? ` ${Math.min(90, Math.max(15, Math.round(minutes)))} min` : ""}`, ctx.planningProfile);
+  }
   if (!plan) return { ok: false, reason: "No suitable moves with this person's equipment." };
-  const names = plan.routine.exercises.map((item) => getExerciseDefinition(item.exerciseId)?.name ?? item.exerciseId);
+  const chosen = plan;
+  const names = chosen.routine.exercises.map((item) => getExerciseDefinition(item.exerciseId)?.name ?? item.exerciseId);
   if (kind === "save_routine") {
-    return { ok: true, payload: { type: "save_routine", name: plan.routine.name, exercises: plan.routine.exercises }, summary: { title: `Save “${plan.routine.name}” to My routines`, why: str(input, "why", 200), changes: names.map((name, index) => `${name} · ${plan.routine.exercises[index].sets} × ${plan.routine.exercises[index].reps}`) } };
+    return { ok: true, payload: { type: "save_routine", name: chosen.routine.name, exercises: chosen.routine.exercises }, summary: { title: `Save “${chosen.routine.name}” to My routines`, why: str(input, "why", 200), changes: [...names.map((name, index) => `${name} · ${chosen.routine.exercises[index].sets} × ${chosen.routine.exercises[index].reps}`), ...notes] } };
   }
   const today = ctx.sessions.find((item) => item.date === ctx.today);
   if (today && today.status !== "planned") return { ok: false, reason: today.status === "completed" ? "Today's workout is already done — save it as a routine for another day instead." : "A workout is already in progress today." };
-  return { ok: true, payload: { type: "start_plan_today", date: ctx.today, plan }, summary: { title: `Make “${plan.routine.name}” today's workout`, why: str(input, "why", 200), changes: [`Replaces today's planned workout${today ? ` (${today.plan.title})` : ""}`, ...names.map((name, index) => `${name} · ${plan.routine.exercises[index].sets} × ${plan.routine.exercises[index].reps}`)] } };
+  return { ok: true, payload: { type: "start_plan_today", date: ctx.today, plan: chosen }, summary: { title: `Make “${chosen.routine.name}” today's workout`, why: str(input, "why", 200), changes: [`Replaces today's planned workout${today ? ` (${today.plan.title})` : ""}`, ...names.map((name, index) => `${name} · ${chosen.routine.exercises[index].sets} × ${chosen.routine.exercises[index].reps}`), ...notes] } };
 }
 
 function buildPreferences(ctx: RoziContext, input: Input): BuildResult {

@@ -89,6 +89,16 @@ const EXERCISE_REGIONS: Record<string, BodyRegion[]> = {
   burpee: ["chest", "thighs", "core"],
   jump_rope: ["calves", "shoulders"],
   kettlebell_swing: ["hips", "hamstrings", "back"],
+  // Batch D (2026-11-25)
+  chest_dip: ["chest", "arms", "shoulders"],
+  upright_row: ["shoulders", "back"],
+  hip_adduction_machine: ["thighs", "hips"],
+  hip_abduction_machine: ["hips"],
+  sumo_deadlift: ["hips", "hamstrings", "back"],
+  good_morning: ["hamstrings", "hips", "back"],
+  cable_glute_kickback: ["hips", "hamstrings"],
+  ab_wheel_rollout: ["core", "shoulders"],
+  front_raise: ["shoulders"],
 };
 
 /** Body regions a set of exercises works, most-used first; ties keep the order they first appear. */

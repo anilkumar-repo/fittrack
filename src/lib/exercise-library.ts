@@ -1,5 +1,6 @@
 import { EQUIPMENT_OPTIONS, EXERCISE_LIBRARY, getExerciseDefinition } from "./templates.ts";
-import { musclesFor, TARGET_MUSCLE_LABELS } from "./exercise-taxonomy.ts";
+import { musclesFor, TARGET_MUSCLE_LABELS, VARIATION_GROUPS } from "./exercise-taxonomy.ts";
+import { coachKeyOf } from "./coach-key.ts";
 import type { EquipmentKey, ExerciseDefinition, ExerciseDifficulty, MovementPattern, Profile, TargetMuscle, WorkoutPlan } from "./types.ts";
 
 export const MOVEMENT_PATTERN_LABELS: Record<MovementPattern, string> = {
@@ -99,6 +100,8 @@ export function workoutPlanMatchesProfile(plan: WorkoutPlan, profile: Profile): 
   const planGoal = plan.goal ?? "general";
   const profileGoal = profile.goal === "muscle" || profile.goal === "tone" || profile.goal === "fatloss" ? profile.goal : "general";
   if (planGoal !== profileGoal) return false;
+  // R14: built before (or without) the coach changes the person has now → plan it again.
+  if ((plan.coachKey ?? "") !== coachKeyOf(profile)) return false;
   return plan.exercises.every((exercise) => isExerciseAllowedForProfile(exercise, profile) && exerciseEquipmentIsAvailable(exercise, profile));
 }
 
@@ -241,13 +244,25 @@ export function getSafeExerciseAlternatives(
   ];
   const seen = new Set<string>();
 
-  return candidates.filter((candidate) => {
+  const usable = candidates.filter((candidate) => {
     const candidatePattern = candidate.movementPattern;
     if (seen.has(candidate.id) || candidate.id === source.id || !candidatePattern || candidatePattern !== source.movementPattern) return false;
     seen.add(candidate.id);
     if (occupiedIds.has(candidate.id) || occupiedPatterns.has(candidatePattern)) return false;
     return isExerciseAllowedForProfile(candidate, profile) && exerciseEquipmentIsAvailable(candidate, profile);
-  }).slice(0, 4).map((candidate) => ({
+  });
+  // Four choices, mixed (2026-11-25, after the library grew): the easier fallback, then the closest versions of the
+  // same movement in the group's own "closest first" order (not A–Z, so niche ones like decline presses come last),
+  // and always room for something different — at most 2 versions when a fallback is shown, 3 otherwise.
+  const sameGroup = (candidate: ExerciseDefinition) => Boolean(source.variationGroup) && candidate.variationGroup === source.variationGroup && candidate.id !== fallback?.id;
+  const groupOrder = VARIATION_GROUPS[source.variationGroup ?? ""] ?? [];
+  const rank = (candidate: ExerciseDefinition) => { const index = groupOrder.indexOf(candidate.id); return index < 0 ? groupOrder.length : index; };
+  const versions = usable.filter(sameGroup).sort((a, b) => rank(a) - rank(b));
+  const others = usable.filter((candidate) => !sameGroup(candidate));
+  const maxVersions = fallback && others.includes(fallback) ? 2 : 3;
+  const keptVersions = versions.slice(0, others.length > (fallback && others.includes(fallback) ? 1 : 0) ? maxVersions : 4);
+  const picked = [...others.filter((candidate) => candidate === fallback), ...keptVersions, ...others.filter((candidate) => candidate !== fallback)].slice(0, 4);
+  return picked.map((candidate) => ({
     ...candidate,
     selectionReason: `Same-pattern alternative to ${source.name}; uses ${candidate.equipment.toLocaleLowerCase()} and respects the current exercise restrictions.`,
   }));

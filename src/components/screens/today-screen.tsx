@@ -261,7 +261,7 @@ function WorkoutDayView({ date, extraDay = false, startAtReview = false }: { dat
           <h2>{plan?.title ?? "Rest day"}</h2>
           {plan?.stage ? <span className={`stage-chip ${plan.recoveryWeek ? "light" : ""}`}>{plan.level ? `${levelTitle(plan.level)} · ` : ""}Week {plan.weekNumber} of 52 · {plan.stage}</span>
             : plan?.level && plan.sessionType !== "recovery" && <span className="stage-chip">{levelTitle(plan.level)} level</span>}
-          {plan?.lightWeek && <span className="stage-chip light">Lighter week from your trainer · fewer sets</span>}
+          {plan?.lightWeek && <span className="stage-chip light">{plan.ownLightWeek ? "Your lighter week" : "Lighter week from your trainer"} · fewer sets</span>}
         </header>}
 
         {!plan && <article className="panel train-rest">

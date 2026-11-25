@@ -263,3 +263,72 @@ All of it is deterministic and read-only (`src/lib/insights.ts`). It's built fro
   - **Rozi:** `get_workout_for_day` now returns the plain "why" and, for a logged day, a `recap`. `get_progress` returns `stalledLifts` overall, or `stalled` for one exercise. No new tools, so it's still 14 tools.
   - **Screens:** Today's "Why this workout" list (the planner notes stay one tap deeper), the recap on the post-workout celebration, and a "Stalled for N weeks" note on an exercise's stats.
 - **No migration and no flag:** nothing new is stored.
+
+## 12. Your own workout, move by move (2026-11-25)
+
+The problem: "save this workout for today: bench 4×8, incline dumbbell 3×10, cable fly 3×12" got a different answer.
+`start_plan_today` and `save_routine` only took `{area, minutes}`, so a list was refused ("Choose an area…") and the
+model talked about something else.
+
+- `propose_action` now also takes `exercises: [{name, sets, reps}]` (up to 10) and an optional `name` for both types.
+  The description tells the model to use the person's own words for each move.
+- `planFromList` (`action-registry.ts`):
+  - matches each name with `findNamedExercise`, the same rules as a swap. A move the person can't do is replaced by
+    the closest version they can, and the card says so ("Swapped for what you can do: bench → Dumbbell bench press").
+  - Names that don't match, or that the person's equipment or trainer rules don't allow, refuse the whole request,
+    listing those names, so Rozi asks instead of guessing. Deadlift rules still apply.
+  - Sets are clamped to 1–8. Reps must look like "8", "8–12", "30 sec" or "10 each side"; otherwise the move's own
+    reps are used. Duplicates are dropped.
+  - The title goes through `plainCardText` (40 characters, no markup or instructions).
+- Approval, applying (`routinePlan` → today's session, or My routines) and verification are unchanged. Nothing is
+  saved until the person taps Approve.
+- Tests: `actions.test.ts` "the person's own workout…".
+- Needs `ROZI_ACTIONS=on`. With actions off, or when the phone answers because the AI is busy, only Rozi-picked plans
+  can be started or saved.
+
+## 13. R14 — Coach review: the plan adapts to your logged weeks (2026-11-25)
+
+**What it does.** Every week the app reviews your last 2–4 weeks of training and suggests at most three plan changes,
+safety first. You approve each with one tap ("Apply" / "Not now"), and every change can be undone. You can also let
+Rozi apply the small, safe ones by itself.
+
+**Where.** The Coach review card on Progress. A row on Today appears only when there's a suggestion.
+
+**Rules** (`src/lib/coach-review.ts`, `REVIEW_RULES`). Plain code, not AI, so it's predictable and tested.
+
+| Suggestion | When | Change | Safe to auto-apply |
+|---|---|---|---|
+| Take a lighter week | pain in a check-in or discomfort after a workout (7 days); soreness ≥ 4/5 over ≥ 2 check-ins (10 days); last 3 workouts ≥ 9/10 effort — not already in a lighter week | 7-day lighter week (≈ ⅓ fewer sets) from today | yes |
+| Drop the extra set | extra set is on and effort ≥ 8.5, or sore, or pain | set nudge back to 0 | yes |
+| Swap a move you keep skipping | skipped ≥ 2× in 28 days | closest safe alternative (equipment + trainer rules) | yes |
+| Swap a stalled lift | `findPlateaus` (R12) with a usable variation | variation, about 3 weeks | no |
+| Add a set to main lifts | ≥ 3 fully done workouts in 14 days at ≤ 6/10 effort, program week ≥ 5, no pain or soreness | +1 set on the first 3 strength moves | no |
+| Shorter sessions | < 50% of ≥ 6 planned days done in 3 weeks | −10 minutes (not below 20) | no |
+
+Level changes stay automatic as before (`levels.ts`). Train together groups get no per-person changes, because their
+plan is shared.
+
+**Storage.** `profiles.plan_adjustments` jsonb (migration `20261125120000_coach_plan_adjustments.sql`). It's
+owner-only through the existing profiles RLS, so there's no new policy or grant. A CHECK keeps it an object of at most
+16 KB. Shape: `{ v, swaps, setDelta, lightWeekStart, autoApply, history (last 20, for undo), dismissed (last 40) }`.
+The app reads it defensively (`parsePlanAdjustments`), dropping unknown ids, bad dates and wrong types.
+
+**Planner.** `generateWorkout` ends with `adjustPlan(plan, profile)` (`coach-plan.ts`):
+- every swap is re-checked against equipment and trainer rules, so a stored swap can't bring back a locked deadlift;
+- the set nudge stays within 1–6 and is skipped in return, recovery and lighter weeks;
+- your own lighter week uses the same lighter-week path as the trainer's, labelled "Your lighter week".
+- Each plan records `coachKey`, so a saved workout that hasn't started is planned again when your changes differ
+  (`workoutPlanMatchesProfile`). With no changes the key is "", so older plans are never re-planned.
+
+**Rozi AI.** A read-only tool, `get_coach_review`, explains the suggestions and what's already in your plan. Rozi
+can't apply them from the chat; it points you to the card. `tool-select` sends it for plan questions ("make it harder",
+"I'm stuck", "adjust my plan", "level me up").
+
+**Tests.** `src/lib/coach.test.ts` (11 tests): each rule, the limits, "not now", auto-apply only for safe changes,
+apply/undo, refusals (locked deadlift, unknown ids, Train together), defensive reading, the planner following changes,
+and re-planning.
+
+**Not yet (later R14 steps).**
+- A weekly push ("Your coach review is ready") through the R11 check-in cron.
+- Rozi proposing these changes on approval cards in the chat; this needs a new action type and its own migration.
+- Changing training days. Today it's only session length, because days interact with Train together and trainer plans.

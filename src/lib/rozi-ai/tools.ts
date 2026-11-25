@@ -6,6 +6,8 @@
 //
 // Privacy: tool results never include the person's name, email, phone or account id.
 
+import { weeklyReview } from "../coach-review.ts";
+import { adjustmentsOf } from "../coach-plan.ts";
 import { BMI_BAND_LABEL, bmi, bmiBand } from "../body.ts";
 import { calculateAchievements } from "../achievements.ts";
 import { dateLabel, nextTrainingDate, shiftDate, weekDates, weekdayOf } from "../dates.ts";
@@ -19,7 +21,7 @@ import { GROUP_LABELS, MUSCLE_GROUPS, muscleRecovery, readyCount, sessionGroupSe
 import { calculateStreak } from "../rozi.ts";
 import { planWorkout } from "../rozi-plan.ts";
 import { ACTIVITY_OPTIONS } from "../onboarding.ts";
-import { EQUIPMENT_OPTIONS, EXERCISE_LIBRARY } from "../templates.ts";
+import { EQUIPMENT_OPTIONS, EXERCISE_LIBRARY, getExerciseDefinition } from "../templates.ts";
 import { DEFAULT_TRAINER_RULE_SETTINGS, profileWithTrainerEquipment } from "../trainer-rules.ts";
 import type { BodyWeightEntry, ExerciseDefinition, FitTrackState, Profile, TrainerRuleSettings, WorkoutPlan, WorkoutSession } from "../types";
 import { swapCard, type RoziCard } from "./cards.ts";
@@ -530,6 +532,26 @@ function myProfile(ctx: RoziContext): ToolOutcome {
   };
 }
 
+/** R14: the weekly coach review — suggested plan changes from the logged weeks, and the changes already in the plan. */
+function coachReview(ctx: RoziContext): ToolOutcome {
+  const review = weeklyReview({ profile: ctx.planningProfile, sessions: ctx.sessions, today: ctx.today });
+  const adjustments = adjustmentsOf(ctx.profile);
+  const name = (id: string) => getExerciseDefinition(id)?.name ?? id;
+  return {
+    result: {
+      week: review.week, workoutsDoneLast3Weeks: review.done, plannedLast3Weeks: review.planned, averageEffort: review.averageEffort,
+      suggestions: review.suggestions.map((item) => ({ title: item.title, why: item.why, smallSafeChange: item.safe })),
+      inYourPlanNow: {
+        swaps: Object.entries(adjustments.swaps).map(([from, to]) => `${name(to)} instead of ${name(from)}`),
+        mainLiftSets: adjustments.setDelta === 1 ? "one extra set" : adjustments.setDelta === -1 ? "one set fewer" : "as planned",
+        lighterWeekFrom: adjustments.lightWeekStart, roziMakesSmallChanges: adjustments.autoApply,
+      },
+      trainTogether: Boolean(ctx.profile.buddyAnchor),
+      howToApply: "The person approves each suggestion on Progress → Coach review (one tap, and every change can be undone). Rozi can't apply them from the chat.",
+    },
+  };
+}
+
 // ---------- Declarations the model sees ----------
 
 const MUSCLE_ARG = { type: "string", description: "Optional muscle group: chest, back, shoulders, arms, legs or core." };
@@ -549,6 +571,7 @@ export const ROZI_TOOLS: AiTool[] = [
   { name: "get_achievements", description: "Badges earned and the closest ones to earn next.", parameters: { type: "object", properties: {} } },
   { name: "plan_custom_workout", description: "Builds a one-off workout for a body area and length, matched to the user's level, goal and equipment. It can be started or saved as a routine from the card.", parameters: { type: "object", properties: { area: { type: "string", enum: [...PLAN_AREAS] }, minutes: { type: "integer", description: "15–90. Optional." } }, required: ["area"] } },
   { name: "suggest_exercise_swap", description: "Swap or replace an exercise in the user's workout (they want a different move, the machine is busy, they don't like one, or want to customise the workout). Returns choices that fit their equipment and trainer rules, and a card where the user taps one to swap it in. Leave 'exercise' empty to let them pick which one.", parameters: { type: "object", properties: { exercise: { ...EXERCISE_ARG, description: "The exercise to swap out, as the user said it. Optional." }, replacement: { ...EXERCISE_ARG, description: "What they want instead, if they said. Optional." }, day: { type: "string", description: "\"today\" (default), \"tomorrow\" or YYYY-MM-DD." } } } },
+  { name: "get_coach_review", description: "The weekly coach review: up to three suggested changes to the user's plan from their logged weeks (lighter week when sore/in pain, swap a move they keep skipping or a stalled lift, one more set when workouts are easy, shorter sessions when missing days), plus the changes already in their plan. Use for 'should I change my plan', 'make my workouts harder/easier', 'I'm stuck', 'level me up', 'adjust my plan'.", parameters: { type: "object", properties: {} } },
   { name: "get_my_profile", description: "The user's training setup: level, goal, training days, session length, equipment, height, latest weight, age, and today's date.", parameters: { type: "object", properties: {} } },
 ];
 
@@ -573,6 +596,7 @@ export function runRoziTool(name: string, args: Args, ctx: RoziContext): ToolOut
       case "plan_custom_workout": return customWorkout(ctx, args);
       case "suggest_exercise_swap": return exerciseSwap(ctx, args);
       case "get_my_profile": return myProfile(ctx);
+      case "get_coach_review": return coachReview(ctx);
       default: return { result: { error: `Unknown tool ${name.slice(0, 40)}.` } };
     }
   } catch {

@@ -37,7 +37,11 @@ const KNOWN_IDS = ["goblet_squat", "dumbbell_bench", "lat_pulldown", "glute_brid
   "bicycle_crunch", "lying_leg_raise", "russian_twist", "wood_chop", "mountain_climber",
   // R6 batch C (2026-11-24)
   "treadmill_walk", "stationary_bike", "elliptical", "rowing_machine", "brisk_walk", "jog", "run", "cycling", "jumping_jack",
-  "low_impact_jumping_jack", "step_touch", "high_knees", "jump_squat", "burpee", "jump_rope", "kettlebell_swing"];
+  "low_impact_jumping_jack", "step_touch", "high_knees", "jump_squat", "burpee", "jump_rope", "kettlebell_swing",
+  // R6 batch D (2026-11-25)
+  "decline_bench_press", "decline_machine_press", "decline_db_press", "chest_dip", "arnold_press", "front_raise", "upright_row", "t_bar_row",
+  "seated_calf_raise", "hip_adduction_machine", "hip_abduction_machine", "front_squat", "sumo_deadlift", "good_morning", "cable_glute_kickback",
+  "ab_wheel_rollout", "concentration_curl", "triceps_kickback"];
 
 const profile: Profile = {
   id: "client", displayName: "Client", experience: "beginner", sessionsPerWeek: 3, trainingDays: [1, 3, 5], trainingStartDate: "2026-01-01",

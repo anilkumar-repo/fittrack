@@ -2854,3 +2854,69 @@ CSS and screen code only, no database or API change.
   `app/globals.css`.
 - Checks: 436 tests pass, type check clean, lint (1 old warning). Checked at 375 px in the browser, including a demo
   workout (logger buttons, actions, How-to, rest timer ±10). The demo data was backed up first and restored afterwards.
+
+### 2026-11-25 — Tour refreshed, Rozi saves your own workout, missing exercises
+
+- **Tour** (`tour-guide.tsx`): it follows the redesigned dock, left to right:
+  - Hi → Today → Workouts → Ask me (Rozi, centre) → Progress → Together → You (your picture, whose ☰ holds the
+    plan and settings);
+  - each step highlights its real button (`target` selector) with an orange ring lifted above the backdrop;
+  - the card is solid and sits above the dock. The backdrop is darker and frosted. Each step's card animates in.
+  - Before, it named the old tabs (Home, Train, Friends, Library, Settings), "Train" highlighted nothing, and the
+    glass card showed the page through it.
+- **Rozi saving your own workout:** see `docs/ROZI_AGENT_ARCHITECTURE.md` §12. `start_plan_today` and `save_routine`
+  now accept your list of exercises with sets and reps. Each move is checked against your equipment and trainer rules,
+  and it's saved only after you tap Approve.
+- **18 missing gym moves added** (`library-additions.ts` `BATCH_D_GAPS`, plus aliases, variation groups, notes and
+  body-map regions):
+  - Decline barbell bench press, Decline chest press (machine), Decline dumbbell press;
+  - Chest dip, Arnold press, Dumbbell front raise, Cable upright row, T-bar row, Seated calf raise;
+  - Hip adduction machine, Hip abduction machine, Barbell front squat;
+  - Sumo deadlift and Barbell good morning, both locked until a trainer approves (`trainer_deadlift_approval`, like
+    the conventional deadlift and the RDL);
+  - Cable glute kickback, Ab wheel rollout, Dumbbell concentration curl, Dumbbell triceps kickback.
+  - They show in the library, search, swaps and Rozi. Generated plans are unchanged: new moves are never auto-picked.
+  - Judgement calls: dips need the pull-up bar (power tower) or machines, with bench dips as the fallback. The hip
+    machines use the single-leg pattern, since nothing fits better, so swaps may offer step-ups.
+- **"Other options" for an exercise** (`getSafeExerciseAlternatives`): with more variations, all four slots had become
+  dumbbell presses for a dumbbell bench. Now:
+  - same-movement versions follow the group's "closest first" order, not A–Z, so decline presses come last;
+  - the list keeps a mix: the easier fallback, up to 2 versions (3 with no fallback), and something different.
+  - Dumbbell bench now shows wall push-up, incline dumbbell press, dumbbell floor press and incline push-up. The test
+    is unchanged.
+- Who did what: the Sonnet builder added the 18 exercises and their wiring. Opus reviewed them, checked the deadlift
+  locks, fixed the alternatives ranking, rebuilt the tour and wrote the Rozi own-workout action. 437 tests pass, type
+  check clean, lint (1 old warning).
+
+### 2026-11-25 — R14 Coach review: the plan adapts to your logged weeks
+
+- **What's new:** a weekly review of your training suggests up to three plan changes. You tap Apply or Not now, and
+  any change can be undone. There's an optional "Let Rozi make small changes" switch for the safe ones. Full design:
+  `docs/ROZI_AGENT_ARCHITECTURE.md` §13.
+- **New files:**
+  - `src/lib/coach-plan.ts`: stored changes, apply, undo, and the planner hook;
+  - `src/lib/coach-review.ts`: the rules;
+  - `src/lib/coach-key.ts`: the re-plan fingerprint;
+  - `src/components/app/coach-review-card.tsx` (on Progress, with a row on Today);
+  - `src/lib/coach.test.ts`.
+- **Changed:**
+  - `planner.ts`: your own lighter week, and `adjustPlan` at the end;
+  - `exercise-library.ts`: re-plan when coach changes differ;
+  - `supabase-repository.ts`: read and save `plan_adjustments`, falling back gracefully before the column exists;
+  - `types.ts`;
+  - `today-screen.tsx`: "Your lighter week" label;
+  - `rozi-ai/tools.ts`: `get_coach_review`, now 15 tools;
+  - `tool-select.ts`.
+- **Migration `20261125120000_coach_plan_adjustments.sql`:** applied 2026-11-25 on "Yes, apply it" (recorded as
+  `20261125073817 coach_plan_adjustments`).
+  - Dry run first, rolled back: 6 profiles defaulted to `{}`; an array and an oversized object were refused.
+  - Verified: `jsonb not null default '{}'`, the shape CHECK, RLS on with the same 3 owner-only profile policies, and
+    0 non-empty rows.
+  - Security advisors: nothing new. Still only the long-standing closed-table INFO, the owner-checked SECURITY DEFINER
+    WARN, and leaked-password protection.
+  - Live test as a real signed-in user, rolled back: own update 1 row; another user's update 0 rows; another user's
+    row not visible; a non-object refused by the CHECK; anon sees 0 profiles. No leftovers (0 non-empty rows after).
+- **Checked:** 448 tests pass, type check clean, lint (1 old warning). In the browser (demo data backed up and
+  restored afterwards): a logged workout with pain showed "Take a lighter week". Apply saved it, the Train page
+  re-planned from 9 to 5 sets labelled "Your lighter week", and Undo restored it.
+- **Who did what:** Opus designed and wrote R14 (it touches the database, the planner and Rozi AI).

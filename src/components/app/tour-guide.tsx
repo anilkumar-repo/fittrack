@@ -9,14 +9,18 @@ import { Rozi } from "./rozi";
 const TOUR_KEY = "rozfit-tour-done";
 const REPLAY_EVENT = "rozfit-replay-tour";
 
-const STEPS: Array<{ href?: string; mood: RoziMood; title: string; text: string }> = [
-  { mood: "hello", title: "Hi, I’m Rozi!", text: "I’ll be your workout buddy. Here’s a 30-second tour of RozFit." },
-  { href: "/", mood: "morning", title: "Home", text: "Today’s plan, your streak, a daily thought and nudges from friends — all at a glance." },
-  { href: "/today", mood: "full-body", title: "Train", text: "Check in, see each exercise with muscle pictures and a demo video, then log your sets. I adjust the plan to how you feel." },
-  { href: "/progress", mood: "trophy", title: "Progress", text: "Workouts, personal records, badges, body weight and missed days, week by week." },
-  { href: "/friends", mood: "cheer", title: "Friends", text: "Invite friends, see each other’s streaks, send a nudge and start weekly or monthly challenges." },
-  { href: "/library", mood: "upper-body", title: "Library", text: "Every exercise with steps, safety tips and the muscles it works." },
-  { href: "/settings", mood: "signin", title: "Settings", text: "Change your goal and days, turn on reminders, pick a theme and add your photo or avatar." },
+/**
+ * The tour follows the dock left to right (2026-11-25 redesign): Today · Workouts · Rozi · Progress · Together, then
+ * your picture (Profile, whose ☰ holds the plan and settings). `target` is what gets the highlight ring.
+ */
+const STEPS: Array<{ target?: string; mood: RoziMood; title: string; text: string }> = [
+  { mood: "hello", title: "Hi, I’m Rozi!", text: "I’m your workout buddy. Here’s a 30-second tour of RozFit." },
+  { target: '.mobile-nav a[href="/"], .side-nav a[href="/"]', mood: "morning", title: "Today", text: "Your workout for today, your streak, water and the week — start every day here." },
+  { target: '.mobile-nav a[href="/library"], .side-nav a[href="/library"]', mood: "upper-body", title: "Workouts", text: "Every exercise with muscle pictures and how-to, stretches, and the routines you save." },
+  { target: '.mobile-nav a[href="/rozi"], .side-nav a[href="/rozi"]', mood: "chat-hello", title: "Ask me", text: "Ask about your training. I can plan a workout, explain your plan, or suggest changes for you to approve." },
+  { target: '.mobile-nav a[href="/progress"], .side-nav a[href="/progress"]', mood: "trophy", title: "Progress", text: "Workouts, personal records, badges, body weight and recovery, week by week." },
+  { target: '.mobile-nav a[href="/friends"], .side-nav a[href="/friends"]', mood: "cheer", title: "Together", text: "Friends, a feed, chats and training buddies — streaks, nudges and challenges." },
+  { target: 'a.round-avatar[href="/profile"], .topbar-actions a[href="/profile"]', mood: "signin", title: "You", text: "Tap your picture for your profile. The ☰ there holds your plan, reminders, theme and the rest." },
 ];
 
 export function tourDone(): boolean {
@@ -29,7 +33,7 @@ export function replayTour() {
   window.dispatchEvent(new Event(REPLAY_EVENT));
 }
 
-/** A short first-time tour of the tabs, shown once after sign-up. The matching menu button is highlighted. */
+/** A short first-time tour of the dock, shown once after sign-up. The matching button is highlighted. */
 export function TourGuide({ blocked }: { blocked: boolean }) {
   const [step, setStep] = useState<number | null>(null);
 
@@ -43,8 +47,8 @@ export function TourGuide({ blocked }: { blocked: boolean }) {
   const current = step === null ? null : STEPS[step];
 
   useEffect(() => {
-    if (!current?.href) return;
-    const links = [...document.querySelectorAll<HTMLAnchorElement>(`.mobile-nav a[href="${current.href}"], .side-nav a[href="${current.href}"]`)];
+    if (!current?.target) return;
+    const links = [...document.querySelectorAll<HTMLElement>(current.target)];
     links.forEach((link) => link.classList.add("tour-highlight"));
     return () => links.forEach((link) => link.classList.remove("tour-highlight"));
   }, [current]);
@@ -59,8 +63,8 @@ export function TourGuide({ blocked }: { blocked: boolean }) {
 
   return createPortal(
     <div className="tour-backdrop" onClick={close}>
-      <section className="tour-card panel" role="dialog" aria-modal="true" aria-labelledby="tour-title" onClick={(event) => event.stopPropagation()}>
-        <Rozi mood={current.mood} size={110} eager />
+      <section key={step} className="tour-card panel" role="dialog" aria-modal="true" aria-labelledby="tour-title" onClick={(event) => event.stopPropagation()}>
+        <Rozi key={current.mood} mood={current.mood} size={104} eager />
         <h2 id="tour-title">{current.title}</h2>
         <p>{current.text}</p>
         <div className="tour-dots" aria-hidden="true">{STEPS.map((item, index) => <span key={item.title} className={index === step ? "on" : ""} />)}</div>
