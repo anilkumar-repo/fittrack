@@ -2946,3 +2946,20 @@ CSS and screen code only, no database or API change.
   - the icon link is the dark one in dark mode and the normal one in light mode;
   - the done buttons are 305×52 full width; with sharing they're two 149 px halves, and the labels fit.
   - 448 tests pass, type check clean, lint (1 old warning).
+
+### 2026-11-25 — Dock shadow removed; YouTube-style top bar on Workouts, Progress and Feed
+
+- **Shadow while scrolling:** the soft fade added behind the phone dock (`.mobile-nav::before`) shrank with the dock
+  when it went compact, and showed as a dark box behind it. Removed.
+- **YouTube-style top bar** (only on `/library`, `/progress` and `/feed`, the `HIDE_BAR_PAGES` list in
+  `app-shell.tsx`):
+  - scrolling down slides the top bar up out of view; scrolling up (or reaching the top) brings it back, like
+    YouTube's header. It uses the same scroll signal as the compact dock (`bar-hidden` next to `dock-compact`).
+  - It moves with a transform only, so nothing on the page jumps.
+  - A page-coloured strip stays under the status bar, and the Workouts A–Z letters stick right under it while the bar
+    is away.
+  - Other pages keep the bar pinned. Reduced motion: no slide animation.
+- Checked in the browser: the bar moves fully out of view (−73 px) and back; the letter headers move to the top; the
+  dock fade is gone. The live scroll couldn't run in the hidden test pane, so the state was set directly — check the
+  feel on the phone.
+- 448 tests pass, type check clean, lint (1 old warning).
