@@ -81,7 +81,7 @@ export function RealBody({ figure, side, tone, selected = [], onPick, label, pri
 
   return (
     <div ref={box} className={`real-body ${onPick ? "pickable" : ""}`} onClick={onPick ? (event) => void pick(event) : undefined} role={label ? "img" : undefined} aria-label={label}>
-      <Image src={`/figures/v3/${figure}-base-${side}.webp`} alt="" width={W} height={H} sizes={sizes} priority={priority} className="real-body-base" />
+      <Image src={`/figures/v4/${figure}-base-${side}.webp`} alt="" width={W} height={H} sizes={sizes} priority={priority} className="real-body-base" />
       {visible.map((region, index) => {
         const url = maskUrl(figure, region, side);
         // --i staggers the fade-in, so the colours appear muscle by muscle (globals.css, Phase 5).

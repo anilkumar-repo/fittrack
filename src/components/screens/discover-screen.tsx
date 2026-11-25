@@ -4,8 +4,7 @@ import { todayInTimeZone } from "@/lib/demo-data";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { ArrowLeft, Check, CircleCheck, Circle, Flame, Search, UserPlus, X } from "lucide-react";
+import { Check, CircleCheck, Circle, Flame, Search, UserPlus, X } from "lucide-react";
 import { Avatar } from "@/components/app/avatar";
 import { useFitTrack } from "@/components/app/fit-track-provider";
 import { MessageButton } from "@/components/app/message-button";
@@ -149,7 +148,6 @@ const todayIn = (timeZone: string) => todayInTimeZone(timeZone);
 /** Someone's profile: name, picture, @username and bio; for friends (and you) streaks, this month and their posts. */
 export function PersonScreen({ userId }: { userId: string }) {
   const { state, isDemo, browserClient } = useFitTrack();
-  const router = useRouter();
   const [profile, setProfile] = useState<PersonProfile | null | undefined>(undefined);
   const [links, setLinks] = useState<Map<string, string>>(new Map());
   const { act, busy } = useFriendAction();
@@ -174,7 +172,7 @@ export function PersonScreen({ userId }: { userId: string }) {
   const { label, action } = relationAction(profile.relation);
   return (
     <section className="person-page">
-      <button type="button" className="text-button person-back" onClick={() => router.back()}><ArrowLeft aria-hidden="true" /> Back</button>
+      {/* The top bar already has the back button (to Together), so no second "← Back" here (2026-11-25). */}
       <article className="panel person-card">
         <Avatar value={profile.avatar} name={profile.name} size={88} />
         <h2>{profile.name}</h2>

@@ -5,7 +5,7 @@
 import { existsSync, mkdirSync } from "node:fs";
 import sharp from "sharp";
 
-const SRC = "public/figures/v3";
+const SRC = "public/figures/v4";
 const OUT = "public/figures/masks/v1";
 mkdirSync(OUT, { recursive: true });
 const FIGURES = ["male", "female", "neutral"];

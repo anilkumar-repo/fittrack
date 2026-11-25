@@ -2711,8 +2711,7 @@ html:not(.scroll-locked), html:not(.scroll-locked) body { overflow-x: clip; }
 .rc-link svg { width: 16px; height: 16px; }
 .rc-stretch { display: grid; gap: 4px; color: var(--ink); text-decoration: none; }
 .rc-stretch-art { display: block; overflow: hidden; border-radius: var(--radius-lg); background: var(--surface-2); }
-.rc-stretch-art img { display: block; width: 100%; height: 170px; object-fit: contain; animation: rc-breathe 4s ease-in-out infinite; }
-@keyframes rc-breathe { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.06) translateY(-3px); } }
+.rc-stretch-art img { display: block; width: 100%; height: 170px; object-fit: contain; }
 .rc-stretch strong { font-size: var(--text-lg); } .rc-stretch small { color: var(--muted); }
 .rc-ready { display: grid; justify-items: center; gap: 8px; text-decoration: none; }
 .rc-ready .body-figure { height: 190px; }
@@ -3042,18 +3041,11 @@ img[data-motion="float"] { --rozi-motion: rozi-float 3.6s ease-in-out infinite; 
   50% { translate: 0 -5px; }
 }
 
-/* Animated muscle highlight: the worked muscle "breathes" over the plain body, like it's contracting. */
+/* Muscle pictures stay still (2026-11-25): the "breathing" highlight and the pulsing sore tint looked odd and are
+   removed. On the recovery and week maps each muscle colour still fades in once, one after another. */
 .turn-face > img { grid-area: 1 / 1; }
-.turn-face > img.turn-glow { animation: muscle-work 2.6s ease-in-out infinite; }
-@keyframes muscle-work {
-  0%, 100% { opacity: .45; filter: saturate(.9); }
-  50% { opacity: 1; filter: saturate(1.25) brightness(1.05); }
-}
-/* Recovery and week maps: each muscle colour fades in one after another; sore muscles pulse gently. */
 .real-body-tint { animation: tint-in .7s ease-out both; animation-delay: calc(var(--i, 0) * 70ms + 150ms); }
-.real-body-tint.tone-sore:not(.picked) { animation: tint-in .7s ease-out both, tint-sore 2.8s 1s ease-in-out infinite; animation-delay: calc(var(--i, 0) * 70ms + 150ms), 1.2s; }
 @keyframes tint-in { from { opacity: 0; } to { opacity: 1; } }
-@keyframes tint-sore { 0%, 100% { opacity: 1; } 50% { opacity: .6; } }
 
 /* Moving exercise pictures: 2–3 frames cross-fading back and forth (MoveLoop). */
 .move-loop { position: relative; display: grid; }
@@ -3070,7 +3062,6 @@ img[data-motion="float"] { --rozi-motion: rozi-float 3.6s ease-in-out infinite; 
 @media (prefers-reduced-motion: reduce) {
   img[data-motion] { --rozi-motion: none; }
   .done-card img.rozi[data-motion] { animation: none; }
-  .turn-face > img.turn-glow { animation: none; opacity: 1; }
   .real-body-tint, .real-body-tint.tone-sore:not(.picked) { animation: none; }
   .move-loop > img { transition: none; }
 }
@@ -4448,3 +4439,44 @@ img.coach-rozi { flex: none; width: 56px; height: 56px; }
   html[data-hide-bar] .library-list.grouped .letter-head { transition: top var(--dur-med) var(--ease); }
 }
 @media (max-width: 700px) and (prefers-reduced-motion: reduce) { html[data-hide-bar] .topbar, html[data-hide-bar] .library-list.grouped .letter-head { transition: none; } }
+
+/* Comments sheet (2026-11-25): one solid surface, with the comment bar in the same colour, so there's no darker band
+   behind the input. (The bar used `background: inherit`, which redrew the sheet's glass gradient as a box.) */
+.modal.chat-sheet.comments-sheet { background: var(--surface-solid); }
+.comments-sheet .comment-compose { align-items: center; padding-block: var(--space-2) 0; background: var(--surface-solid); box-shadow: 0 -12px 16px -8px var(--surface-solid); }
+.comments-sheet .comment-compose textarea { min-height: 48px; border-radius: var(--radius-pill); padding: 13px 18px; background: var(--surface-2); }
+.comments-sheet .chat-send { width: 48px; height: 48px; padding: 0; border-radius: 50%; }
+.comments-sheet .chat-send:disabled { opacity: .45; box-shadow: none; filter: saturate(.7); }
+
+/* Gooey search (2026-11-25), after Aceternity UI's Gooey Input: an inverted pill that stretches open while a round
+   search bubble pulls away with a liquid join (the SVG goo filter in gooey-search.tsx). Same 0.4 s springy timing. */
+.gooey-search { --gooey-h: 52px; --gooey-spring: cubic-bezier(.34, 1.45, .64, 1); position: relative; display: flex; justify-content: center; min-height: var(--gooey-h); }
+.gooey-filter { position: absolute; width: 0; height: 0; overflow: hidden; }
+.gooey-stage { position: relative; display: flex; align-items: center; justify-content: center; width: 100%; height: var(--gooey-h); }
+.gooey-pill { display: flex; align-items: center; width: var(--gooey-closed, 200px); height: var(--gooey-h); margin-left: 0; border-radius: var(--radius-pill); color: var(--page); background: var(--ink); box-shadow: var(--shadow-1); transition: width .4s var(--gooey-spring), margin-left .4s var(--gooey-spring); }
+.gooey-search.open .gooey-pill { width: calc(100% - var(--gooey-h) - 8px); margin-left: calc(var(--gooey-h) + 8px); }
+.gooey-bubble { position: absolute; top: 50%; left: 0; width: var(--gooey-h); height: var(--gooey-h); opacity: 0; transform: translateY(-50%) scale(0); transition: transform .4s var(--gooey-spring), opacity .3s ease; pointer-events: none; }
+.gooey-search.open .gooey-bubble { opacity: 1; transform: translateY(-50%) scale(1); }
+.gooey-bubble > span { display: grid; place-items: center; width: 100%; height: 100%; border-radius: 50%; color: var(--page); background: var(--ink); }
+.gooey-bubble svg, .gooey-trigger svg { width: 18px; height: 18px; }
+.gooey-trigger { display: inline-flex; align-items: center; justify-content: center; gap: var(--space-2); width: 100%; height: 100%; padding: 0 var(--space-4); border: 0; border-radius: var(--radius-pill); color: inherit; background: transparent; font: inherit; font-size: var(--text-base); font-weight: 700; cursor: pointer; }
+.gooey-trigger:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+.gooey-form { display: flex; align-items: center; gap: var(--space-2); width: 100%; height: 100%; padding: 0 var(--space-1) 0 var(--space-5); }
+.gooey-form[hidden] { display: none; }
+:root .gooey-search.gooey-search input:not([type="range"]):not([type="checkbox"]):not([type="radio"]),
+:root[data-theme="dark"] .gooey-search.gooey-search input:not([type="range"]):not([type="checkbox"]):not([type="radio"]) {
+  flex: 1; min-width: 0; height: 100%; min-height: 0; padding: 0; border: 0 !important; border-radius: 0; outline: 0; color: var(--page); background: transparent !important; box-shadow: none; font-size: var(--text-lg); font-weight: 600; -webkit-appearance: none; appearance: none;
+}
+.gooey-search input::placeholder { color: color-mix(in srgb, var(--page) 55%, transparent); font-weight: 500; }
+.gooey-search input::-webkit-search-cancel-button, .gooey-search input::-webkit-search-decoration { -webkit-appearance: none; appearance: none; }
+.gooey-clear { display: grid; place-items: center; flex: none; width: 40px; height: 40px; border: 0; border-radius: 50%; color: var(--page); background: color-mix(in srgb, var(--page) 14%, transparent); cursor: pointer; }
+.gooey-clear svg { width: 16px; height: 16px; }
+@media (prefers-reduced-motion: reduce) { .gooey-pill, .gooey-bubble { transition: none; } }
+/* Dock magnification while sliding (dock-scrub.tsx): icons follow the finger quickly, then settle back softly. */
+.mobile-nav .dock-pill.dock-dragging > a .nav-icon, .mobile-nav .dock-pill.dock-dragging > a img { transition: transform .12s ease-out; will-change: transform; }
+.mobile-nav .dock-pill > a img { transition: transform .3s cubic-bezier(.2, .9, .3, 1); }
+.gooey-trigger span { white-space: nowrap; }
+/* The whole pill shows focus, not a square ring inside it. */
+/* The open pill itself shows focus; no orange app-wide ring inside it (that rule is !important). */
+.gooey-search.gooey-search input:focus, .gooey-search.gooey-search input:focus-visible { outline: none !important; }
+.gooey-search .gooey-pill:focus-within { box-shadow: 0 0 0 3px color-mix(in srgb, var(--ink) 18%, transparent), var(--shadow-1); }

@@ -1,10 +1,11 @@
 "use client";
 
 import { CATEGORY_LABEL } from "@/components/app/exercise-picker";
+import { GooeySearch } from "@/components/ui/gooey-search";
 import Link from "next/link";
 import { MOBILITY_MOVES, MOBILITY_ROUTINES } from "@/lib/mobility";
 import { useCallback, useState } from "react";
-import { ChevronRight, ListPlus, Search, SlidersHorizontal, X } from "lucide-react";
+import { ChevronRight, ListPlus, SlidersHorizontal, X } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { ListRow } from "@/components/ui/list-row";
 import { ExerciseGuideModal, toGuideExercise } from "@/components/app/exercise-guide-modal";
@@ -71,7 +72,8 @@ export function LibraryScreen() {
   return (
     <>
       <section className="library">
-        <label className="library-find"><Search aria-hidden="true" /><input type="search" value={librarySearch} onChange={(event) => setLibrarySearch(event.target.value)} placeholder="Search exercises or muscles" aria-label="Search exercises, muscles, or equipment" />{librarySearch && <button type="button" onClick={() => setLibrarySearch("")} aria-label="Clear search"><X aria-hidden="true" /></button>}</label>
+        <GooeySearch value={librarySearch} onChange={setLibrarySearch} placeholder="Exercises, muscles, equipment" label="Search exercises, muscles, or equipment" collapsedLabel="Search exercises"
+          trailing={librarySearch ? <button type="button" className="gooey-clear" onClick={() => setLibrarySearch("")} aria-label="Clear search"><X aria-hidden="true" /></button> : null} />
         <div className="area-cards" role="group" aria-label="Body area">{BODY_AREAS.map((area) => {
           const count = filterExerciseLibrary(EXERCISE_LIBRARY, planningProfile, { area: area.id }).length;
           return (
