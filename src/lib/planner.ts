@@ -1,3 +1,4 @@
+import { adjustPlan, inOwnLightWeek } from "./coach-plan.ts";
 import { EXERCISE_LIBRARY, FOCUS_SUBTITLES, GOAL_CYCLES, getExerciseDefinition, getOptionalDeadliftExercise, getRecoveryExercises, getTemplateExercises, RULE_VERSION, TEMPLATE_VERSION, type TemplateFocus } from "./templates.ts";
 import { goalOf, goalTitle, inLightWeek, isRecoveryWeek, recoveryWeekSets, setCap, stageLabel } from "./program.ts";
 import { extraSets, levelOf, levelSetBonus, levelTitle, programWeek, usesFoundationWeeks } from "./levels.ts";
@@ -333,7 +334,10 @@ export function generateWorkout({ date, profile, sessions, checkIn, trainerRuleS
   const program = goal !== "general";
   const recoveryWeek = isRecoveryWeek(goal, week);
   // A week the trainer made lighter: the same session (buddies stay in step), about a third fewer sets.
-  const lightWeek = !isReturnSession && inLightWeek(profile.lightWeekStart, date);
+  const trainerLightWeek = inLightWeek(profile.lightWeekStart, date);
+  // R14: a lighter week can also be one the person accepted in their coach review (never in Train together).
+  const ownLightWeek = !trainerLightWeek && !profile.buddyAnchor && inOwnLightWeek(profile, date);
+  const lightWeek = !isReturnSession && (trainerLightWeek || ownLightWeek);
   const stage = stageLabel(goal, week);
   // Train together: the same session as your buddies, from the calendar (a return after a long break still comes first).
   const focus: WorkoutFocus = profile.buddyAnchor && !isReturnSession
@@ -410,7 +414,7 @@ export function generateWorkout({ date, profile, sessions, checkIn, trainerRuleS
   if (recoveryWeek) generationReasons.push(goal === "muscle"
     ? "Every fourth week is a conditioning week: no heavy lifting, a 20-minute circuit and easy cardio so you recover and move well."
     : "Every fourth week is a recovery week: the same workouts with about a third fewer sets and comfortable loads.");
-  if (lightWeek) generationReasons.push("Your trainer made this week lighter: the same session with about a third fewer sets. Keep the weights comfortable.");
+  if (lightWeek) generationReasons.push(ownLightWeek ? "A lighter week you chose in your coach review: the same session with about a third fewer sets. Keep the weights comfortable." : "Your trainer made this week lighter: the same session with about a third fewer sets. Keep the weights comfortable.");
   if (avoidRecentPatterns) generationReasons.push("The last completed workout was within one day; repeated movement patterns are replaced or omitted where a safe alternative is available.");
   if (profile.deadliftEnabled && baseFocus === "Foundation B") generationReasons.push("A trainer-approved rule permits the hinge variation for this client; time in training alone never enables it.");
 
@@ -509,7 +513,7 @@ export function generateWorkout({ date, profile, sessions, checkIn, trainerRuleS
     : baseFocus === "Conditioning circuit"
       ? "Repeat the three moves as a circuit for 20 minutes at a controlled pace, resting when needed. Keep 2–3 reps in reserve; this is not a race."
       : recoveryWeek || lightWeek
-        ? `${lightWeek ? "Lighter week from your trainer" : "Recovery week"}: same workout, fewer sets and comfortable weights. Focus on smooth, clean reps.`
+        ? `${lightWeek ? (ownLightWeek ? "Your lighter week" : "Lighter week from your trainer") : "Recovery week"}: same workout, fewer sets and comfortable weights. Focus on smooth, clean reps.`
         : volumeAdjustment
       ? "Today’s plan uses fewer sets based on recovery feedback and recent training."
       : goal === "fatloss"
@@ -517,7 +521,8 @@ export function generateWorkout({ date, profile, sessions, checkIn, trainerRuleS
         : program
         ? "Warm up for 5–7 minutes first. Finish most sets with 1–3 reps in reserve; add reps before adding weight."
         : "Build comfortable, repeatable strength with simple movements and a calm pace.";
-  return {
+  // R14: the swaps and set nudge the person approved in their coach review (re-checked against their rules).
+  return adjustPlan({
     id: `${date}-${baseFocus.toLowerCase().replaceAll(" ", "-")}`,
     date,
     focus,
@@ -538,8 +543,8 @@ export function generateWorkout({ date, profile, sessions, checkIn, trainerRuleS
     trainerRuleSettings: settings,
     level,
     ...(program ? { goal, weekNumber: week, stage, recoveryWeek } : {}),
-    ...(lightWeek ? { lightWeek: true } : {}),
-  };
+    ...(lightWeek ? { lightWeek: true, ...(ownLightWeek ? { ownLightWeek: true } : {}) } : {}),
+  }, profile);
 }
 
 export function hasDuplicateExerciseIds(plan: WorkoutPlan): boolean {

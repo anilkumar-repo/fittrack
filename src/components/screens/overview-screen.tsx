@@ -2,8 +2,9 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Activity, ArrowRight, Check, ChevronRight, Flame, Moon, Sun, Sunrise } from "lucide-react";
+import { Activity, ArrowRight, Check, ChevronRight, Flame, Moon, Sparkles, Sun, Sunrise } from "lucide-react";
 import { NudgeBanner } from "@/components/app/nudge-banner";
+import { weeklyReview } from "@/lib/coach-review";
 import { SessionLiveCard } from "@/components/app/session-live-card";
 import { WaterCard } from "@/components/app/water-card";
 import { MobilitySuggestion } from "@/components/app/mobility-suggestion";
@@ -57,6 +58,7 @@ export function OverviewScreen() {
   // The header already says "Good evening, Asha": skip Rozi's title when it's the same greeting.
   const sayTitle = moment.title.startsWith("Good ") ? null : moment.title;
   const recovery = muscleRecovery(recordedSessions, currentDate);
+  const coach = weeklyReview({ profile: state.profile, sessions: recordedSessions, today: currentDate });
   const ready = readyCount(recovery);
   const firstName = state.profile.displayName.trim().split(/\s+/)[0] || state.profile.displayName;
   const TimeIcon = hour < 12 ? Sunrise : hour < 17 ? Sun : Moon;
@@ -146,6 +148,12 @@ export function OverviewScreen() {
           })}
         </div>
       </Card>
+
+      {coach.suggestions.length > 0 && !state.profile.buddyAnchor && <Link href="/progress#coach" className="today-recovery today-coach ui-card ui-card--pad-md">
+        <span className="today-recovery-icon"><Sparkles aria-hidden="true" /></span>
+        <span className="today-recovery-text"><strong>Coach review: {coach.suggestions.length === 1 ? coach.suggestions[0].title : `${coach.suggestions.length} ideas for your plan`}</strong><small>From how your last few weeks went. You approve each one.</small></span>
+        <ChevronRight aria-hidden="true" />
+      </Link>}
 
       <Link href="/recovery" className="today-recovery ui-card ui-card--pad-md">
         <span className="today-recovery-icon"><Activity aria-hidden="true" /></span>
