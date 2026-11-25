@@ -4113,11 +4113,8 @@ a.round-avatar { display: inline-grid; place-items: center; min-width: 44px; min
 .bodyweight-form .button { min-height: 48px; font-size: var(--text-md); }
 /* Chart readout: the latest value on one line, lowest/highest on the next, never squeezed beside it. */
 .line-chart-readout .line-chart-range { flex-basis: 100%; margin-left: 0; font-size: var(--text-sm); }
-/* A soft fade behind the phone dock, so page text never shows sharp beside the pill (most of all when it shrinks
-   while scrolling). It belongs to the dock, so it hides with it in Rozi chat and workout mode. */
-@media (max-width: 700px) {
-  .mobile-nav::before { content: ""; position: absolute; z-index: -1; top: -36px; left: -12px; right: -12px; bottom: calc(-8px - env(safe-area-inset-bottom)); background: linear-gradient(to bottom, transparent, color-mix(in srgb, var(--page) 82%, transparent) 55%, var(--page)); pointer-events: none; }
-}
+/* (2026-11-25) The soft fade that sat behind the phone dock is removed: it shrank with the dock while scrolling and
+   showed as a dark box behind it. */
 
 /* Tab bars slide like the dock (DockScrub): press lifts the orange lens, dragging moves it with the finger, letting go
    picks the tab under it. pan-y keeps the page scrolling up and down; the sideways swipe belongs to the bar. */
@@ -4439,3 +4436,15 @@ img.coach-rozi { flex: none; width: 56px; height: 56px; }
 .done-actions .done-streak-icon svg { width: 16px; height: 16px; }
 .done-action svg, .done-streak > svg { width: 18px; height: 18px; color: var(--muted); }
 .done-streak:active, .done-action:active { transform: scale(.97); }
+
+/* YouTube-style top bar (2026-11-25) on Workouts, Progress and Feed: it slides up out of view while you scroll down and
+   back as soon as you scroll up. It moves with a transform (no layout change, so nothing jumps). A page-coloured strip
+   stays under the status bar, and the A–Z letters stick right under it while the bar is away. */
+@media (max-width: 700px) {
+  html[data-hide-bar] .topbar { transition: transform var(--dur-med) var(--ease), background-color .25s ease, box-shadow .25s ease; will-change: transform; }
+  html[data-hide-bar].bar-hidden .topbar { transform: translateY(calc(-100% + env(safe-area-inset-top))); }
+  html[data-hide-bar] body::after { content: ""; position: fixed; z-index: 45; top: 0; left: 0; right: 0; height: env(safe-area-inset-top); background: var(--page); pointer-events: none; }
+  html[data-hide-bar].bar-hidden.scrolled .library-list.grouped .letter-head { top: env(safe-area-inset-top); }
+  html[data-hide-bar] .library-list.grouped .letter-head { transition: top var(--dur-med) var(--ease); }
+}
+@media (max-width: 700px) and (prefers-reduced-motion: reduce) { html[data-hide-bar] .topbar, html[data-hide-bar] .library-list.grouped .letter-head { transition: none; } }
