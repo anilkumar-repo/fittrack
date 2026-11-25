@@ -17,6 +17,9 @@ function place(container: HTMLElement, firstPaint: boolean, reduceMotion: boolea
     container.append(glider);
     container.dataset.glider = "on";
   }
+  // Rows that fit the screen slide like the dock (DockScrub); wider rows keep their own sideways scroll (CSS reads this).
+  const fits = container.scrollWidth <= container.clientWidth + 1 ? "yes" : "no";
+  if (container.dataset.fits !== fits) container.dataset.fits = fits;
   const chosen = [...container.querySelectorAll<HTMLElement>(CHOSEN)].find((element) => element !== glider);
   if (!chosen || chosen.offsetWidth === 0) {
     glider.style.opacity = "0";

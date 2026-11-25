@@ -4121,7 +4121,8 @@ a.round-avatar { display: inline-grid; place-items: center; min-width: 44px; min
 
 /* Tab bars slide like the dock (DockScrub): press lifts the orange lens, dragging moves it with the finger, letting go
    picks the tab under it. pan-y keeps the page scrolling up and down; the sideways swipe belongs to the bar. */
-.segmented, .library-chips { touch-action: pan-y; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+/* Only rows that fit (data-fits, set by GlassGlider): a wider row, like the Recovery muscles, must keep scrolling sideways. */
+.segmented[data-fits="yes"], .library-chips[data-fits="yes"] { touch-action: pan-y; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
 .segmented > .glider, .library-chips > .glider { transition-property: translate, width, height, opacity, scale, box-shadow; }
 .scrub-pressing > .glider { scale: 1.04 1.06; }
 .scrub-dragging > .glider { scale: 1.1 1.12; transition: width .25s ease, height .25s ease, opacity .2s ease, scale .2s ease, box-shadow .2s ease; }
@@ -4133,18 +4134,18 @@ a.round-avatar { display: inline-grid; place-items: center; min-width: 44px; min
 .library-chips > button { flex: 1 1 auto; min-width: 0; padding: 0 var(--space-2); font-size: var(--text-md); white-space: nowrap; }
 .library-chips > button .chip-count { margin-left: var(--space-1); }
 
-/* Opening an exercise: the backdrop fades in while the sheet glides up and its content follows a beat later; closing
-   plays it in reverse (the guide waits for it before unmounting). Reduced motion turns it off app-wide. */
+/* Opening an exercise: the backdrop fades in while the sheet slides up from the bottom edge (like an iOS sheet) and its
+   content follows a beat later; closing slides it back down (never a see-through fade) (the guide waits for it before unmounting). Reduced motion turns it off app-wide. */
 @keyframes guide-fade-in { from { opacity: 0; } to { opacity: 1; } }
 @keyframes guide-fade-out { from { opacity: 1; } to { opacity: 0; } }
-@keyframes guide-sheet-in { from { opacity: .4; transform: translateY(48px) scale(.98); } to { opacity: 1; transform: none; } }
-@keyframes guide-sheet-out { from { opacity: 1; transform: none; } to { opacity: 0; transform: translateY(64px) scale(.98); } }
+@keyframes guide-sheet-in { from { transform: translateY(100%); } to { transform: none; } }
+@keyframes guide-sheet-out { from { transform: none; } to { transform: translateY(100%); } }
 @keyframes guide-content-in { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
 .guide-backdrop { animation: guide-fade-in var(--dur-med) var(--ease) both; }
-.guide-backdrop > .exercise-modal.guide { animation: guide-sheet-in .42s var(--ease) backwards; }
-.guide-backdrop > .exercise-modal.guide > :not(.sheet-grip):not(.guide-close-pin) { animation: guide-content-in .4s var(--ease) .08s both; }
-.guide-backdrop.is-closing { animation: guide-fade-out .22s ease-in both; }
-.guide-backdrop.is-closing > .exercise-modal.guide { animation: guide-sheet-out .22s ease-in both; }
+.guide-backdrop > .exercise-modal.guide { animation: guide-sheet-in .46s cubic-bezier(.22, 1, .36, 1) backwards; will-change: transform; }
+.guide-backdrop > .exercise-modal.guide > :not(.sheet-grip):not(.guide-close-pin):not(.guide-video-fab) { animation: guide-content-in .36s var(--ease) .18s backwards; }
+.guide-backdrop.is-closing { animation: guide-fade-out .28s ease-in both; }
+.guide-backdrop.is-closing > .exercise-modal.guide { animation: guide-sheet-out .28s cubic-bezier(.4, 0, 1, 1) both; }
 
 /* Water card (2026-11-25): a round glass orb that fills with two drifting waves and rising bubbles, a splash and a
    floating "+250 ml" on each drink, and one even row of buttons with undo at the end. */
@@ -4245,3 +4246,61 @@ a.text-button > svg { flex: none; width: 16px; height: 16px; }
 .today-head .today-hello { display: grid; margin: 0; color: var(--ink); font-size: var(--text-4xl); font-weight: 800; line-height: 1.1; overflow-wrap: anywhere; }
 .today-head .today-hello span { color: var(--muted); font-size: var(--text-xl); font-weight: 700; }
 .today-head .round-avatar { width: 44px; height: 44px; }
+/* Rozi chat fit (2026-11-25): the back arrow sits centred in its circle like the other header buttons, and the message
+   box sits just above the iPhone home bar instead of a full bar's height plus 10px higher. */
+.rozi-chat-top .rozi-back { display: grid; place-items: center; align-self: center; width: 44px; height: 44px; padding: 0; gap: 0; }
+.rozi-chat-top .rozi-back svg { width: 20px; height: 20px; }
+@media (max-width: 700px) {
+  .rozi-mode .main-area { padding-bottom: max(8px, calc(env(safe-area-inset-bottom) - 14px)); }
+  .rozi-mode .chat-input { bottom: max(8px, calc(env(safe-area-inset-bottom) - 14px)); }
+}
+/* The greeting's top row spans the full width, so your picture sits in the top-right corner (it was shrinking to its
+   content and placing the picture next to the date). */
+.today-head > .today-head-row { justify-self: stretch; width: 100%; }
+.today-head-actions { margin-left: auto; }
+.today-head { grid-template-columns: minmax(0, 1fr); justify-content: stretch; align-items: stretch; }
+
+/* Smooth scrolling on phones (2026-11-25). Every card had a live background blur, but behind the cards there is only
+   the soft fixed page gradient, so the blur barely shows — while iPhone redraws each blurred card on every scroll frame
+   (the Friends page stuttered). On phones, cards that scroll with the page keep their glass fill, edge and shadow
+   without the blur. Floating layers (dock, top bar, workout bar, sheets) keep their blur. */
+@media (max-width: 700px) {
+  :root, :root[data-theme="dark"], :root[data-theme="light"] { --glass-blur: none; }
+  .workout-bar { -webkit-backdrop-filter: blur(20px) saturate(1.4); backdrop-filter: blur(20px) saturate(1.4); }
+}
+
+/* Friends top (2026-11-25): search bar, then "Your week" as one compact row. */
+.friends-search { display: flex; align-items: center; gap: var(--space-2); min-height: 52px; padding: 0 var(--space-1) 0 var(--space-4); border: var(--glass-edge); border-radius: var(--radius-pill); background: var(--glass-fill); box-shadow: var(--glass-shadow); }
+.friends-search:focus-within { border-color: var(--accent-line); }
+.friends-search > svg { flex: none; width: 18px; height: 18px; color: var(--muted); }
+.friends-search input { flex: 1; min-width: 0; height: 44px; border: 0; outline: 0; color: var(--ink); background: transparent; font: inherit; font-size: var(--text-lg); }
+.friends-search input::placeholder { color: var(--faint); }
+.friends-search input::-webkit-search-cancel-button { -webkit-appearance: none; }
+.friends-search-go { display: grid; place-items: center; flex: none; width: 44px; height: 44px; border: 0; border-radius: 50%; color: var(--accent-ink); background: var(--accent-soft); cursor: pointer; }
+.friends-search-go svg { width: 18px; height: 18px; }
+.friends-search-chip { display: inline-flex; align-items: center; flex: none; min-height: 44px; padding: 0 var(--space-4); border-radius: var(--radius-pill); color: var(--on-accent); background: var(--button-primary-bg); font-size: var(--text-sm); font-weight: 800; text-decoration: none; white-space: nowrap; }
+.friends-v2 .friends-me { display: flex; align-items: center; gap: var(--space-3); padding: var(--space-3) var(--space-4); background: var(--glass-fill); }
+.friends-me-text { display: grid; flex: 1; gap: 2px; min-width: 0; }
+.friends-me-label { color: var(--muted); font-size: var(--text-xs); font-weight: 800; letter-spacing: .06em; text-transform: uppercase; }
+.friends-v2 .friends-me-text strong { color: var(--ink); font-size: var(--text-lg); font-weight: 800; }
+.friends-me-pips { display: flex; gap: var(--space-1); margin-top: var(--space-1); }
+.friends-me-pips i { flex: 1; max-width: 28px; height: 6px; border-radius: var(--radius-pill); background: var(--line-strong); }
+.friends-me-pips i.on { background: var(--success); }
+.friends-v2 .friends-me-streak { display: grid; justify-items: center; flex: none; min-width: 56px; min-height: 56px; padding: var(--space-2); border-radius: var(--radius-md); color: var(--accent-ink); background: var(--accent-soft); text-decoration: none; }
+.friends-v2 .friends-me-streak svg { width: 16px; height: 16px; margin: 0; color: var(--accent); }
+.friends-v2 .friends-me-streak strong { font-size: var(--text-xl); font-weight: 800; line-height: 1.1; }
+.friends-v2 .friends-me-streak small { color: var(--muted); font-size: var(--text-2xs); font-weight: 700; text-transform: uppercase; letter-spacing: .04em; }
+.friends-hub:has(> .hub-tile:only-child) { grid-template-columns: minmax(0, 1fr); }
+:root .friends-search.friends-search input[type="search"]:not([type="range"]), :root[data-theme="dark"] .friends-search.friends-search input[type="search"]:not([type="range"]) { min-height: 0; padding: 0; border: 0 !important; border-radius: 0; background: transparent !important; box-shadow: none; -webkit-appearance: none; appearance: none; }
+
+/* Exercise sheet video button (2026-11-25): floats in the bottom-right corner of the sheet. At the top of the sheet it is
+   a "▶ Watch video" pill; once you scroll it shrinks to a round play button, and grows back at the top. */
+.guide-video-fab { position: sticky; z-index: 5; bottom: calc(var(--space-4) + env(safe-area-inset-bottom)); display: flex; align-items: flex-end; justify-content: flex-end; height: 0; pointer-events: none; }
+.guide-video-fab .button { pointer-events: auto; display: inline-flex; align-items: center; justify-content: center; gap: var(--space-2); min-height: 52px; padding: 0 var(--space-5); overflow: hidden; border-radius: var(--radius-pill); white-space: nowrap; font-size: var(--text-base); font-weight: 800; box-shadow: var(--button-primary-shadow), 0 12px 28px color-mix(in srgb, black 35%, transparent); transition: padding var(--dur-med) var(--ease), min-width var(--dur-med) var(--ease); animation: guide-content-in .36s var(--ease) .3s backwards; }
+.guide-video-fab .button svg { flex: none; width: 18px; height: 18px; fill: currentColor; }
+.guide-video-fab .button span { display: inline-block; max-width: 140px; transition: max-width var(--dur-med) var(--ease), opacity var(--dur-fast) ease; }
+.exercise-modal.guide.is-scrolled .guide-video-fab .button { min-width: 52px; padding: 0; gap: 0; }
+.exercise-modal.guide.is-scrolled .guide-video-fab .button span { max-width: 0; opacity: 0; }
+.exercise-modal.guide.is-scrolled .guide-video-fab .button svg { margin-left: 3px; }
+.guide-video small { display: block; color: var(--faint); font-size: var(--text-sm); line-height: 1.45; }
+@media (prefers-reduced-motion: reduce) { .guide-video-fab .button, .guide-video-fab .button span { transition: none; } }

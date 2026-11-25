@@ -74,10 +74,12 @@ export function ExerciseGuideModal({ exercise, workout, onOpen, onClose }: Exerc
   // Closing plays the sheet's exit (slide down, backdrop fades) before the guide unmounts. Swiping down on the grip
   // already animates itself, so it still calls onClose directly.
   const [closing, setClosing] = useState(false);
+  // The video button is a "▶ Watch video" pill while the sheet is at the top and a round play button once you scroll.
+  const [scrolled, setScrolled] = useState(false);
   const close = useCallback(() => {
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) { onClose(); return; }
     setClosing(true);
-    window.setTimeout(onClose, 220);
+    window.setTimeout(onClose, 280);
   }, [onClose]);
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => { if (event.key === "Escape") close(); };
@@ -87,7 +89,7 @@ export function ExerciseGuideModal({ exercise, workout, onOpen, onClose }: Exerc
 
   return (
     <div className={`modal-backdrop guide-backdrop ${closing ? "is-closing" : ""}`} role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) close(); }}>
-      <section className="exercise-modal guide" role="dialog" aria-modal="true" aria-labelledby="exercise-modal-title">
+      <section className={`exercise-modal guide ${scrolled ? "is-scrolled" : ""}`} role="dialog" aria-modal="true" aria-labelledby="exercise-modal-title" onScroll={(event) => { const next = event.currentTarget.scrollTop > 40; if (next !== scrolled) setScrolled(next); }}>
         <SheetGrip onClose={onClose} />
         {/* Pinned to the top of the sheet, so it stays in reach while the guide scrolls. */}
         <div className="guide-close-pin"><button type="button" className="guide-close" aria-label="Close guide" onClick={close}><X aria-hidden="true" /></button></div>
@@ -113,9 +115,6 @@ export function ExerciseGuideModal({ exercise, workout, onOpen, onClose }: Exerc
         {!restricted && tab === "how" && <>
           <ol className="guide-steps big">{instructions.map((instruction, index) => <li key={`${index}-${instruction}`}><span>{index + 1}</span><p>{instruction}</p></li>)}</ol>
           {exercise.cues.length > 0 && <div className="guide-cues"><strong>Keep in mind</strong><ul>{exercise.cues.map((cue) => <li key={cue}>{cue}</li>)}</ul></div>}
-          <div className="guide-video">
-            <a className="button button-subtle" href={demoVideo.url} target="_blank" rel="noopener noreferrer"><Play aria-hidden="true" /> Watch a demonstration</a>
-          </div>
         </>}
 
         {restricted ? <div className="locked-note">This movement is restricted until your trainer approves it, so its instructions are not shown.</div> : tab === "about" && <>
@@ -131,8 +130,7 @@ export function ExerciseGuideModal({ exercise, workout, onOpen, onClose }: Exerc
           </div>
 
           <div className="guide-video">
-            <a className="button button-subtle" href={demoVideo.url} target="_blank" rel="noopener noreferrer"><Play aria-hidden="true" /> Watch a demonstration</a>
-            <small>{demoVideo.curated ? "Opens the video your trainer chose, in a new tab." : "Opens a YouTube search in a new tab. These videos are not reviewed by your trainer; the steps below come first."}</small>
+            <small>{demoVideo.curated ? "The ▶ video button opens the video your trainer chose, in a new tab." : "The ▶ video button opens a YouTube search in a new tab. Those videos aren’t reviewed by your trainer; the steps below come first."}</small>
           </div>
 
           {exercise.selectionReason && <p className="guide-note">{exercise.selectionReason}</p>}
@@ -158,6 +156,11 @@ export function ExerciseGuideModal({ exercise, workout, onOpen, onClose }: Exerc
           {inCurrentWorkout && todaySession?.status === "in_progress" && <p className="guide-sub">This workout has started, so the plan stays as it is. If you swap a movement, note it under “Notes, form, and why this exercise”.</p>}
         </>}
         <button className="button button-primary guide-done" onClick={close}>Close</button>
+        {!restricted && <div className="guide-video-fab">
+          <a className="button button-primary" href={demoVideo.url} target="_blank" rel="noopener noreferrer" aria-label={`Watch a video of ${exercise.name}`}>
+            <Play aria-hidden="true" /><span>Watch video</span>
+          </a>
+        </div>}
       </section>
     </div>
   );

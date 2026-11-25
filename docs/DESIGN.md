@@ -66,7 +66,9 @@ Display words (the giant "Day 1", 54–72 px) are the only sizes outside the sca
   - Page gutter 16. Card padding 16 (hero cards 20). Gap between cards 12.
 - **Radius:** `--radius-xs` 6 · `--radius-sm` 12 (fields, thumbs) · `--radius-md` 16 (inner cards, set rows) · `--radius-lg` 22 (cards) · `--radius-xl` 28 (sheets, hero) · `--radius-pill` 999 (buttons, chips, dock).
 - **Elevation:** `--shadow-1` (flat), `--shadow-2` (cards), `--shadow-3` (floating: dock, sheets, menus).
-- **Glass:** `--glass-blur` on cards and floating layers. Never blur inside a blurred parent.
+- **Glass:** `--glass-blur` on cards and floating layers. Never blur inside a blurred parent. On phones (≤700 px) cards
+  that scroll with the page don't blur (`--glass-blur: none`): the blur barely shows over the soft page gradient but
+  costs smooth scrolling. Floating layers (dock, top bar, workout bar, sheets) keep their own blur.
 
 ## 6. Motion
 
@@ -76,6 +78,10 @@ Display words (the giant "Day 1", 54–72 px) are the only sizes outside the sca
 - Easing: `--ease` `cubic-bezier(.2,.8,.2,1)`.
 - Lists stagger by 40 ms.
 - Press feedback: `scale(.97)`.
+- **Page changes** (`app-shell.tsx`): the new page fades in while sliding 28 px from the side it comes from, over
+  320 ms. Tabs follow their order in the dock (left or right). A page one level down comes in from the right, and going
+  back comes in from the left. The top bar stays put and its title cross-fades. Back swipes and the browser's back
+  button get a 180 ms fade only, because iPhone already slides those.
 - `prefers-reduced-motion: reduce` turns transitions and animations off.
 
 ## 7. Layout and navigation

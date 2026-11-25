@@ -72,6 +72,13 @@ function PersonRow({ person, onChange, extra }: { person: Person; onChange: (nex
 export function DiscoverScreen() {
   const { state, isDemo, browserClient } = useFitTrack();
   const [query, setQuery] = useState("");
+  // Friends' search bar sends what you typed here (/discover?q=…), so the search starts right away.
+  useEffect(() => {
+    const typed = new URLSearchParams(window.location.search).get("q")?.slice(0, 60);
+    if (!typed) return;
+    const timer = window.setTimeout(() => setQuery(typed), 0);
+    return () => window.clearTimeout(timer);
+  }, []);
   const [results, setResults] = useState<Person[] | null>(null);
   const [suggested, setSuggested] = useState<Person[] | null | undefined>(undefined);
   const [requests, setRequests] = useState<FriendRequests>({ incoming: [], outgoing: [] });
