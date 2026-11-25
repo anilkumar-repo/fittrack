@@ -3070,3 +3070,29 @@ Loader).
   - Known limit: the launch picture is always dark (the app's default). Someone who chose the light theme sees a dark
     launch picture, then a light opening.
   - Add a new iPhone size: add it to `splash-devices.json` and run `node scripts/build-splash.mjs`.
+- Follow-up after the owner tried it on a phone ("too fast", "splash looks weird", "Rozi isn't matching"):
+  - **Removed:** the iPhone launch pictures (`public/splash`, `scripts/build-splash.mjs`, `src/lib/splash-devices.json`
+    and the `<head>` links), the icon-opening step and Rozi landing. iOS shows its own short black screen at launch
+    again, which only a launch picture could cover.
+  - **The opening is now only the barbell (style 6), slower and smoother, 3.2 s:** the bar draws out from the middle
+    (0–0.5 s); R-O-Z-F-I-T slide on from both ends inward, one every 0.22 s (0.45–2.1 s); the bar lifts and settles
+    (2.2–2.8 s); then it fades into the app. Ease-out curves with no bounce; bigger plates (42 × 76 px) so it reads
+    on a phone. `?opening=plain` is gone; `/?opening` still replays it.
+  - Checked frame by frame at 375 px in dark and light, plus a real-time run (removes itself after 3.3 s, doesn't replay
+    on reload in the same session, no console errors). 448 tests pass, type check clean, lint (1 old warning).
+- **Preview, not yet approved: Rozi peeks over the name** (`/?opening=rozi`; the default opening is unchanged).
+  - After ROZFIT loads, Rozi rises from behind the plates (2.25–3 s), rests both paws on top of the letters with a
+    small press, looking straight at you, holds, then it fades (4 s in total, no bar lift in this version).
+  - New picture `public/rozi/peek.webp` (480 px, 32 KB): Rozi cut out of the app-icon artwork
+    (`design/brand-incoming/app-icon-rozi-face.webp`) by colour, since that is the only Rozi that looks straight ahead
+    with both paws in front. It's drawn twice: behind the plates, and a paws-only copy (masked to two ovals) in front
+    of them, so the paws sit on top of the letters.
+  - Added after review: **one blink** at 3.6 s, once his paws have settled. Two fur-coloured eyelids (named colours
+    coral/chocolate with a saddlebrown lash line, positions measured on `peek.webp`) close and open over 0.24 s. The
+    Rozi version is now 4.4 s.
+  - A playable preview page (private artifact) shows both versions in dark and light with a Play-again button.
+  - If approved: make "rozi" the default in `decide()` and drop the `bar` mode, or keep both. If not: delete
+    `peek.webp`, the `ro-peek` CSS and the `rozi` mode.
+- **Approved: the opening with Rozi is now the only opening** (owner's choice after the playable preview).
+  `rozi-opening.tsx` lost its two modes; the bar-lift version and `?opening=rozi` are gone (`/?opening` still
+  replays it). 4.4 s: bar → ROZFIT plates → Rozi rises and rests his paws on the letters → one blink → fade.

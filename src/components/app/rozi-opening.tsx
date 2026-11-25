@@ -6,62 +6,58 @@ const SEEN_KEY = "rozfit-opening-seen";
 const LETTERS = "ROZFIT".split("");
 /** Plates go on from both ends inward, like loading a real bar: R, T, O, I, Z, F. */
 const LOAD_ORDER = [0, 2, 4, 5, 3, 1];
+/** A little past the CSS animation's 4.4 s, so it has fully faded before it's removed. */
+const DURATION_MS = 4500;
 
-type Mode = false | "full" | "plain";
-let decided: Mode | undefined;
+let decided: boolean | undefined;
 /** Decided once per page load: play on the first open of this session, or whenever the URL asks (`?opening`). */
-function decide(): Mode {
+function decide(): boolean {
   if (decided !== undefined) return decided;
   decided = false;
   try {
-    const param = new URLSearchParams(window.location.search).get("opening");
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return decided;
-    if (param === null && window.sessionStorage.getItem(SEEN_KEY)) return decided;
+    const asked = new URLSearchParams(window.location.search).has("opening");
+    if (!asked && window.sessionStorage.getItem(SEEN_KEY)) return decided;
     window.sessionStorage.setItem(SEEN_KEY, "1");
-    decided = param === "plain" ? "plain" : "full";
+    decided = true;
   } catch { /* storage blocked: skip the opening rather than replay it on every page */ }
   return decided;
 }
 const noSubscribe = () => () => {};
 
 /**
- * The opening (picked 2026-11-25, styles 13 + 3 + 6): the app icon you tapped opens up, Rozi lands with a squash, the
- * letters slide onto a barbell like weight plates, and the bar lifts. About 2.4 s, once per app open (per session), on
- * top of whatever is loading underneath. Skipped with reduced motion.
- * `?opening=plain` shows it without Rozi landing (13 + 6), `?opening` alone replays it; both are for comparing looks.
+ * The opening (approved 2026-11-25): the bar draws out, R-O-Z-F-I-T slide on like weight plates from both ends
+ * inward, Rozi rises from behind the name, rests his paws on top of the letters, blinks once, and it fades into the
+ * app. 4.4 s, once per app open (per session), on top of whatever is loading underneath. Skipped with reduced motion.
+ * `/?opening` replays it, for checking.
+ * It's in the server page, so it starts at the very first paint; the client then keeps or drops it.
  */
 export function RoziOpening() {
-  // The server page already includes it, so it starts at the very first paint, straight after the iPhone launch
-  // picture; the client then keeps or drops it (already seen this session, reduced motion).
-  const mode = useSyncExternalStore(noSubscribe, decide, () => "full" as Mode);
+  const play = useSyncExternalStore(noSubscribe, decide, () => true);
   const [done, setDone] = useState(false);
-  const show = done ? false : mode;
   // A timer, not animationend: the animation starts with the server page and can finish before React is listening.
   useEffect(() => {
-    if (!mode) return;
-    const timer = window.setTimeout(() => setDone(true), 2500);
+    if (!play) return;
+    const timer = window.setTimeout(() => setDone(true), DURATION_MS);
     return () => window.clearTimeout(timer);
-  }, [mode]);
+  }, [play]);
 
-  if (!show) return null;
+  if (!play || done) return null;
   return (
-    <div className={`rozi-opening ${show === "plain" ? "plain" : ""}`} aria-hidden="true">
-      <picture className="ro-tile">
-        <source srcSet="/icons/apple-touch-icon-dark.png" media="(prefers-color-scheme: dark)" />
-        <img src="/icons/apple-touch-icon.png" alt="" width={180} height={180} />
-      </picture>
-      <div className="ro-stage">
-        {/* eslint-disable-next-line @next/next/no-img-element -- same static Rozi as the loader */}
-        <img className="ro-rozi" src="/rozi/hello.webp" alt="" width={140} height={140} fetchPriority="high" />
-        <div className="ro-lift">
-          <span className="ro-bar" />
-          <div className="ro-plates">
-            {LETTERS.map((letter, index) => (
-              <span key={index} className={`${index < 3 ? "from-left" : "from-right"} ${index === 1 ? "accent" : ""}`}
-                style={{ animationDelay: `${1 + LOAD_ORDER[index] * 0.09}s` }}>{letter}</span>
-            ))}
-          </div>
+    <div className="rozi-opening" aria-hidden="true">
+      <div className="ro-lift">
+        {/* Rozi behind the plates, and his paws again in front of them, so they rest on top of the letters. */}
+        {/* eslint-disable-next-line @next/next/no-img-element -- static cut-out, must show with the first paint */}
+        <span className="ro-peek back"><span className="ro-rozi"><img src="/rozi/peek.webp" alt="" width={230} height={230} /><i className="ro-lid left" /><i className="ro-lid right" /></span></span>
+        <span className="ro-bar" />
+        <div className="ro-plates">
+          {LETTERS.map((letter, index) => (
+            <span key={index} className={`${index < 3 ? "from-left" : "from-right"} ${index === 1 ? "accent" : ""}`}
+              style={{ animationDelay: `${0.45 + LOAD_ORDER[index] * 0.22}s` }}>{letter}</span>
+          ))}
         </div>
+        {/* eslint-disable-next-line @next/next/no-img-element -- the same picture, paws only */}
+        <span className="ro-peek paws"><span className="ro-rozi"><img src="/rozi/peek.webp" alt="" width={230} height={230} /></span></span>
       </div>
     </div>
   );
