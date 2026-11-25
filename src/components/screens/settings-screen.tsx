@@ -7,7 +7,7 @@ import { RoziMemorySettings } from "@/components/app/rozi-memory-settings";
 import { RoziCheckinSettings } from "@/components/app/rozi-checkin-settings";
 import { replayTour } from "@/components/app/tour-guide";
 import { TrainerControls } from "@/components/trainer-controls";
-import { Bell, CalendarDays, Check, ChevronLeft, ChevronRight, Database, Dumbbell, Info, KeyRound, Moon, Palette, QrCode, ShieldCheck, Smartphone, Sparkles, Sun, Users } from "lucide-react";
+import { ArrowLeft, Bell, CalendarDays, Check, ChevronRight, Database, Dumbbell, Info, KeyRound, Moon, Palette, QrCode, ShieldCheck, Smartphone, Sparkles, Sun, Users } from "lucide-react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { SettingsMenu, type MenuItem } from "@/components/app/settings-menu";
@@ -112,7 +112,14 @@ export function SettingsScreen() {
     { group: "Help", id: "about", icon: Info, color: "#7a8a99", label: "About this plan", note: `Rules ${RULE_VERSION}`, keywords: "about version rules templates" },
   ];
 
-  if (!section || !items.some((item) => item.id === section && !item.href && !item.onClick)) {
+  // Only a real section (not a mistyped link that falls back to the menu) swaps the app's top bar for its own header.
+  const inSection = Boolean(section) && items.some((item) => item.id === section && !item.href && !item.onClick);
+  useEffect(() => {
+    document.documentElement.classList.toggle("settings-detail-mode", inSection);
+    return () => document.documentElement.classList.remove("settings-detail-mode");
+  }, [inSection]);
+
+  if (!inSection) {
     return <SettingsMenu items={items} profileCard={(
       // Your picture and name live on Profile (one tap back); Settings keeps only where your data is saved.
       <Link href={isDemo ? "/sign-in" : "/settings?section=account"} className="settings-me settings-sync" aria-label={isDemo ? "Sign in to sync your data" : "Account and sync"}>
@@ -126,8 +133,12 @@ export function SettingsScreen() {
   const current = items.find((item) => item.id === section)!;
   return (
     <section className="settings settings-detail">
-      <Link href="/settings" className="settings-back"><ChevronLeft aria-hidden="true" /> Settings</Link>
-      <h2>{current.label}</h2>
+      {/* One header for a section (2026-11-25): the app's top bar hides here (settings-detail-mode), so there is one
+          back button (to Settings) and one title, instead of "← Settings" above "‹ Settings / Appearance". */}
+      <header className="settings-detail-head">
+        <Link href="/settings" className="icon-button settings-detail-back" aria-label="Back to Settings"><ArrowLeft aria-hidden="true" /></Link>
+        <div><span className="eyebrow">Settings</span><h1>{current.label}</h1></div>
+      </header>
       {dirty && <SaveBar onSave={saveDraft} onDiscard={() => setDraft({})} disabled={nameMissing} note={nameMissing ? "Add your name to save" : undefined} />}
       {section === "plan" && <>
           <article className="panel settings-group">

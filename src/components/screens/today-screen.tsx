@@ -78,7 +78,7 @@ function WorkoutDayView({ date, extraDay = false, startAtReview = false }: { dat
     void loadPostedDates(browserClient, shiftDate(currentDate, -8)).then(setPostedDates);
   }, [isDemo, browserClient, currentDate]);
   useEffect(() => { const timer = window.setTimeout(refreshPosted, 0); return () => window.clearTimeout(timer); }, [refreshPosted]);
-  const [rest, setRest] = useState<{ endsAt: number; total: number; exerciseName: string } | null>(null);
+  const [rest, setRest] = useState<{ id: number; endsAt: number; total: number; exerciseName: string } | null>(null);
   // Rest timer on/off, remembered on this device.
   const [restOn, setRestOn] = useState(true);
   useEffect(() => {
@@ -393,14 +393,22 @@ function WorkoutDayView({ date, extraDay = false, startAtReview = false }: { dat
                 onAddSet={() => addSet(exercise.id)}
                 onOpenGuide={() => setGuideExercise(toGuideExercise(exercise))}
                 onSwap={!editing && todaySession.status === "in_progress" ? () => setSwapping(exercise) : undefined}
-                onSetCompleted={() => { if (!editing && restOn && exercise.restSeconds > 0) setRest({ endsAt: Date.now() + exercise.restSeconds * 1000, total: exercise.restSeconds, exerciseName: exercise.name }); }} />;
+                onSetCompleted={() => { if (!editing && restOn && exercise.restSeconds > 0) setRest({ id: Date.now(), endsAt: Date.now() + exercise.restSeconds * 1000, total: exercise.restSeconds, exerciseName: exercise.name }); }} />;
             })}
           </div>
-          <div className="logger-nav">
-            {oneAtATime && exerciseCount > 1 && <button type="button" className="button button-subtle" disabled={shownIndex === 0} onClick={() => setFocusIndex(shownIndex - 1)}><ArrowLeft aria-hidden="true" /> Previous</button>}
+          {/* Bottom of the logger (2026-11-25): a round "back" button and one wide primary button that names what's next,
+              so the label never wraps onto two lines. "Finish workout early" stays a quiet link under them. */}
+          <div className={`logger-nav ${oneAtATime && exerciseCount > 1 ? "has-prev" : ""}`}>
+            {oneAtATime && exerciseCount > 1 && <button type="button" className="logger-prev" disabled={shownIndex === 0} onClick={() => setFocusIndex(shownIndex - 1)} aria-label="Previous exercise"><ArrowLeft aria-hidden="true" /></button>}
             {oneAtATime && shownIndex < exerciseCount - 1
-              ? <button type="button" className="button button-primary" onClick={() => setFocusIndex(shownIndex + 1)}>Next exercise <ArrowRight aria-hidden="true" /></button>
-              : <button type="button" className="button button-primary" onClick={finishLogging}>Finish and review <ArrowRight aria-hidden="true" /></button>}
+              ? <button type="button" className="button button-primary logger-next" onClick={() => setFocusIndex(shownIndex + 1)}>
+                <span className="logger-next-text"><small>Next</small><strong>{todaySession?.plan.exercises[shownIndex + 1]?.name ?? "Next exercise"}</strong></span>
+                <ArrowRight aria-hidden="true" />
+              </button>
+              : <button type="button" className="button button-primary logger-next" onClick={finishLogging}>
+                <span className="logger-next-text"><small>All done?</small><strong>Finish and review</strong></span>
+                <ArrowRight aria-hidden="true" />
+              </button>}
           </div>
           {oneAtATime && shownIndex < exerciseCount - 1 && <button type="button" className="text-button logger-finish-early" onClick={finishLogging}>Finish workout early</button>}
         </article>}
@@ -417,7 +425,7 @@ function WorkoutDayView({ date, extraDay = false, startAtReview = false }: { dat
           <button className="button button-primary flow-cta" disabled={savingSession} onClick={completeWorkout}>{savingSession ? "Saving…" : "Save my session"} <Check aria-hidden="true" /></button>
         </article>}
       </section>
-      {rest && logging && displayFlowStep === "workout" && <RestTimer key={rest.total + rest.exerciseName} endsAt={rest.endsAt} totalSeconds={rest.total} exerciseName={rest.exerciseName}
+      {rest && logging && displayFlowStep === "workout" && <RestTimer key={rest.id} endsAt={rest.endsAt} totalSeconds={rest.total} exerciseName={rest.exerciseName}
         onAdjust={(seconds) => setRest((current) => current ? { ...current, endsAt: Math.max(Date.now() + 1000, current.endsAt + seconds * 1000), total: Math.max(1, current.total + seconds) } : current)} onDismiss={dismissRest} />}
       {swapping && <SwapSheet exercise={swapping} workoutExercises={(todaySession && todaySession.status !== "planned" ? todaySession.plan : plan)?.exercises ?? []}
         onPick={(replacement) => { if (swapExercise(swapping.id, replacement.id, plan)) setSwapping(null); }} onClose={() => setSwapping(null)} />}

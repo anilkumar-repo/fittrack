@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { ArrowLeftRight, Calculator, Check } from "lucide-react";
+import { ArrowLeftRight, Calculator, Check, Plus } from "lucide-react";
 import { shortDate } from "@/lib/dates";
 import { setKind, setLabels, SET_KINDS } from "@/lib/pro-tracking";
 import { PlatesSheet } from "./plates-sheet";
@@ -108,9 +108,9 @@ export function ExerciseLogCard({ exercise, index, log, substitutedForName, last
         })}
       </div>
       <div className="pro-set-actions">
-        <button className="add-set" disabled={skipped} onClick={onAddSet}>＋ Add set</button>
-        {counted === "reps" && <button type="button" className="text-button pro-plates-open" disabled={skipped} onClick={() => setPlates(true)}><Calculator aria-hidden="true" /> Warm-up & plates</button>}
-        {onSwap && !log.sets.some((set) => set.completed) && <button type="button" className="text-button pro-plates-open" onClick={onSwap} aria-label={`Swap ${exercise.name} for another exercise`}><ArrowLeftRight aria-hidden="true" /> Swap</button>}
+        <button type="button" className="add-set pro-action" disabled={skipped} onClick={onAddSet}><Plus aria-hidden="true" /> Add set</button>
+        {counted === "reps" && <button type="button" className="text-button pro-plates-open pro-action" disabled={skipped} onClick={() => setPlates(true)} aria-label="Warm-up sets and plate calculator"><Calculator aria-hidden="true" /> Plates</button>}
+        {onSwap && !log.sets.some((set) => set.completed) && <button type="button" className="text-button pro-plates-open pro-action" onClick={onSwap} aria-label={`Swap ${exercise.name} for another exercise`}><ArrowLeftRight aria-hidden="true" /> Swap</button>}
       </div>
       {plates && <PlatesSheet exerciseName={exercise.name} barbell={/barbell|smith/i.test(`${exercise.equipment} ${exercise.name}`)} unit={unit}
         workKg={log.sets.find((item) => setKind(item) !== "warmup" && item.loadKg)?.loadKg ?? hintLoad}
