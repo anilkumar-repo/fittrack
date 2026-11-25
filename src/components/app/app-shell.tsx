@@ -81,10 +81,15 @@ function Icon({ children }: { children: React.ReactNode }) {
  * Which way a page change should slide: tabs follow their order in the dock (left/right), a page one level down comes
  * in from the right, and going back up comes in from the left.
  */
+const SUB_TABS = ["/friends", "/feed", "/chats", "/buddies"];
 function slideFor(from: string, to: string): number {
   const fromTab = TABS.indexOf(tabFor(from) as Tab);
   const toTab = TABS.indexOf(tabFor(to) as Tab);
   if (fromTab >= 0 && toTab >= 0 && fromTab !== toTab) return toTab > fromTab ? 1 : -1;
+  // Sub-tabs (Together: Friends · Feed · Chats · Buddies) follow their order in the tab row too.
+  const fromSub = SUB_TABS.indexOf(from);
+  const toSub = SUB_TABS.indexOf(to);
+  if (fromSub >= 0 && toSub >= 0) return toSub > fromSub ? 1 : -1;
   if (parentFor(from) === to || from.startsWith(`${to}/`)) return -1;
   return 1;
 }
@@ -115,7 +120,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     const main = document.querySelector<HTMLElement>(".main-area");
     if (!main) return;
     const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    const parts = [...main.children].filter((element): element is HTMLElement => element instanceof HTMLElement && !element.matches(".topbar, .toasts, .sr-only"));
+    const parts = [...main.children].filter((element): element is HTMLElement => element instanceof HTMLElement && !element.matches(".topbar, .toasts, .sr-only, .together-tabs"));
+    // (The Together tab row is shared by its four pages, so it stays still and only what's under it moves.)
     const shift = reduce || fromHistory ? 0 : slideFor(from, to) * 28;
     const frames: Keyframe[] = shift ? [{ opacity: 0, transform: `translateX(${shift}px)` }, { opacity: 1, transform: "none" }] : [{ opacity: 0 }, { opacity: 1 }];
     for (const part of parts) part.animate(frames, { duration: shift ? 320 : 180, easing: "cubic-bezier(.2, .8, .2, 1)" });

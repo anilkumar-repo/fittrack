@@ -96,10 +96,18 @@ export function ExerciseGuideModal({ exercise, workout, onOpen, onClose }: Exerc
         <div className="guide-head">
           <div><p className="guide-kicker">{exercise.category === "core" ? "Core" : exercise.category === "conditioning" ? "Conditioning" : "Strength"} · {exercise.difficulty}</p><h2 id="exercise-modal-title">{exercise.name}</h2></div>
         </div>
-        <div className="chip-row">
-          <span className="chip"><Repeat aria-hidden="true" /> {exercise.sets} × {exercise.reps}</span>
-          <span className="chip"><Clock aria-hidden="true" /> {exercise.restSeconds ? `${exercise.restSeconds} sec rest` : "No timed rest"}</span>
-          <span className={`chip ${ready ? "chip-ok" : "chip-warn"}`}><Dumbbell aria-hidden="true" /> {exercise.equipment}</span>
+        {/* The plan for this move at a glance (2026-11-25): three big numbers, then the equipment with a clear status. */}
+        <div className="guide-facts ui-card">
+          <dl className="guide-facts-row">
+            <div><dt><Repeat aria-hidden="true" />Sets</dt><dd>{exercise.sets}</dd></div>
+            <div><dt>Reps</dt><dd>{exercise.reps}</dd></div>
+            <div><dt><Clock aria-hidden="true" />Rest</dt><dd>{exercise.restSeconds ? <>{exercise.restSeconds}<small>s</small></> : "—"}</dd></div>
+          </dl>
+          <p className="guide-facts-gear">
+            <span className="guide-facts-gear-icon"><Dumbbell aria-hidden="true" /></span>
+            <span className="guide-facts-gear-name">{exercise.equipment}</span>
+            <span className={`guide-facts-gear-tag ${ready ? "ok" : "warn"}`}>{ready ? "You have it" : "Check"}</span>
+          </p>
         </div>
         {!ready && !restricted && <p className="guide-note warn">This needs equipment that is not ticked in your Settings. Confirm you have it before using this movement.</p>}
 

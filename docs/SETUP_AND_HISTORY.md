@@ -2794,3 +2794,31 @@ CSS and screen code only, no database or API change.
   keep working.
 - Checks: 436 tests pass, type check clean, lint (1 old warning). Checked in the browser: Today → Progress slides from
   the right, Progress → Workouts from the left.
+
+### 2026-11-25 — Transitions polish, exercise facts card, video button lower
+
+- **Together tabs (from the phone recording):**
+  - the shared tab row (Friends · Feed · Chats · Buddies) faded out and in with every switch, which dimmed the top of
+    the screen. It's now left out of the page animation and stays still. Only what's under it moves.
+  - Switching between those tabs slides in tab order (`SUB_TABS` in `app-shell.tsx`).
+  - Content that replaces "Loading…" (Friends list, Feed, Chats, Buddies, routines) now fades up (`content-arrive`,
+    0.28 s) instead of popping in.
+- **Exercise sheet facts:** the three loose pills ("3 × 5", "90 sec rest", the equipment) became one card. It shows
+  Sets · Reps · Rest as big numbers over small labels, split by hairlines, then an equipment row with a clear
+  "You have it" (mint) or "Check" (amber) tag.
+- **Video button:** it sits about 12 px above the home bar instead of ~100 px up the sheet. The sheet's own bottom
+  padding already lifts sticky elements, so its offset is now `-7px`.
+- Files: `app-shell.tsx`, `exercise-guide-modal.tsx`, `app/globals.css`.
+- Checks: 436 tests pass, type check clean, lint (1 old warning). Checked in the browser: Friends → Feed slides from the
+  right, Feed → Friends from the left, the tab row isn't animated, and the facts card and video button are in place.
+
+### 2026-11-25 — Rest timer: "Go!" moment and a smooth exit
+
+- When a rest ends, "Go!" pops in (scale 0.7 → 1.12 → 1) and the bar's green ring glows in, instead of just swapping
+  text.
+- The timer no longer vanishes in one frame. Auto-close (8 s after Go), Skip and Close now play a 0.28 s slide-down
+  and fade before it's removed (`leave()` in `rest-timer.tsx`, `.rest-bar.leaving`). Reduced motion closes it
+  straight away.
+- Files: `rest-timer.tsx`, `app/globals.css`. 436 tests pass, type check clean, lint clean for the file. The three
+  animations were checked in the browser on a timer element. A full rest timer needs a logged set, so check it on the
+  phone.
