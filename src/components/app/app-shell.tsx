@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect } from "react";
+import { useEffect, useLayoutEffect, useRef } from "react";
 import { BrandMark } from "./brand-mark";
 import { MissedDayPrompt } from "./missed-day-prompt";
 import { TourGuide } from "./tour-guide";
@@ -77,26 +77,72 @@ function Icon({ children }: { children: React.ReactNode }) {
   return <span className="nav-icon" aria-hidden="true">{children}</span>;
 }
 
+/**
+ * Which way a page change should slide: tabs follow their order in the dock (left/right), a page one level down comes
+ * in from the right, and going back up comes in from the left.
+ */
+function slideFor(from: string, to: string): number {
+  const fromTab = TABS.indexOf(tabFor(from) as Tab);
+  const toTab = TABS.indexOf(tabFor(to) as Tab);
+  if (fromTab >= 0 && toTab >= 0 && fromTab !== toTab) return toTab > fromTab ? 1 : -1;
+  if (parentFor(from) === to || from.startsWith(`${to}/`)) return -1;
+  return 1;
+}
+
 /** Sidebar, top bar, messages, and mobile navigation around every page. */
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   // Unread chat messages (signed in only): a badge on the chat button and a dot on Friends.
   const { unread: unreadChats } = useChats();
+  // Page transitions (2026-11-25): the new page fades and slides in from the side it comes from (slideFor). It
+  // animates the page's own elements, never a wrapper, so layout rules that expect the page directly inside
+  // .main-area keep working. A back swipe or the browser's back button already has its own slide on iPhone, so those
+  // only get a short fade.
+  const previousPath = useRef<string | null>(null);
+  const historyMove = useRef(false);
+  useEffect(() => {
+    const onPop = () => { historyMove.current = true; };
+    window.addEventListener("popstate", onPop);
+    return () => window.removeEventListener("popstate", onPop);
+  }, []);
+  useLayoutEffect(() => {
+    const from = previousPath.current;
+    const to = pathname ?? "/";
+    previousPath.current = to;
+    const fromHistory = historyMove.current;
+    historyMove.current = false;
+    if (!from || from === to) return;
+    const main = document.querySelector<HTMLElement>(".main-area");
+    if (!main) return;
+    const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const parts = [...main.children].filter((element): element is HTMLElement => element instanceof HTMLElement && !element.matches(".topbar, .toasts, .sr-only"));
+    const shift = reduce || fromHistory ? 0 : slideFor(from, to) * 28;
+    const frames: Keyframe[] = shift ? [{ opacity: 0, transform: `translateX(${shift}px)` }, { opacity: 1, transform: "none" }] : [{ opacity: 0 }, { opacity: 1 }];
+    for (const part of parts) part.animate(frames, { duration: shift ? 320 : 180, easing: "cubic-bezier(.2, .8, .2, 1)" });
+    // The top bar stays put; only its title cross-fades to the new page's name.
+    main.querySelector(".topbar-text")?.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 220, easing: "ease-out" });
+  }, [pathname]);
   // Big page titles shrink into a frosted bar once the page scrolls (see "LIQUID GLASS 2" in globals.css).
   // "scrolled" (top bar shadow) and "dock-compact": like Instagram, the phone dock shrinks to a smaller pill while
   // you scroll down, and comes back to full size as soon as you scroll up or reach the top. Read once per frame.
   useEffect(() => {
     const root = document.documentElement;
     let last = window.scrollY;
+    let barHeight = "";
     let frame = 0;
     const update = () => {
       frame = 0;
+      // While a sheet is open the page is pinned (use-scroll-lock) and scrollY reads 0. Ignore that, or the top bar
+      // jumps back to its big header behind the sheet and snaps small again on close (the "blink").
+      if (root.classList.contains("scroll-locked")) return;
       const y = window.scrollY;
       root.classList.toggle("scrolled", y > 12);
       // The top bar's real height (it shrinks once the page scrolls), for things that stick under it, such as the
       // A–Z letter headers in Workouts. A fixed guess let them slide underneath the bar.
+      // Written only when it changes: a new value on the root restyles the whole page, which made scrolling lag.
       const bar = document.querySelector<HTMLElement>(".topbar");
-      if (bar) root.style.setProperty("--topbar-h", `${bar.offsetHeight}px`);
+      const height = bar ? `${bar.offsetHeight}px` : "";
+      if (bar && height !== barHeight) { barHeight = height; root.style.setProperty("--topbar-h", height); }
       const delta = y - last;
       if (y < 80 || delta < -6) root.classList.remove("dock-compact");
       else if (delta > 6) root.classList.add("dock-compact");

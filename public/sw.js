@@ -1,6 +1,7 @@
 // RozFit offline cache. It keeps the app's own pages and files so the app still opens with a weak
 // or missing connection. It never touches requests to other sites (such as the Supabase database).
-const CACHE = "rozfit-v5";
+// v6 (2026-11-25): clears pages cached by builds before the redesign.
+const CACHE = "rozfit-v6";
 const PAGES = ["/", "/today", "/progress", "/friends", "/library", "/settings", "/sign-in"];
 
 self.addEventListener("install", (event) => {
@@ -56,6 +57,10 @@ self.addEventListener("fetch", (event) => {
   if (url.origin !== self.location.origin) return;
   // Sign-in must always reach the server.
   if (url.pathname.startsWith("/auth/")) return;
+
+  // Page data for in-app navigation (React Server Components) belongs to one build only. Never cache it, so an
+  // older build's data can't be mixed into a newer app (that showed the old Rozi chat).
+  if (request.headers.get("RSC") === "1" || url.searchParams.has("_rsc")) return;
 
   if (request.mode === "navigate") {
     event.respondWith(networkFirst(request, "/"));
