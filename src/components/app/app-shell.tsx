@@ -82,6 +82,8 @@ function Icon({ children }: { children: React.ReactNode }) {
  * in from the right, and going back up comes in from the left.
  */
 const SUB_TABS = ["/friends", "/feed", "/chats", "/buddies"];
+/** Long list pages where the top bar slides away while scrolling down, like YouTube. */
+const HIDE_BAR_PAGES = ["/library", "/progress", "/feed"];
 function slideFor(from: string, to: string): number {
   const fromTab = TABS.indexOf(tabFor(from) as Tab);
   const toTab = TABS.indexOf(tabFor(to) as Tab);
@@ -173,8 +175,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       const height = bar ? `${bar.offsetHeight}px` : "";
       if (bar && height !== barHeight) { barHeight = height; root.style.setProperty("--topbar-h", height); }
       const delta = y - last;
-      if (y < 80 || delta < -6) root.classList.remove("dock-compact");
-      else if (delta > 6) root.classList.add("dock-compact");
+      if (y < 80 || delta < -6) root.classList.remove("dock-compact", "bar-hidden");
+      else if (delta > 6) root.classList.add("dock-compact", "bar-hidden");
       if (Math.abs(delta) > 6 || y < 80) last = y;
     };
     const onScroll = () => { if (!frame) frame = window.requestAnimationFrame(update); };
@@ -184,7 +186,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     const onBarResized = (event: TransitionEvent) => { if (event.target instanceof Element && event.target.matches(".topbar, .topbar *")) onScroll(); };
     window.addEventListener("scroll", onScroll, { passive: true });
     document.addEventListener("transitionend", onBarResized);
-    return () => { window.removeEventListener("scroll", onScroll); document.removeEventListener("transitionend", onBarResized); if (frame) window.cancelAnimationFrame(frame); root.classList.remove("dock-compact"); };
+    // YouTube-style (2026-11-25): on the long list pages the top bar slides away while you scroll down and comes back
+    // as soon as you scroll up (CSS: html[data-hide-bar].bar-hidden). Other pages keep it pinned.
+    if (HIDE_BAR_PAGES.includes(pathname ?? "")) root.dataset.hideBar = "on"; else delete root.dataset.hideBar;
+    root.classList.remove("bar-hidden");
+    return () => { root.classList.remove("bar-hidden"); delete root.dataset.hideBar; window.removeEventListener("scroll", onScroll); document.removeEventListener("transitionend", onBarResized); if (frame) window.cancelAnimationFrame(frame); root.classList.remove("dock-compact"); };
   }, [pathname]);
   const { state, ready, isDemo, accountLoading, authChecked, currentDate, notice, setNotice, saveError, savingSession, retryPendingSessions, browserClient } = useFitTrack();
   const router = useRouter();
