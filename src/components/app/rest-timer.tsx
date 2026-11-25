@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { ChevronDown, X } from "lucide-react";
 import { formatCountdown } from "@/lib/logging";
 import { haptic } from "@/lib/haptics";
@@ -27,6 +27,13 @@ const SIZE_KEY = "rozfit-rest-size";
 export function RestTimer({ endsAt, totalSeconds, exerciseName, onAdjust, onDismiss }: RestTimerProps) {
   const [now, setNow] = useState(() => Date.now());
   const [small, setSmall] = useState(false);
+  // Leaving plays a short slide-down-and-fade before the timer is removed, instead of vanishing in one frame.
+  const [leaving, setLeaving] = useState(false);
+  const leave = useCallback(() => {
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) { onDismiss(); return; }
+    setLeaving(true);
+    window.setTimeout(onDismiss, 280);
+  }, [onDismiss]);
 
   const remaining = (endsAt - now) / 1000;
   const finished = remaining <= 0;
@@ -47,9 +54,9 @@ export function RestTimer({ endsAt, totalSeconds, exerciseName, onAdjust, onDism
   useEffect(() => {
     if (!finished) return;
     haptic("strong");
-    const close = window.setTimeout(onDismiss, 8000);
+    const close = window.setTimeout(leave, 8000);
     return () => window.clearTimeout(close);
-  }, [finished, onDismiss]);
+  }, [finished, leave]);
 
   function resize(next: boolean) {
     haptic();
@@ -68,14 +75,14 @@ export function RestTimer({ endsAt, totalSeconds, exerciseName, onAdjust, onDism
 
   if (small) {
     return (
-      <div className={`rest-bar small ${finished ? "finished" : ""}`} role="timer" aria-live="off" aria-label={label}>
+      <div className={`rest-bar small ${finished ? "finished" : ""} ${leaving ? "leaving" : ""}`} role="timer" aria-live="off" aria-label={label}>
         <button type="button" className="rest-bar-main" onClick={() => resize(false)} aria-label={`${label}. Show the rest controls`}>{ring}<strong>{time}</strong></button>
-        <button type="button" className="rest-bar-skip" onClick={press(onDismiss)} aria-label={finished ? "Close" : "Skip rest"}><X aria-hidden="true" /></button>
+        <button type="button" className="rest-bar-skip" onClick={press(leave)} aria-label={finished ? "Close" : "Skip rest"}><X aria-hidden="true" /></button>
       </div>
     );
   }
   return (
-    <div className={`rest-bar ${finished ? "finished" : ""}`} role="timer" aria-live="off" aria-label={label}>
+    <div className={`rest-bar ${finished ? "finished" : ""} ${leaving ? "leaving" : ""}`} role="timer" aria-live="off" aria-label={label}>
       <button type="button" className="rest-bar-main" onClick={() => resize(true)} aria-label={`${label}. Make the timer smaller`}>
         {ring}
         <span className="rest-bar-text"><strong>{time}</strong><small>{finished ? "Start your next set" : exerciseName}</small></span>
@@ -84,7 +91,7 @@ export function RestTimer({ endsAt, totalSeconds, exerciseName, onAdjust, onDism
       <div className="rest-bar-actions">
         {!finished && <button type="button" onClick={press(() => onAdjust(-10))} disabled={remaining <= 10} aria-label="10 seconds less">−10</button>}
         {!finished && <button type="button" onClick={press(() => onAdjust(10))} aria-label="10 seconds more">+10</button>}
-        <button type="button" className="rest-bar-skip" onClick={press(onDismiss)}>{finished ? "Close" : "Skip"}</button>
+        <button type="button" className="rest-bar-skip" onClick={press(leave)}>{finished ? "Close" : "Skip"}</button>
       </div>
     </div>
   );
