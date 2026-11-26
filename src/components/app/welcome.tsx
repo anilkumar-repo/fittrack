@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import {
-  ArrowLeft, ArrowRight, Building2, CalendarCheck, Check, Circle, CircleCheck, House, PersonStanding, Search, Sparkles, Target, TrendingUp, Warehouse, Zap, type LucideIcon,
+  ArrowLeft, ArrowRight, Building2, CalendarCheck, Check, Circle, CircleCheck, LoaderCircle, House, PersonStanding, Search, Sparkles, Target, TrendingUp, Warehouse, Zap, type LucideIcon,
 } from "lucide-react";
 import { MAX_TRAINING_DAYS, MIN_TRAINING_DAYS, shiftDate, trainingDaysHint, trainingDaysValid, WEEKDAY_LABELS } from "@/lib/dates";
 import { FIGURE_OPTIONS, type FigureChoice } from "@/lib/figure";
@@ -36,7 +36,10 @@ const LENGTHS = [
   { minutes: 50, title: "About 50 minutes", note: "More time for each movement" },
 ];
 const GYM_ICONS: Record<GymType, LucideIcon> = { large_gym: Building2, small_gym: Warehouse, home: House, bodyweight: PersonStanding };
-const BUILD_STEPS = ["Reading your body stats", "Picking moves for your equipment", "Balancing your week", "Adding rest and recovery", "Your plan is ready"];
+/** The plan-building steps, ticked off one by one; each matches real work the planner does with your answers. */
+const BUILD_STEPS = ["Reading your body stats", "Checking your goal and level", "Picking moves for your equipment", "Balancing muscles across your week", "Setting sets, reps and rest", "Adding rest and recovery days", "Your plan is ready"];
+/** Row height of the plan-building list (CSS .build-steps rows match it). */
+const BUILD_ROW = 46;
 /** Flags the app shell acts on after setup: open Train today, and turn on reminders once signed in. */
 export const START_TODAY_KEY = "rozfit-start-today";
 export const WANT_PUSH_KEY = "rozfit-want-push";
@@ -82,7 +85,7 @@ export function Welcome() {
     if (step !== "building") return;
     const started = Date.now();
     const timer = window.setInterval(() => {
-      const pct = Math.min(100, Math.round(((Date.now() - started) / 3200) * 100));
+      const pct = Math.min(100, Math.round(((Date.now() - started) / 4400) * 100));
       setBuilt(pct);
       if (pct >= 100) window.clearInterval(timer);
     }, 60);
@@ -131,6 +134,14 @@ export function Welcome() {
     completeOnboarding(answers(), bodyStats.weightKg);
   }
 
+  /** One unit for height and weight: switching on either screen converts the weight too (it was left as the same
+   *  number, so 70 kg became "70 lb"). */
+  function switchUnit(unit: "metric" | "us") {
+    setBody((current) => current.unit === unit ? current : {
+      ...current, unit,
+      weight: unit === "metric" ? String(Math.round(Number(current.weight) * 0.45359237 * 2) / 2 || 70) : String(Math.round(Number(current.weight) / 0.45359237) || 154),
+    });
+  }
   function go(next: Step) { setStep(next); window.scrollTo({ top: 0 }); }
 
   function next() {
@@ -220,18 +231,22 @@ export function Welcome() {
           <h1>A plan built around you{name.trim() ? `, ${name.trim()}` : ""}</h1>
           <div className="building-bar" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={built}><i style={{ width: `${built}%` }} /></div>
           <span className="building-percent">{built}%</span>
-          {/* Style 4 (2026-11-25): every step stays on screen and ticks off in turn, like a checklist. */}
-          <ol className="building-steps">
-            {BUILD_STEPS.map((text, index) => {
-              const state = index < current || built >= 100 ? "done" : index === current ? "current" : "todo";
-              return (
-                <li key={text} className={state} aria-current={state === "current" ? "step" : undefined}>
-                  {state === "done" ? <CircleCheck aria-hidden="true" /> : <Circle aria-hidden="true" />}
-                  <span>{text}{index === 1 ? extra : ""}</span>
-                </li>
-              );
-            })}
-          </ol>
+          {/* Plan steps (2026-11-26, after Aceternity's Multi Step Loader): the list scrolls up so the current step stays
+              on the middle line; done steps tick, and steps fade the further they are from the current one. */}
+          <div className="build-steps" role="list" aria-label="Building your plan">
+            <div className="build-steps-track" style={{ transform: `translateY(${-current * BUILD_ROW}px)` }}>
+              {BUILD_STEPS.map((text, index) => {
+                const state = index < current || built >= 100 ? "done" : index === current ? "current" : "todo";
+                return (
+                  <div key={text} role="listitem" className={state} aria-current={state === "current" ? "step" : undefined}
+                    style={{ opacity: Math.max(1 - Math.abs(index - current) * 0.3, 0.1) }}>
+                    {state === "done" ? <CircleCheck aria-hidden="true" /> : state === "current" ? <LoaderCircle className="spin" aria-hidden="true" /> : <Circle aria-hidden="true" />}
+                    <span>{text}{index === 2 ? extra : ""}</span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
         </section>
       </main>
     );
@@ -257,8 +272,8 @@ export function Welcome() {
         {step === "height" && <>
           <h1 id="onb-title">What’s your height?</h1>
           <div className="segmented onb-unit-toggle" role="radiogroup" aria-label="Height unit">
-            <button type="button" role="radio" aria-checked={metric} className={metric ? "selected" : ""} onClick={() => setBody((current) => ({ ...current, unit: "metric" }))}>Centimetres</button>
-            <button type="button" role="radio" aria-checked={!metric} className={!metric ? "selected" : ""} onClick={() => setBody((current) => ({ ...current, unit: "us" }))}>Feet and inches</button>
+            <button type="button" role="radio" aria-checked={metric} className={metric ? "selected" : ""} onClick={() => switchUnit("metric")}>Centimetres</button>
+            <button type="button" role="radio" aria-checked={!metric} className={!metric ? "selected" : ""} onClick={() => switchUnit("us")}>Feet and inches</button>
           </div>
           {metric
             ? <WheelPicker key="cm" label="Height in centimetres" items={HEIGHTS_CM} value={Number(body.heightCm) || 170} format={(cm) => `${cm} cm`} onChange={(cm) => setBody((current) => ({ ...current, heightCm: String(cm) }))} />
@@ -269,8 +284,8 @@ export function Welcome() {
         {step === "weight" && <>
           <h1 id="onb-title">What’s your weight?</h1>
           <div className="segmented onb-unit-toggle" role="radiogroup" aria-label="Weight unit">
-            <button type="button" role="radio" aria-checked={metric} className={metric ? "selected" : ""} onClick={() => setBody((current) => current.unit === "metric" ? current : { ...current, unit: "metric", weight: String(Math.round(Number(current.weight) * 0.45359237 * 2) / 2 || 70) })}>Kilograms</button>
-            <button type="button" role="radio" aria-checked={!metric} className={!metric ? "selected" : ""} onClick={() => setBody((current) => current.unit === "us" ? current : { ...current, unit: "us", weight: String(Math.round(Number(current.weight) / 0.45359237) || 154) })}>Pounds</button>
+            <button type="button" role="radio" aria-checked={metric} className={metric ? "selected" : ""} onClick={() => switchUnit("metric")}>Kilograms</button>
+            <button type="button" role="radio" aria-checked={!metric} className={!metric ? "selected" : ""} onClick={() => switchUnit("us")}>Pounds</button>
           </div>
           {metric
             ? <RulerPicker key="kg" label="Weight in kilograms" min={30} max={200} step={0.5} major={5} unit="kg" value={Number(body.weight) || 70} onChange={(kg) => setBody((current) => ({ ...current, weight: String(kg) }))} />

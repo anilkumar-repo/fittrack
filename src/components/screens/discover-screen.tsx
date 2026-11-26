@@ -2,15 +2,15 @@
 
 import { todayInTimeZone } from "@/lib/demo-data";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { Check, CircleCheck, Circle, Flame, Search, UserPlus, X } from "lucide-react";
+import { Check, Flame, Search, UserPlus, X } from "lucide-react";
 import { Avatar } from "@/components/app/avatar";
 import { useFitTrack } from "@/components/app/fit-track-provider";
 import { MessageButton } from "@/components/app/message-button";
 import { Rozi } from "@/components/app/rozi";
 import { EmptyState } from "@/components/ui/empty-state";
-import { BIO_LIMIT, isAdultOn, needsBirthDate, normalizeUsername, profileChecklist, relationAction, suggestUsername, usernameProblem, type Relation } from "@/lib/discover";
+import { BIO_LIMIT, isAdultOn, needsBirthDate, normalizeUsername, relationAction, suggestUsername, usernameProblem, type Relation } from "@/lib/discover";
 import {
   cancelFriendRequest, loadFriendRequests, loadPersonProfile, respondFriendRequest, searchPeople, sendFriendRequest, setPublicProfile, suggestedPeople, usernameAvailable,
   type FriendRequests, type Person, type PersonProfile,
@@ -212,25 +212,15 @@ export function PersonScreen({ userId }: { userId: string }) {
 
 /** On your Profile page: @username, bio, "Let people find me", and the "Complete your profile" checklist. */
 export function PublicProfileCard() {
-  const { state, getState, updateState, isDemo, browserClient, recordedSessions, setNotice } = useFitTrack();
+  const { state, getState, updateState, isDemo, browserClient, setNotice } = useFitTrack();
   const profile = state.profile;
   const [editing, setEditing] = useState(false);
   const [username, setUsername] = useState(profile.username ?? "");
   const [bio, setBio] = useState(profile.bio ?? "");
   const [taken, setTaken] = useState(false);
   const [busy, setBusy] = useState(false);
-  const [posts, setPosts] = useState(0);
   const today = todayIn(profile.timeZone);
   const adult = isAdultOn(profile, today);
-  const workouts = recordedSessions.filter((session) => session.status === "completed").length;
-  const checklist = useMemo(() => profileChecklist({ avatar: profile.avatar, username: profile.username, bio: profile.bio, birthYear: profile.birthYear, workouts, posts }),
-    [profile.avatar, profile.username, profile.bio, profile.birthYear, workouts, posts]);
-  const done = checklist.filter((item) => item.done).length;
-
-  useEffect(() => {
-    if (isDemo || !browserClient) return;
-    void loadPersonProfile(browserClient, profile.id).then((found) => setPosts(found?.postCount ?? 0)).catch(() => undefined);
-  }, [isDemo, browserClient, profile.id]);
 
   // Is the typed username free? (checked after a short pause)
   useEffect(() => {
@@ -284,14 +274,6 @@ export function PublicProfileCard() {
           onClick={() => void save({ username: profile.username ?? "", bio: profile.bio ?? "", findable: !profile.findable })}><span /></button>
       </div>
 
-      {done < checklist.length && <div className="profile-checklist">
-        <div className="profile-checklist-head"><strong>Complete your profile</strong><span>{done}/{checklist.length}</span></div>
-        <div className="friend-week" aria-hidden="true"><span style={{ width: `${(done / checklist.length) * 100}%` }} /></div>
-        <ul>{checklist.map((item) => (
-          <li key={item.id} className={item.done ? "done" : ""}>{item.done ? <CircleCheck aria-hidden="true" /> : <Circle aria-hidden="true" />}
-            {item.href && !item.done ? <Link href={item.href}>{item.label}</Link> : <span>{item.label}</span>}</li>
-        ))}</ul>
-      </div>}
     </article>
   );
 }

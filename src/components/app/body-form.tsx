@@ -2,6 +2,7 @@
 
 import { BMI_BAND_LABEL, bodyPlan, MIN_AGE, validBodyStats, type BodySex, type BodyStats } from "@/lib/body";
 import { WHY_OPTIONS } from "@/lib/wellness";
+import { Bandage, Brain, Check, Dumbbell, HeartPulse, Smile, Sparkles, Trophy, Users, Weight, Zap, type LucideIcon } from "lucide-react";
 
 /** What the person typed, in their chosen units. */
 export interface BodyDraft {
@@ -94,14 +95,37 @@ export function BmiCard({ plan }: { plan: ReturnType<typeof bodyPlan> }) {
   );
 }
 
-/** Why are you starting? Choices plus your own words; Rozi quotes it when you need a push. */
+const WHY_ICONS: Record<(typeof WHY_OPTIONS)[number], LucideIcon> = {
+  "Feel healthier": HeartPulse, "Lose weight": Weight, "Get stronger": Dumbbell, "More energy": Zap,
+  "Look and feel confident": Sparkles, "Manage stress": Brain, "Keep up with my kids/family": Users,
+  "Train for a sport or event": Trophy, "Recover from an injury": Bandage,
+};
+const WHY_PICKS = 3;
+
+/**
+ * Why are you starting? Choices plus your own words; Rozi quotes it when you need a push.
+ * Redesigned 2026-11-26: an even two-column grid of tiles (icon + words) instead of pills of every width; a counter
+ * shows how many of the 3 are picked, and the rest dim once 3 are chosen.
+ */
 export function WhyFields({ draft, onChange }: { draft: BodyDraft; onChange: DraftUpdate }) {
-  const toggle = (chip: string) => onChange((current) => ({ ...current, whyChips: current.whyChips.includes(chip) ? current.whyChips.filter((item) => item !== chip) : [...current.whyChips, chip].slice(0, 3) }));
+  const toggle = (chip: string) => onChange((current) => ({ ...current, whyChips: current.whyChips.includes(chip) ? current.whyChips.filter((item) => item !== chip) : [...current.whyChips, chip].slice(0, WHY_PICKS) }));
+  const full = draft.whyChips.length >= WHY_PICKS;
   return (
     <div className="why-form">
-      <div className="onb-chips" role="group" aria-label="Reasons">{WHY_OPTIONS.map((chip) => <button key={chip} type="button" className={draft.whyChips.includes(chip) ? "selected" : ""} aria-pressed={draft.whyChips.includes(chip)} onClick={() => toggle(chip)}>{chip}</button>)}</div>
-      <label className="why-text">In your own words (optional)
-        <textarea rows={2} maxLength={140} placeholder="e.g. I want to play football with my son without getting tired" value={draft.whyText} onChange={(event) => { const whyText = event.target.value; onChange((current) => ({ ...current, whyText })); }} />
+      <span className="why-count" aria-live="polite">{draft.whyChips.length} of {WHY_PICKS} picked</span>
+      <div className="why-grid" role="group" aria-label="Reasons">{WHY_OPTIONS.map((chip) => {
+        const Icon = WHY_ICONS[chip];
+        const picked = draft.whyChips.includes(chip);
+        return (
+          <button key={chip} type="button" className={`why-tile ${picked ? "picked" : full ? "muted" : ""}`} aria-pressed={picked} onClick={() => toggle(chip)}>
+            <span className="why-icon"><Icon aria-hidden="true" /></span>
+            <span className="why-label">{chip}</span>
+            {picked && <span className="why-tick"><Check aria-hidden="true" /></span>}
+          </button>
+        );
+      })}</div>
+      <label className="why-text"><span><Smile aria-hidden="true" /> In your own words (optional)</span>
+        <textarea rows={2} maxLength={140} placeholder="I want to play football with my son without getting tired" value={draft.whyText} onChange={(event) => { const whyText = event.target.value; onChange((current) => ({ ...current, whyText })); }} />
       </label>
     </div>
   );

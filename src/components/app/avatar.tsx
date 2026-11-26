@@ -64,7 +64,7 @@ function blobToDataUrl(blob: Blob): Promise<string> {
 }
 
 /** Settings: change your picture — upload a photo, pick a Rozi, or use initials on a colour. */
-export function AvatarPicker() {
+export function AvatarPicker({ size = 64 }: { size?: number } = {}) {
   const { state, isDemo, browserClient, updateProfile } = useFitTrack();
   const [open, setOpen] = useState(false);
   useScrollLock(open);
@@ -106,7 +106,7 @@ export function AvatarPicker() {
   return (
     <>
       <button type="button" className="avatar-edit" onClick={() => setOpen(true)} aria-label="Change your picture">
-        <Avatar value={profile.avatar} name={profile.displayName} size={64} />
+        <Avatar value={profile.avatar} name={profile.displayName} size={size} />
         <span className="avatar-edit-badge" aria-hidden="true"><Camera /></span>
       </button>
       {open && typeof document !== "undefined" && createPortal(<div className="avatar-sheet-backdrop" onClick={() => setOpen(false)}>
