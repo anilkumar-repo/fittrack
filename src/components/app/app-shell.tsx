@@ -232,7 +232,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   }, [ready, state.onboarded, isDemo, pathname, router]);
 
   if (!ready || !authChecked || (accountLoading && isDemo)) return <RoziLoader />;
-  if (!state.onboarded) return <><Welcome /><InstallHint /></>;
+  // Onboarding gets the same sliding glass and press-and-slide as the app (unit switches, sex picker).
+  if (!state.onboarded) return <><Welcome /><GlassGlider /><DockScrub /><InstallHint /></>;
   const missedDays = unexplainedMissedDays(state.profile, state.sessions, currentDate);
 
   const activeTab = tabFor(pathname);

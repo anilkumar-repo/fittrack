@@ -3096,3 +3096,37 @@ Loader).
 - **Approved: the opening with Rozi is now the only opening** (owner's choice after the playable preview).
   `rozi-opening.tsx` lost its two modes; the bar-lift version and `?opening=rozi` are gone (`/?opening` still
   replays it). 4.4 s: bar → ROZFIT plates → Rozi rises and rests his paws on the letters → one blink → fade.
+
+### 2026-11-26 — Onboarding fixes and profile redesign (owner's phone review)
+
+- **Height and weight unit switches** (`welcome.tsx`, `app-shell.tsx`, CSS `.onb-unit-toggle`):
+  - they didn't slide, because the sliding glass (`GlassGlider`) and press-and-slide (`DockScrub`) were only mounted
+    inside the app, not during onboarding; both are now mounted there too;
+  - "Feet and inches" spilled out of its half: each button now sizes to its words;
+  - **bug found while testing:** switching height to feet also switched weight to pounds without converting it (70 kg
+    became "70 lb", then 32 kg). One `switchUnit()` now converts the weight whichever screen you switch on.
+- **"Why are you starting?"** (`body-form.tsx` `WhyFields`, also used in the profile gate): pills of every width
+  replaced by an even two-column grid of tiles (icon + words, equal heights; the 9th spans the row), a "2 of 3 picked"
+  counter, a tick on picked tiles, and the rest dim once 3 are picked.
+- **Building your plan** (`welcome.tsx`, CSS "Building your plan"): now follows Aceternity's Multi Step Loader. Seven
+  real steps scroll up one row at a time so the current step stays on the middle line (spinner); finished steps tick and
+  fade by distance; one left-aligned column. 4.4 s.
+  - Why it looked uneven on the phone: the 2026-11-25 checklist styles were deleted by mistake when the opening's
+    styles were merged, so the deployed list showed browser numbers and centred rows.
+- **Profile** (`profile-screen.tsx`, CSS "Profile"), after the owner's reference recording:
+  - centred 96 px picture with the camera badge, name, @username (or "Saved on this device") and level;
+  - plain numbers: workouts, days in a row, BMI;
+  - "Complete your profile" card: progress ring, "N items remaining", a hide button (remembered on this device) and
+    chips you swipe sideways. Signed in: the full checklist. On this device only: picture, first workout and "Sign in
+    to keep your plan safe";
+  - three tabs on the sliding-glass segmented control: Overview (last 5 workouts, tap for details), Routines (your own
+    routines + New routine), Public (username, bio, "Let people find me"; sign-in prompt when not signed in);
+  - the checklist moved out of `PublicProfileCard` into the new card. `AvatarPicker` takes a `size`.
+- Tested end to end in the preview at 375 px: onboarding from the welcome screen through height, weight, why, the plan
+  loader and the program summary. The last step (email code) was not done, because it creates an account. Then the
+  profile in dark and light: tabs, glide, chips. 448 tests pass, type check clean, lint (1 old warning).
+- **Ask Rozi on tablets** (CSS "Ask Rozi on tablets and computers"): on an iPad and a Galaxy Tab S10+ the chat sat in
+  the middle of the screen with an empty band below. The phone's full-height layout (header at the top, Rozi in the
+  free space, suggestions and message box at the bottom) only applied below 700 px; it now applies at every width,
+  with the chat column up to 760 px. Checked at 1180×820 and 820×1180 (iPad), 1462×914 (Tab S10+) and 375×812
+  (phone, unchanged): the header is at the top and the message box 18 px from the bottom (8 px on the phone).
