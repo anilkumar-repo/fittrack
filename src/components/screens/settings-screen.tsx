@@ -20,6 +20,7 @@ import { FIGURE_OPTIONS } from "@/lib/figure";
 import { EQUIPMENT_OPTIONS, RULE_VERSION, TEMPLATE_VERSION } from "@/lib/templates";
 import type { Profile } from "@/lib/types";
 import { useEffect, useState } from "react";
+import { EmptyState } from "@/components/ui/empty-state";
 import { SaveBar, useUnsavedGuard } from "@/components/app/save-bar";
 import { BirthDateSetting, BodySettings } from "@/components/app/body-panel";
 import type { Theme } from "@/components/app/fit-track-provider";
@@ -45,7 +46,7 @@ function withoutUnchanged(draft: Partial<Profile>, saved: Profile): Partial<Prof
 }
 
 export function SettingsScreen() {
-  const { state, currentDate, recordedSessions, updateState, isDemo, browserClient, updateProfile, refreshTrainerClients, setNotice, weightUnit, setWeightUnit, theme, setTheme, figure, setFigure, saveError, savingSession } = useFitTrack();
+  const { state, currentDate, recordedSessions, isDemo, browserClient, updateProfile, refreshTrainerClients, weightUnit, setWeightUnit, theme, setTheme, figure, setFigure, saveError, savingSession } = useFitTrack();
   // "Your plan" changes are held as a draft until Save; Discard drops them.
   const [draft, setDraft] = useState<Partial<Profile>>({});
   const params = useSearchParams();
@@ -76,15 +77,6 @@ export function SettingsScreen() {
     edit({ equipmentAvailability: "verified", availableEquipment });
   }
 
-  async function toggleDeadlift(enabled: boolean) {
-    if (state.mode !== "demo") return;
-    if (!window.confirm(enabled
-      ? "Allow the hinge (deadlift) variation on this device? A trainer must still approve it for a signed-in account."
-      : "Lock the hinge variation on this device?")) return;
-    const nextProfile = { ...state.profile, deadliftEnabled: enabled };
-    updateState({ ...state, profile: nextProfile });
-    setNotice(enabled ? "Hinge variation allowed on this device. A trainer must approve it for a signed-in account." : "Deadlift variations are locked on this device.");
-  }
 
   const workouts = recordedSessions.filter((session) => session.status === "completed").length;
 
@@ -212,15 +204,19 @@ export function SettingsScreen() {
             : <article className="panel settings-group">
                 <h3><ShieldCheck aria-hidden="true" /> Safety rules</h3>
                 <div className="settings-row">
-                  <div><strong>Deadlift movements</strong><small>{profile.deadliftEnabled ? "Approved by your trainer." : "Locked until your trainer approves them. Time in training never unlocks them."}</small></div>
+                  {/* Sign-in required (2026-11-26): only a trainer can approve deadlifts, on a signed-in account. */}
+                  <div><strong>Deadlift movements</strong><small>{profile.deadliftEnabled ? "Approved by your trainer." : isDemo ? "Locked. Sign in and add your trainer: only they can approve them." : "Locked until your trainer approves them. Time in training never unlocks them."}</small></div>
                   {isDemo
-                    ? <button type="button" className={`toggle ${profile.deadliftEnabled ? "on" : ""}`} role="switch" aria-checked={profile.deadliftEnabled} onClick={() => void toggleDeadlift(!profile.deadliftEnabled)} aria-label="Allow deadlift movements on this device"><span /></button>
+                    ? <Link className="button button-subtle small" href="/sign-in">Sign in</Link>
                     : <span className={`settings-status ${profile.deadliftEnabled ? "ok" : ""}`}>{profile.deadliftEnabled ? "Approved" : "Locked"}</span>}
                 </div>
                 <div className="settings-row"><div><strong>Pain always means recovery</strong><small>If you tick pain in a check-in, that day switches to gentle recovery. This cannot be turned off.</small></div><span className="settings-status ok">On</span></div>
               </article>}
       </>}
-      {section === "trainers" && <><TrainerModeCard /><TrainerInviteCard onLinked={refreshTrainerClients} /><TrainerLinkCard /></>}
+      {/* The trainer cards need an account and hid themselves, which left a blank page when signed out. */}
+      {section === "trainers" && (isDemo
+        ? <EmptyState mood="hello" title="Sign in to work with a trainer" text="Add your trainer with their code, let them approve moves like deadlifts, or become a trainer yourself." action={{ label: "Sign in", href: "/sign-in" }} />
+        : <><TrainerModeCard /><TrainerInviteCard onLinked={refreshTrainerClients} /><TrainerLinkCard /></>)}
       {section === "account" && <AccountCard />}
       {section === "data" && <><RoziAiCard /><RoziMemorySettings /><RoziCheckinSettings /><LiftSharingCard /><DataCard /></>}
       {section === "about" && <>

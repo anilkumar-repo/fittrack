@@ -4,7 +4,7 @@ import { noticeDuration } from "@/lib/notice";
 import { checkLevelChange, type LevelChange } from "@/lib/levels";
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import type { SupabaseClient, User } from "@supabase/supabase-js";
-import { createDemoState, localTimeZone, readDemoState, todayInTimeZone, writeDemoState } from "@/lib/demo-data";
+import { clearDemoState, createDemoState, localTimeZone, readDemoState, todayInTimeZone, writeDemoState } from "@/lib/demo-data";
 import { isDeadliftVariation } from "@/lib/exercise-library";
 import { clearPendingSession, readPendingSessions, writePendingSession } from "@/lib/pending-sessions";
 import { getSupabaseBrowserClient } from "@/lib/supabase-browser";
@@ -68,6 +68,8 @@ interface FitTrackContextValue {
   /** Saves the welcome answers on this device without leaving the welcome steps, so signing in carries them into the new account. */
   stageOnboarding: (patch: Partial<Profile>, startingWeightKg?: number) => void;
   signOut: () => Promise<void>;
+  /** Deletes the signed-in account; resolves to an error message, or null once it's gone (the app then reloads). */
+  deleteAccount: () => Promise<string | null>;
   refreshTrainerClients: () => Promise<void>;
   /** How weights are shown and typed on this device. They are always stored in kilograms. */
   weightUnit: WeightUnit;
@@ -393,8 +395,27 @@ export function FitTrackProvider({ children }: { children: React.ReactNode }) {
     // Unlink this phone from the account first, so a signed-out account never sends it reminders.
     await releasePush(browserClient, stateRef.current.profile.id).catch(() => undefined);
     await browserClient.auth.signOut();
-    setNotice("You’re signed out. RozFit now saves on this device only.");
+    // Signing out leaves nothing of the account on this device (2026-11-26): the local copy was already moved into the
+    // account at sign-in, so it's cleared and the app reopens on the welcome screen with the sign-in form showing.
+    clearDemoState();
+    window.location.replace("/?signin=1");
   }, [browserClient, flushDelayedCloudWrites]);
+
+  /** Deletes the signed-in account and everything in it (app/api/account/delete), then leaves like signing out. */
+  const deleteAccount = useCallback(async (): Promise<string | null> => {
+    if (!browserClient) return "Sign in first.";
+    const { data } = await browserClient.auth.getSession();
+    const token = data.session?.access_token;
+    if (!token) return "Sign in again, then try once more.";
+    const response = await fetch("/api/account/delete", { method: "POST", headers: { "content-type": "application/json", authorization: `Bearer ${token}` }, body: JSON.stringify({ confirm: "DELETE" }) }).catch(() => null);
+    if (!response) return "You seem to be offline. Nothing was deleted.";
+    if (!response.ok) return ((await response.json().catch(() => ({}))) as { error?: string }).error ?? "Your account couldn't be deleted. Try again.";
+    await releasePush(browserClient, stateRef.current.profile.id).catch(() => undefined);
+    await browserClient.auth.signOut({ scope: "local" }).catch(() => undefined);
+    clearDemoState();
+    window.location.replace("/?signin=1");
+    return null;
+  }, [browserClient]);
 
   const retryPendingSessions = useCallback(() => {
     for (const session of pendingSessions) void upsertSession(session);
@@ -494,9 +515,9 @@ export function FitTrackProvider({ children }: { children: React.ReactNode }) {
   const value = useMemo<FitTrackContextValue>(() => ({
     state, getState, updateState, ready, isDemo: state.mode === "demo", accountLoading, authChecked, browserClient, currentDate,
     trainerRuleSettings, planningProfile, recordedSessions, notice, setNotice, saveError, savingSession,
-    retryPendingSessions, upsertSession, recordMissedDays, updateProfile, completeOnboarding, stageOnboarding, signOut, refreshTrainerClients, weightUnit, setWeightUnit, theme, setTheme, figure, setFigure, levelChange, dismissLevelChange,
+    retryPendingSessions, upsertSession, recordMissedDays, updateProfile, completeOnboarding, stageOnboarding, signOut, deleteAccount, refreshTrainerClients, weightUnit, setWeightUnit, theme, setTheme, figure, setFigure, levelChange, dismissLevelChange,
   }), [levelChange, dismissLevelChange, stageOnboarding, recordMissedDays, state, getState, updateState, ready, accountLoading, authChecked, browserClient, currentDate, trainerRuleSettings, planningProfile,
-    recordedSessions, notice, saveError, savingSession, retryPendingSessions, upsertSession, updateProfile, completeOnboarding, signOut, refreshTrainerClients, weightUnit, setWeightUnit, theme, setTheme, figure, setFigure]);
+    recordedSessions, notice, saveError, savingSession, retryPendingSessions, upsertSession, updateProfile, completeOnboarding, signOut, deleteAccount, refreshTrainerClients, weightUnit, setWeightUnit, theme, setTheme, figure, setFigure]);
 
   return <FitTrackContext.Provider value={value}>{children}</FitTrackContext.Provider>;
 }

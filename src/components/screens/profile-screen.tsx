@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import { ChevronRight, Dumbbell, ListChecks, Menu, Plus, UserRound, X } from "lucide-react";
+import { ChevronRight, Dumbbell, ListChecks, Plus, UserRound, X } from "lucide-react";
 import { AvatarPicker } from "@/components/app/avatar";
 import { useFitTrack } from "@/components/app/fit-track-provider";
 import { HistoryDetailModal } from "@/components/app/history-detail-modal";
@@ -26,7 +26,7 @@ const HIDE_COMPLETION_KEY = "rozfit-hide-profile-completion";
  * Profile (redesigned 2026-11-26 after the owner's reference recording): picture, name and @username in the middle,
  * a row of plain numbers, a "Complete your profile" card (progress ring + swipeable chips), then three tabs on the
  * sliding-glass segmented control (GlassGlider): Overview (recent workouts), Routines, Public (username, bio, search).
- * The ☰ button opens Settings and everything else.
+ * The ☰ button (in the top bar's right corner, app-shell.tsx) opens Settings and everything else.
  */
 export function ProfileScreen() {
   const { state, isDemo, browserClient, recordedSessions, currentDate } = useFitTrack();
@@ -41,7 +41,6 @@ export function ProfileScreen() {
   return (
     <section className="profile-page">
       <header className="pf-head">
-        <Link href="/settings" className="icon-button profile-menu" aria-label="Menu: plan, settings and more"><Menu aria-hidden="true" /></Link>
         <AvatarPicker size={96} />
         <h2>{profile.displayName}</h2>
         <p className="pf-handle">{profile.username ? `@${profile.username}` : isDemo ? "Saved on this device" : state.userEmail ?? "Signed in"} · {levelTitle(profile.experience)}</p>

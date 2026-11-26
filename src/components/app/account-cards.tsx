@@ -28,6 +28,7 @@ function messageOf(error: unknown, fallback: string): string {
 /** Sign in, or see who is signed in and sign out. */
 export function AccountCard() {
   const { state, isDemo, signOut } = useFitTrack();
+  const [busy, setBusy] = useState(false);
   return (
     <article className="panel account-panel">
       <div className="side-card-title"><span className="side-card-icon green-icon">◎</span><div><h3>Account & sync</h3><p>{isDemo ? "Your workouts are saved on this device only." : `Signed in as ${state.userEmail ?? "your account"}.`}</p></div></div>
@@ -35,8 +36,36 @@ export function AccountCard() {
         ? <div className="setup-note">Add your Supabase URL and publishable key to <code>.env.local</code> to turn on account sync.</div>
         : isDemo
           ? <><p className="card-note">Sign in to keep your workouts safe and see them on any phone or computer. Workouts already logged here come with you.</p><SignInForm /></>
-          : <button className="button button-subtle" onClick={() => void signOut()}>Sign out</button>}
+          : <>
+            <button className="button button-subtle" disabled={busy} onClick={() => { setBusy(true); void signOut().finally(() => setBusy(false)); }}>{busy ? "Signing out…" : "Sign out"}</button>
+            <DeleteAccount />
+          </>}
     </article>
+  );
+}
+
+/** Delete account (2026-11-26): opens a warning you confirm by typing DELETE; then the account and everything in it go. */
+function DeleteAccount() {
+  const { deleteAccount } = useFitTrack();
+  const [open, setOpen] = useState(false);
+  const [typed, setTyped] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  if (!open) return <button type="button" className="text-button danger-link" onClick={() => setOpen(true)}><Trash2 aria-hidden="true" /> Delete account</button>;
+  const ready = typed.trim().toUpperCase() === "DELETE";
+  return (
+    <form className="delete-account" onSubmit={(event) => { event.preventDefault(); if (!ready || busy) return; setBusy(true); setError(""); void deleteAccount().then((problem) => { if (problem) { setError(problem); setBusy(false); } }); }}>
+      <strong>Delete your account?</strong>
+      <p>This permanently deletes your account and everything in it: workouts, body weight, routines, friends, chats, posts, Rozi chats and your pictures. It can’t be undone. Download your data first (Settings → Your data) if you want a copy.</p>
+      <label className="field-label">Type DELETE to confirm
+        <input type="text" autoCapitalize="characters" autoComplete="off" value={typed} onChange={(event) => setTyped(event.target.value)} placeholder="DELETE" />
+      </label>
+      {error && <p className="form-error" role="alert">{error}</p>}
+      <div className="account-card-actions">
+        <button type="submit" className="button button-danger small" disabled={!ready || busy}>{busy ? "Deleting…" : "Delete my account"}</button>
+        <button type="button" className="text-button" disabled={busy} onClick={() => { setOpen(false); setTyped(""); setError(""); }}>Cancel</button>
+      </div>
+    </form>
   );
 }
 

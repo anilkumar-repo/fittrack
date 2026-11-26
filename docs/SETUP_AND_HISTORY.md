@@ -3130,3 +3130,44 @@ Loader).
   free space, suggestions and message box at the bottom) only applied below 700 px; it now applies at every width,
   with the chat column up to 760 px. Checked at 1180×820 and 820×1180 (iPad), 1462×914 (Tab S10+) and 375×812
   (phone, unchanged): the header is at the top and the message box 18 px from the bottom (8 px on the phone).
+- **Second round (tablet + phone review):**
+  - **Profile ☰** is now in the top bar's right corner (`app-shell.tsx`, only on /profile), next to "Sign in" when that
+    shows and alone when it doesn't. Before, it floated beside the picture.
+  - **Together tabs on tablets** start at the same left edge as the title and the page below (they were centred across
+    the main area, so they sat off to the right of the content). Phones unchanged.
+  - **Trainers page was blank when not signed in:** all three trainer cards hide without an account. It now shows a
+    "Sign in to work with a trainer" screen.
+  - **Deadlifts need sign-in** (safety): the "allow on this device" switch is gone. Without an account the Safety row
+    says "Locked. Sign in and add your trainer: only they can approve them" with a Sign in button, and data saved only
+    on this device always loads with deadlifts locked (`readDemoState`), including phones that had switched them on.
+    New test in `demo-data.test.ts`.
+  - **Notices leave smoothly:** they fade, rise a little and shrink in their last 0.35 s, and the × plays the same.
+    Sync errors still stay until fixed. Off with reduced motion.
+  - Checked at 1180×820 (Feed, Chats, Trainers, Safety, Profile) and 375×812 (Profile with and without "Sign in").
+    449 tests pass, type check clean, lint (1 old warning).
+
+### 2026-11-26 — Sign out, delete account, missed-day popup
+
+- **Sign out** (`fit-track-provider.tsx` `signOut`): it used to stay in the app with the account's name on screen.
+  Now it unlinks reminders, signs out, clears this device's copy (`clearDemoState`; that copy was already moved into
+  the account at sign-in) and reopens on the welcome screen with the sign-in form showing (`/?signin=1`, read by
+  `welcome.tsx`).
+- **Delete account** (Settings → Account & sync, `account-cards.tsx` `DeleteAccount`; server
+  `app/api/account/delete/route.ts`):
+  - a red "Delete account" link opens a warning listing what goes; you confirm by typing DELETE;
+  - the server takes the user id **only from the sign-in token**, requires `{"confirm":"DELETE"}`, removes the
+    person's files in the `avatars` and `post-photos` buckets (their `<user id>/` folder; storage doesn't delete with
+    the account), then deletes the auth user with the service-role client;
+  - every table with personal data deletes with the account: checked on 2026-11-26 that all foreign keys to
+    `auth.users` are ON DELETE CASCADE, except audit/report references (who accepted an invite, who was reported,
+    who changed a trainer rule), which are set to null; nothing blocks the delete;
+  - afterwards the app signs out on this device, clears the local copy and opens the welcome screen;
+  - needs `SUPABASE_SERVICE_ROLE_KEY` on the server (already used by Rozi AI history). Without it the route answers
+    "isn't set up" and deletes nothing (that's what happens locally).
+- **Missed-day popup** (`missed-day-prompt.tsx`, CSS "Missed-day popup"): Rozi (caring, not grumpy) beside the day,
+  "Day 1 of 3 to explain" when several are waiting, reasons as an even 2-column grid of icon tiles (the 7th spans the
+  row), then the note, the pain safety line, "Same reason for all" and the save button. Same saving logic as before.
+- Checked in the preview at 375 px: the popup, picking a reason (and the pain safety line), "same reason for all" and
+  saving closes it. Not tested here: signing out and deleting an account (both need a real signed-in account); the
+  delete route refuses before doing anything when the server key is missing. 449 tests pass, type check clean, lint
+  (1 old warning).

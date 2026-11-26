@@ -56,7 +56,8 @@ export function Welcome() {
   const QUESTIONS: Step[] = isDemo && hasSupabaseConfig() ? [...BASE_QUESTIONS, "account"] : BASE_QUESTIONS;
   const [step, setStep] = useState<Step>("hero");
   const [slide, setSlide] = useState(0);
-  const [showSignIn, setShowSignIn] = useState(false);
+  // After signing out or deleting the account the app opens here with the sign-in form showing (?signin=1).
+  const [showSignIn, setShowSignIn] = useState(() => typeof window !== "undefined" && new URLSearchParams(window.location.search).has("signin"));
   const [name, setName] = useState(isDemo ? "" : state.profile.displayName);
   const [days, setDays] = useState<number[]>(state.profile.trainingDays);
   const [goal, setGoal] = useState<TrainingGoal>(goalOf(state.profile));
