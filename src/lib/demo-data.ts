@@ -72,10 +72,18 @@ export function readDemoState(): FitTrackState | null {
       : [];
     // People who logged workouts before the welcome steps existed are not asked to set up again.
     const onboarded = value.onboarded === true || sessions.some((session) => !session.sampleData && session.status !== "planned");
-    return { ...value, sessions, bodyWeightEntries, bodyWeightAvailable: true, onboarded };
+    // Deadlifts need a trainer's approval on a signed-in account (2026-11-26): data saved only on this device always
+    // loads with them locked, including devices that switched them on before this rule.
+    const profile = { ...value.profile, deadliftEnabled: false };
+    return { ...value, profile, sessions, bodyWeightEntries, bodyWeightAvailable: true, onboarded };
   } catch {
     return null;
   }
+}
+
+/** Forgets this device's copy (after signing out or deleting the account), so the next person starts fresh. */
+export function clearDemoState(): void {
+  try { window.localStorage.removeItem(STORAGE_KEY); } catch { /* storage blocked: nothing saved to clear */ }
 }
 
 export function writeDemoState(state: FitTrackState): void {

@@ -3,7 +3,7 @@
 import { useScrollLock } from "./use-scroll-lock";
 import { useState } from "react";
 import { createPortal } from "react-dom";
-import { Check } from "lucide-react";
+import { BatteryLow, Bone, Briefcase, CalendarX, Check, Ellipsis, Plane, Thermometer, type LucideIcon } from "lucide-react";
 import { dateLabel } from "@/lib/dates";
 import { MISSED_REASONS, missedDaySession, validateMissedReason } from "@/lib/missed-days";
 import { generateWorkout } from "@/lib/planner";
@@ -11,8 +11,11 @@ import type { MissedReason, WorkoutSession } from "@/lib/types";
 import { sessionForDate, useFitTrack } from "./fit-track-provider";
 import { Rozi } from "./rozi";
 
+const REASON_ICONS: Record<MissedReason, LucideIcon> = { busy: Briefcase, unwell: Thermometer, tired: BatteryLow, sore: Bone, travel: Plane, forgot: CalendarX, other: Ellipsis };
+
 /**
- * Asks why a planned training day was missed. It stays open until a reason is saved, so every missed day
+ * Asks why a planned training day was missed. Redesigned 2026-11-26: Rozi and the day side by side, "1 of 3" when
+ * several days are waiting, and the reasons as an even grid of icon tiles (was a centred wrap of pills). It stays open until a reason is saved, so every missed day
  * has an honest answer the trainer can see. Oldest missed day first.
  */
 export function MissedDayPrompt({ dates }: { dates: string[] }) {
@@ -51,24 +54,35 @@ export function MissedDayPrompt({ dates }: { dates: string[] }) {
   return createPortal(
     <div className="missed-backdrop">
       <section className="missed-dialog panel" role="dialog" aria-modal="true" aria-labelledby="missed-title" aria-describedby="missed-help">
-        <Rozi mood="grumpy" size={110} priority />
-        <h2 id="missed-title">You missed {dateLabel(date)}</h2>
-        <p id="missed-help">What happened? Your trainer sees this and can adjust your plan. Be honest — no judgement.</p>
+        <header className="missed-head">
+          <Rozi mood="care" size={72} priority />
+          <div>
+            {dates.length > 1 && <span className="missed-step">Day 1 of {dates.length} to explain</span>}
+            <h2 id="missed-title">You missed {dateLabel(date, { weekday: "long", month: "short", day: "numeric" })}</h2>
+            <p id="missed-help">What happened? Your trainer sees this and can adjust your plan. No judgement.</p>
+          </div>
+        </header>
         <div className="missed-reasons" role="radiogroup" aria-label="Reason">
-          {MISSED_REASONS.map((item) => (
-            <button key={item.id} type="button" role="radio" aria-checked={reason === item.id} className={reason === item.id ? "selected" : ""} onClick={() => { setReason(item.id); setError(""); }}>
-              {reason === item.id && <Check aria-hidden="true" />}{item.label}
-            </button>
-          ))}
+          {MISSED_REASONS.map((item) => {
+            const Icon = REASON_ICONS[item.id];
+            const picked = reason === item.id;
+            return (
+              <button key={item.id} type="button" role="radio" aria-checked={picked} className={`missed-tile ${picked ? "picked" : ""}`} onClick={() => { setReason(item.id); setError(""); }}>
+                <span className="missed-icon"><Icon aria-hidden="true" /></span>
+                <span className="missed-label">{item.label}</span>
+                {picked && <span className="missed-tick"><Check aria-hidden="true" /></span>}
+              </button>
+            );
+          })}
         </div>
         <label className="missed-note">
           {reason === "other" ? "What happened? (required)" : "Anything to add? (optional)"}
           <textarea rows={2} maxLength={300} value={note} onChange={(event) => setNote(event.target.value)} placeholder={reason === "sore" ? "Where does it hurt, and how much?" : "A short note for your trainer"} />
         </label>
+        {reason === "sore" && <p className="missed-safety">If pain is new, severe or getting worse, please see a health professional before training.</p>}
         {more > 0 && <label className="missed-all"><input type="checkbox" checked={applyAll} onChange={(event) => setApplyAll(event.target.checked)} /> Same reason for all {dates.length} missed days</label>}
         {error && <p className="missed-error" role="alert">{error}</p>}
         <button type="button" className="button button-primary" disabled={saving || !reason} onClick={save}>{saving ? "Saving…" : more > 0 && !applyAll ? "Save and next" : "Save reason"}</button>
-        {reason === "sore" && <p className="missed-safety">If pain is new, severe or getting worse, please see a health professional before training.</p>}
       </section>
     </div>,
     document.body,
