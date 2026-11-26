@@ -11,7 +11,7 @@ import { DockScrub } from "./dock-scrub";
 import { ProfileGate } from "./profile-gate";
 import { Avatar } from "./avatar";
 import { unexplainedMissedDays } from "@/lib/missed-days";
-import { AlertCircle, ArrowLeft, ChartColumn, Check, ChevronUp, CloudOff, Dumbbell, House, MessageCircle, UserRound, Users, X, type LucideIcon } from "lucide-react";
+import { AlertCircle, ArrowLeft, ChartColumn, Check, ChevronUp, CloudOff, Dumbbell, House, Menu, MessageCircle, UserRound, Users, X, type LucideIcon } from "lucide-react";
 import { noticeDuration, noticeIsProblem } from "@/lib/notice";
 import { usePathname, useRouter } from "next/navigation";
 import { dateLabel, weekdayOf } from "@/lib/dates";
@@ -23,6 +23,14 @@ import { joinCode, PENDING_JOIN_KEY } from "@/lib/trainers";
 import { InstallHint } from "./install-hint";
 import { RoziLoader } from "./rozi-loader";
 import { useChats } from "@/components/screens/chats-screen";
+
+/** Closing a message with × plays the same fade-up as when it times out (CSS toast-out), then removes it. */
+function dismissToast(button: HTMLElement, remove: () => void) {
+  const toast = button.closest<HTMLElement>(".toast");
+  if (!toast || window.matchMedia("(prefers-reduced-motion: reduce)").matches) { remove(); return; }
+  toast.style.animation = "none";
+  void toast.animate([{ opacity: 1, transform: "none" }, { opacity: 0, transform: "translateY(-14px) scale(.96)" }], { duration: 240, easing: "ease-in", fill: "forwards" }).finished.then(remove, remove);
+}
 
 /**
  * The four main tabs (docs/DESIGN.md §7): Today · Workouts · (Rozi) · Progress · Together. Each tab also lights up for
@@ -282,7 +290,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         {/* Home has no top bar: its hero carries the picture, greeting and date. */}
         {pathname === "/" ? <h1 className="sr-only">Home</h1> : <header className="topbar">
           {parent && <Link className="icon-button topbar-back" href={parent} aria-label="Back"><ArrowLeft aria-hidden="true" /></Link>}<div className="topbar-text"><span className="eyebrow">{dateLabel(currentDate, { month: "long", day: "numeric", year: "numeric" })}</span><h1>{pageTitle}</h1></div>
-          <div className="topbar-actions">{!isDemo && (savingSession || saveError) && <span className={`save-state ${saveError ? "sync-error" : "connected"}`}><span className="save-dot" />{saveLabel}</span>}{isDemo && hasSupabaseConfig() && pathname !== "/sign-in" && <Link className="button button-subtle topbar-sign-in" href="/sign-in">Sign in</Link>}{!onProfile && <Link className="round-avatar has-picture" aria-label="Open your profile" href="/profile"><Avatar value={state.profile.avatar} name={state.profile.displayName} size={36} /></Link>}</div>
+          <div className="topbar-actions">{!isDemo && (savingSession || saveError) && <span className={`save-state ${saveError ? "sync-error" : "connected"}`}><span className="save-dot" />{saveLabel}</span>}{isDemo && hasSupabaseConfig() && pathname !== "/sign-in" && <Link className="button button-subtle topbar-sign-in" href="/sign-in">Sign in</Link>}{!onProfile && <Link className="round-avatar has-picture" aria-label="Open your profile" href="/profile"><Avatar value={state.profile.avatar} name={state.profile.displayName} size={36} /></Link>}{pathname === "/profile" && <Link className="icon-button topbar-menu" href="/settings" aria-label="Menu: plan, settings and more"><Menu aria-hidden="true" /></Link>}</div>
         </header>}
 
         {/* Messages float at the top as small glass toasts; information closes by itself, sync errors stay. */}
@@ -290,7 +298,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           {notice && <div key={notice} role="status" className={`notice toast ${noticeIsProblem(notice) ? "warn" : "ok"}`} style={{ "--toast-time": `${noticeDuration(notice)}ms` } as React.CSSProperties}>
             <span className="toast-icon" aria-hidden="true">{noticeIsProblem(notice) ? <AlertCircle /> : <Check />}</span>
             <span className="toast-text">{notice}</span>
-            <button type="button" className="toast-close" aria-label="Dismiss message" onClick={() => setNotice("")}><X aria-hidden="true" /></button>
+            <button type="button" className="toast-close" aria-label="Dismiss message" onClick={(event) => dismissToast(event.currentTarget, () => setNotice(""))}><X aria-hidden="true" /></button>
             <span className="toast-timer" aria-hidden="true" />
           </div>}
           {saveError && <div role="alert" className="notice toast notice-error">

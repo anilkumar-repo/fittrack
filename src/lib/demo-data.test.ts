@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { createDemoState, defaultDisplayName, isBuiltInDemoExample, localTimeZone, todayInTimeZone } from "./demo-data.ts";
+import { createDemoState, defaultDisplayName, isBuiltInDemoExample, localTimeZone, readDemoState, todayInTimeZone, writeDemoState } from "./demo-data.ts";
 import { generateWorkout } from "./planner.ts";
 import { createExerciseLog } from "./workout-tracking.ts";
 import type { WorkoutSession } from "./types";
@@ -35,4 +35,17 @@ test("a new account gets a name from its email and a usable local time zone, nev
   assert.equal(defaultDisplayName("a_kumar@example.com"), "Kumar");
   assert.equal(defaultDisplayName(undefined), "Friend");
   assert.match(todayInTimeZone(localTimeZone()), /^\d{4}-\d{2}-\d{2}$/);
+});
+
+test("data saved only on this device always loads with deadlifts locked (they need a trainer on an account)", () => {
+  const store = new Map<string, string>();
+  const original = (globalThis as { window?: unknown }).window;
+  (globalThis as { window?: unknown }).window = { localStorage: { getItem: (key: string) => store.get(key) ?? null, setItem: (key: string, value: string) => void store.set(key, value) } };
+  try {
+    const saved = createDemoState();
+    writeDemoState({ ...saved, profile: { ...saved.profile, deadliftEnabled: true } });
+    assert.equal(readDemoState()?.profile.deadliftEnabled, false);
+  } finally {
+    (globalThis as { window?: unknown }).window = original;
+  }
 });
